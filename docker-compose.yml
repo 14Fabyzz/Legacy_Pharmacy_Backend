@@ -1,0 +1,53 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-usuarios
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: legacy_pharmacy_usuarios
+      MYSQL_USER: legacy_user
+      MYSQL_PASSWORD: legacy_pass
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - legacy-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ms-usuarios:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ms-usuarios
+    restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/legacy_pharmacy_usuarios?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: legacy_user
+      SPRING_DATASOURCE_PASSWORD: legacy_pass
+      JWT_SECRET: TXlTZWNyZXRLZXlGb3JKV1RUb2tlbkxlZ2FjeVBoYXJtYWN5MjAyNVNwcmluZ0Jvb3Q0VmVyeVNlY3VyZUtleQ
+    ports:
+      - "8080:8080"
+    networks:
+      - legacy-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  mysql_data:
+
+networks:
+  legacy-network:
+    driver: bridge
