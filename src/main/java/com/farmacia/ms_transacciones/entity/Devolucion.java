@@ -16,14 +16,13 @@ public class Devolucion {
     private Long id;
     
     private String numeroDevolucion;
-    
-    @ManyToOne
-    @JoinColumn(name = "venta_id")
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "venta_id", nullable = false)
     private Venta venta;
     
     private LocalDateTime fechaDevolucion;
-    
-    @Enumerated(EnumType.STRING)
+
     private MotivoDevolucion motivo;
     
     private String descripcionMotivo;

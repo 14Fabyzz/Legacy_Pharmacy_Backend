@@ -21,11 +21,12 @@ public enum TipoReembolso {
 
     @JsonCreator
     public static TipoReembolso fromValor(String valor) {
-        for (TipoReembolso tipo : TipoReembolso.values()) {
-            if (tipo.valor.equalsIgnoreCase(valor)) {
-                return tipo;
+        if (valor == null) return null;
+        for (TipoReembolso t : TipoReembolso.values()) {
+            if (t.valor.equalsIgnoreCase(valor) || t.name().equalsIgnoreCase(valor)) {
+                return t;
             }
         }
-        throw new IllegalArgumentException("Tipo de reembolso no válido: " + valor);
+        throw new IllegalArgumentException("Tipo de reembolso inválido: " + valor);
     }
 }

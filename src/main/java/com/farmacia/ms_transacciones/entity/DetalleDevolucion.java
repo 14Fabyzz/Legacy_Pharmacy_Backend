@@ -5,7 +5,7 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "detalles_devolucion")
+@Table(name = "detalle_devoluciones")
 @Data
 public class DetalleDevolucion {
     @Id
@@ -20,6 +20,7 @@ public class DetalleDevolucion {
     @JoinColumn(name = "detalle_venta_id", nullable = false)
     private DetalleVenta detalleVenta;
 
+    @Column(name = "cantidad_devuelta", nullable = false)
     private Integer cantidad;
 
     private BigDecimal precioUnitario;

@@ -60,6 +60,7 @@ public class DetalleDevolucionServiceImpl implements DetalleDevolucionService {
         detalleDevolucionRepository.deleteById(id);
     }
 
+    // --- CORRECCIÓN 1: Método obtenerPorEstado IMPLEMENTADO ---
     @Override
     public List<DetalleDevolucionResponseDTO> obtenerPorEstado(String estado) {
         return detalleDevolucionRepository.findByEstado(estado)
@@ -68,17 +69,24 @@ public class DetalleDevolucionServiceImpl implements DetalleDevolucionService {
                 .collect(Collectors.toList());
     }
 
+    // --- CORRECCIÓN 2: Método convertirADTO AJUSTADO A TU DTO ---
     private DetalleDevolucionResponseDTO convertirADTO(DetalleDevolucion detalle) {
         DetalleDevolucionResponseDTO dto = new DetalleDevolucionResponseDTO();
+
         dto.setId(detalle.getId());
-        dto.setDetalleVentaId(detalle.getDetalleVenta().getId());
-        dto.setProductoNombre(detalle.getDetalleVenta().getProductoNombre());
         dto.setCantidad(detalle.getCantidad());
         dto.setPrecioUnitario(detalle.getPrecioUnitario());
         dto.setSubtotal(detalle.getSubtotal());
         dto.setMotivoDetalle(detalle.getMotivoDetalle());
         dto.setEstado(detalle.getEstado());
         dto.setDestinoProducto(detalle.getDestinoProducto());
+
+        // Ajuste: Usamos los campos que SÍ existen en tu DTO
+        if (detalle.getDetalleVenta() != null) {
+            dto.setDetalleVentaId(detalle.getDetalleVenta().getId());
+            dto.setProductoNombre(detalle.getDetalleVenta().getProductoNombre());
+        }
+
         return dto;
     }
 }

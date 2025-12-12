@@ -30,7 +30,6 @@ public class NotaCredito {
     
     private LocalDateTime fechaEmision;
     private LocalDate fechaVencimiento;
-    
-    @Enumerated(EnumType.STRING)
+
     private EstadoNota estado;
 }

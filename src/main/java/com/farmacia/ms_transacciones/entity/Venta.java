@@ -26,7 +26,7 @@ public class Venta {
     private String vendedorId; // Guardamos el ID del usuario (String/UUID)
 
     // --- RELACIONES INTERNAS ---
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "cliente_id")
     private Cliente cliente;
 

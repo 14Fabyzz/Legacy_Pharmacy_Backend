@@ -18,4 +18,6 @@ public class DetalleDevolucionResponseDTO {
     private String motivoDetalle;
     private String estado;
     private String destinoProducto;
+
+
 }

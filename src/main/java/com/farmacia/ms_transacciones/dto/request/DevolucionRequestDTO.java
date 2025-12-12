@@ -11,12 +11,7 @@ public class DevolucionRequestDTO {
     private MotivoDevolucion motivo;
     private String descripcionMotivo;
     private TipoReembolso tipoReembolso;
-    private List<DevolucionDetalleRequestDTO> detalles;
-}
 
-@Data
-class DevolucionDetalleRequestDTO {
-    private Long productoId;
-    private Integer cantidad;
-    private String motivoDetalle;
+    // Ahora usará la clase pública del otro archivo
+    private List<DevolucionDetalleRequestDTO> detalles;
 }

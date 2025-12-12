@@ -1,6 +1,6 @@
 package com.farmacia.ms_transacciones.controller;
 
-import com.farmacia.ms_transacciones.dto.DevolucionRequestDTO;
+import com.farmacia.ms_transacciones.dto.request.DevolucionRequestDTO;
 import com.farmacia.ms_transacciones.dto.response.DevolucionResponseDTO;
 import com.farmacia.ms_transacciones.service.DevolucionService;
 import io.swagger.v3.oas.annotations.Operation;

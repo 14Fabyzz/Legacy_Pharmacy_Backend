@@ -4,22 +4,16 @@ import com.farmacia.ms_transacciones.enums.MotivoDevolucion;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 
-@Converter(autoApply = true) // ¡Importante! Esto lo aplica automáticamente a todas las entidades
+@Converter(autoApply = true) // <--- ¡LA CLAVE! Se aplica solo
 public class MotivoDevolucionConverter implements AttributeConverter<MotivoDevolucion, String> {
 
     @Override
     public String convertToDatabaseColumn(MotivoDevolucion attribute) {
-        if (attribute == null) {
-            return null;
-        }
-        return attribute.getValor(); // Guarda "producto_danado" (minúscula)
+        return (attribute == null) ? null : attribute.getValor();
     }
 
     @Override
     public MotivoDevolucion convertToEntityAttribute(String dbData) {
-        if (dbData == null) {
-            return null;
-        }
-        return MotivoDevolucion.fromValor(dbData); // Lee "producto_danado" y lo convierte al Enum Java
+        return (dbData == null) ? null : MotivoDevolucion.fromValor(dbData);
     }
 }
