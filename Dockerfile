@@ -19,8 +19,9 @@ WORKDIR /app
 # Copy the built jar from build stage
 COPY --from=build /app/target/usuarios-*.jar app.jar
 
-# Expose port (Render uses $PORT)
+# Expose port (Render will assign dynamically)
 EXPOSE 8080
 
-# Run the application
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Run with PORT environment variable
+# This is CRITICAL for Render to detect the service
+CMD ["sh", "-c", "java -Dserver.port=${PORT:-8080} -jar app.jar"]
