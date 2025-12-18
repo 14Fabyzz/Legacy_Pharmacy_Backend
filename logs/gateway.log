@@ -1,0 +1,73 @@
+2025-12-17T18:49:23.046-05:00  INFO 28808 --- [gateway-service] [restartedMain] c.l.p.gateway.GatewayServiceApplication  : Starting GatewayServiceApplication using Java 21.0.9 with PID 28808 (C:\Users\LENOVO\OneDrive\otros\Escritorio\gateway-service-new\gateway-service\target\classes started by LENOVO in C:\Users\LENOVO\OneDrive\otros\Escritorio\gateway-service-new\gateway-service)
+2025-12-17T18:49:23.047-05:00 DEBUG 28808 --- [gateway-service] [restartedMain] c.l.p.gateway.GatewayServiceApplication  : Running with Spring Boot v4.0.0, Spring v7.0.1
+2025-12-17T18:49:23.047-05:00  INFO 28808 --- [gateway-service] [restartedMain] c.l.p.gateway.GatewayServiceApplication  : No active profile set, falling back to 1 default profile: "default"
+2025-12-17T18:49:23.279-05:00  INFO 28808 --- [gateway-service] [restartedMain] o.s.cloud.context.scope.GenericScope     : BeanFactory id=0ee4929a-4f5d-35d9-a3a4-3891e94bb112
+2025-12-17T18:49:23.325-05:00  INFO 28808 --- [gateway-service] [restartedMain] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 8080 (http)
+2025-12-17T18:49:23.326-05:00  INFO 28808 --- [gateway-service] [restartedMain] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2025-12-17T18:49:23.326-05:00  INFO 28808 --- [gateway-service] [restartedMain] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.14]
+2025-12-17T18:49:23.343-05:00  INFO 28808 --- [gateway-service] [restartedMain] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 291 ms
+2025-12-17T18:49:23.497-05:00  INFO 28808 --- [gateway-service] [restartedMain] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 3 endpoints beneath base path '/actuator'
+2025-12-17T18:49:23.511-05:00  INFO 28808 --- [gateway-service] [restartedMain] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 8080 (http) with context path '/'
+2025-12-17T18:49:23.524-05:00  INFO 28808 --- [gateway-service] [restartedMain] c.l.p.gateway.GatewayServiceApplication  : Started GatewayServiceApplication in 0.566 seconds (process running for 289.821)
+2025-12-17T18:49:24.883-05:00  INFO 28808 --- [gateway-service] [File Watcher] rtingClassPathChangeChangedEventListener : Restarting due to 1 class path change (0 additions, 0 deletions, 1 modification)
+2025-12-17T18:49:24.885-05:00  INFO 28808 --- [gateway-service] [Thread-19] o.s.boot.tomcat.GracefulShutdown         : Commencing graceful shutdown. Waiting for active requests to complete
+2025-12-17T18:49:24.928-05:00  INFO 28808 --- [gateway-service] [tomcat-shutdown] o.s.boot.tomcat.GracefulShutdown         : Graceful shutdown complete
+2025-12-17 18:49:25 [restartedMain] INFO  c.l.p.g.GatewayServiceApplication - Starting GatewayServiceApplication using Java 21.0.9 with PID 28808 (C:\Users\LENOVO\OneDrive\otros\Escritorio\gateway-service-new\gateway-service\target\classes started by LENOVO in C:\Users\LENOVO\OneDrive\otros\Escritorio\gateway-service-new\gateway-service)
+2025-12-17 18:49:25 [restartedMain] DEBUG c.l.p.g.GatewayServiceApplication - Running with Spring Boot v4.0.0, Spring v7.0.1
+2025-12-17 18:49:25 [restartedMain] INFO  c.l.p.g.GatewayServiceApplication - No active profile set, falling back to 1 default profile: "default"
+2025-12-17 18:49:25 [restartedMain] INFO  o.s.cloud.context.scope.GenericScope - BeanFactory id=0ee4929a-4f5d-35d9-a3a4-3891e94bb112
+2025-12-17 18:49:25 [restartedMain] INFO  o.s.boot.tomcat.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2025-12-17 18:49:25 [restartedMain] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-12-17 18:49:25 [restartedMain] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/11.0.14]
+2025-12-17 18:49:25 [restartedMain] INFO  o.s.b.w.c.s.WebApplicationContextInitializer - Root WebApplicationContext: initialization completed in 289 ms
+2025-12-17 18:49:25 [restartedMain] INFO  o.s.b.a.e.web.EndpointLinksResolver - Exposing 3 endpoints beneath base path '/actuator'
+2025-12-17 18:49:25 [restartedMain] INFO  o.s.boot.tomcat.TomcatWebServer - Tomcat started on port 8080 (http) with context path '/'
+2025-12-17 18:49:25 [restartedMain] INFO  c.l.p.g.GatewayServiceApplication - Started GatewayServiceApplication in 0.585 seconds (process running for 291.868)
+2025-12-17 18:49:25 [restartedMain] INFO  o.s.b.d.a.ConditionEvaluationDeltaLoggingListener - Condition evaluation unchanged
+2025-12-17 18:49:57 [File Watcher] INFO  o.s.b.d.a.LocalDevToolsAutoConfiguration$RestartingClassPathChangeChangedEventListener - Restarting due to 3 class path changes (0 additions, 1 deletion, 2 modifications)
+2025-12-17 18:49:57 [Thread-25] INFO  o.s.boot.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2025-12-17 18:49:57 [tomcat-shutdown] INFO  o.s.boot.tomcat.GracefulShutdown - Graceful shutdown complete
+2025-12-17 18:49:57 [restartedMain] INFO  c.l.p.g.GatewayServiceApplication - Starting GatewayServiceApplication using Java 21.0.9 with PID 28808 (C:\Users\LENOVO\OneDrive\otros\Escritorio\gateway-service-new\gateway-service\target\classes started by LENOVO in C:\Users\LENOVO\OneDrive\otros\Escritorio\gateway-service-new\gateway-service)
+2025-12-17 18:49:57 [restartedMain] DEBUG c.l.p.g.GatewayServiceApplication - Running with Spring Boot v4.0.0, Spring v7.0.1
+2025-12-17 18:49:57 [restartedMain] INFO  c.l.p.g.GatewayServiceApplication - No active profile set, falling back to 1 default profile: "default"
+2025-12-17 18:49:57 [restartedMain] INFO  o.s.cloud.context.scope.GenericScope - BeanFactory id=0ee4929a-4f5d-35d9-a3a4-3891e94bb112
+2025-12-17 18:49:57 [restartedMain] INFO  o.s.boot.tomcat.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2025-12-17 18:49:57 [restartedMain] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-12-17 18:49:57 [restartedMain] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/11.0.14]
+2025-12-17 18:49:57 [restartedMain] INFO  o.s.b.w.c.s.WebApplicationContextInitializer - Root WebApplicationContext: initialization completed in 225 ms
+2025-12-17 18:49:57 [restartedMain] INFO  o.s.b.a.e.web.EndpointLinksResolver - Exposing 3 endpoints beneath base path '/actuator'
+2025-12-17 18:49:57 [restartedMain] INFO  o.s.boot.tomcat.TomcatWebServer - Tomcat started on port 8080 (http) with context path '/'
+2025-12-17 18:49:57 [restartedMain] INFO  c.l.p.g.GatewayServiceApplication - Started GatewayServiceApplication in 0.453 seconds (process running for 324.195)
+2025-12-17 18:49:57 [restartedMain] INFO  o.s.b.d.a.ConditionEvaluationDeltaLoggingListener - Condition evaluation unchanged
+2025-12-17 18:51:05 [File Watcher] INFO  o.s.b.d.a.LocalDevToolsAutoConfiguration$RestartingClassPathChangeChangedEventListener - Restarting due to 2 class path changes (0 additions, 0 deletions, 2 modifications)
+2025-12-17 18:51:05 [Thread-31] INFO  o.s.boot.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2025-12-17 18:51:05 [tomcat-shutdown] INFO  o.s.boot.tomcat.GracefulShutdown - Graceful shutdown complete
+2025-12-17 18:51:05 [restartedMain] INFO  c.l.p.g.GatewayServiceApplication - Starting GatewayServiceApplication using Java 21.0.9 with PID 28808 (C:\Users\LENOVO\OneDrive\otros\Escritorio\gateway-service-new\gateway-service\target\classes started by LENOVO in C:\Users\LENOVO\OneDrive\otros\Escritorio\gateway-service-new\gateway-service)
+2025-12-17 18:51:05 [restartedMain] DEBUG c.l.p.g.GatewayServiceApplication - Running with Spring Boot v4.0.0, Spring v7.0.1
+2025-12-17 18:51:05 [restartedMain] INFO  c.l.p.g.GatewayServiceApplication - No active profile set, falling back to 1 default profile: "default"
+2025-12-17 18:51:05 [restartedMain] INFO  o.s.cloud.context.scope.GenericScope - BeanFactory id=0ee4929a-4f5d-35d9-a3a4-3891e94bb112
+2025-12-17 18:51:05 [restartedMain] INFO  o.s.boot.tomcat.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2025-12-17 18:51:05 [restartedMain] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-12-17 18:51:05 [restartedMain] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/11.0.14]
+2025-12-17 18:51:05 [restartedMain] INFO  o.s.b.w.c.s.WebApplicationContextInitializer - Root WebApplicationContext: initialization completed in 233 ms
+2025-12-17 18:51:05 [restartedMain] INFO  o.s.b.a.e.web.EndpointLinksResolver - Exposing 3 endpoints beneath base path '/actuator'
+2025-12-17 18:51:05 [restartedMain] INFO  o.s.boot.tomcat.TomcatWebServer - Tomcat started on port 8080 (http) with context path '/'
+2025-12-17 18:51:05 [restartedMain] INFO  c.l.p.g.GatewayServiceApplication - Started GatewayServiceApplication in 0.476 seconds (process running for 391.946)
+2025-12-17 18:51:05 [restartedMain] INFO  o.s.b.d.a.ConditionEvaluationDeltaLoggingListener - Condition evaluation unchanged
+2025-12-17 18:53:56 [File Watcher] INFO  o.s.b.d.a.LocalDevToolsAutoConfiguration$RestartingClassPathChangeChangedEventListener - Restarting due to 2 class path changes (0 additions, 0 deletions, 2 modifications)
+2025-12-17 18:53:56 [Thread-37] INFO  o.s.boot.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2025-12-17 18:53:56 [tomcat-shutdown] INFO  o.s.boot.tomcat.GracefulShutdown - Graceful shutdown complete
+2025-12-17 18:53:56 [restartedMain] INFO  c.l.p.g.GatewayServiceApplication - Starting GatewayServiceApplication using Java 21.0.9 with PID 28808 (C:\Users\LENOVO\OneDrive\otros\Escritorio\gateway-service-new\gateway-service\target\classes started by LENOVO in C:\Users\LENOVO\OneDrive\otros\Escritorio\gateway-service-new\gateway-service)
+2025-12-17 18:53:56 [restartedMain] DEBUG c.l.p.g.GatewayServiceApplication - Running with Spring Boot v4.0.0, Spring v7.0.1
+2025-12-17 18:53:56 [restartedMain] INFO  c.l.p.g.GatewayServiceApplication - No active profile set, falling back to 1 default profile: "default"
+2025-12-17 18:53:57 [restartedMain] INFO  o.s.cloud.context.scope.GenericScope - BeanFactory id=0ee4929a-4f5d-35d9-a3a4-3891e94bb112
+2025-12-17 18:53:57 [restartedMain] INFO  o.s.boot.tomcat.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2025-12-17 18:53:57 [restartedMain] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2025-12-17 18:53:57 [restartedMain] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/11.0.14]
+2025-12-17 18:53:57 [restartedMain] INFO  o.s.b.w.c.s.WebApplicationContextInitializer - Root WebApplicationContext: initialization completed in 257 ms
+2025-12-17 18:53:57 [restartedMain] INFO  o.s.b.a.e.web.EndpointLinksResolver - Exposing 3 endpoints beneath base path '/actuator'
+2025-12-17 18:53:57 [restartedMain] INFO  o.s.boot.tomcat.TomcatWebServer - Tomcat started on port 8080 (http) with context path '/'
+2025-12-17 18:53:57 [restartedMain] INFO  c.l.p.g.GatewayServiceApplication - Started GatewayServiceApplication in 0.562 seconds (process running for 563.724)
+2025-12-17 18:53:57 [restartedMain] INFO  o.s.b.d.a.ConditionEvaluationDeltaLoggingListener - Condition evaluation unchanged
+2025-12-17 18:55:30 [SpringApplicationShutdownHook] INFO  o.s.boot.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2025-12-17 18:55:30 [tomcat-shutdown] INFO  o.s.boot.tomcat.GracefulShutdown - Graceful shutdown complete
