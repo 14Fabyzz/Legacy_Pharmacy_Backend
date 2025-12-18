@@ -3,26 +3,21 @@ package com.legacy.pharmacy.gateway.config;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;  // ← AÑADIR IMPORT
 import java.util.Date;
 import java.util.function.Function;
 
-/**
- * Utilidad para validación de tokens JWT
- * <p>
- * Esta clase se encarga de:
- * - Validar tokens JWT recibidos del microservicio de usuarios
- * - Extraer información del usuario (username, roles)
- * - Verificar expiración
- * <p>
- * IMPORTANTE: La clave secreta debe ser la MISMA que usa el microservicio de usuarios
- */
 @Component
 public class JwtUtil {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtUtil.class);
 
     @Value("${jwt.secret}")
     private String secret;
@@ -30,17 +25,12 @@ public class JwtUtil {
     @Value("${jwt.expiration}")
     private Long expiration;
 
-    /**
-     * Obtiene la clave secreta para firmar/validar tokens
-     */
+    // ⭐ CAMBIO CRÍTICO: Decodificar Base64 igual que MS-Usuarios
     private SecretKey getSigningKey() {
-        byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+        byte[] keyBytes = Base64.getDecoder().decode(secret);  // ← DECODIFICAR BASE64
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    /**
-     * Extrae todos los claims del token
-     */
     public Claims getAllClaimsFromToken(String token) {
         return Jwts.parser()
                 .verifyWith(getSigningKey())
@@ -49,68 +39,63 @@ public class JwtUtil {
                 .getPayload();
     }
 
-    /**
-     * Extrae un claim específico del token
-     */
     public <T> T getClaimFromToken(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = getAllClaimsFromToken(token);
         return claimsResolver.apply(claims);
     }
 
-    /**
-     * Extrae el username del token
-     */
     public String getUsernameFromToken(String token) {
         return getClaimFromToken(token, Claims::getSubject);
     }
 
-    /**
-     * Extrae la fecha de expiración del token
-     */
     public Date getExpirationDateFromToken(String token) {
         return getClaimFromToken(token, Claims::getExpiration);
     }
 
-    /**
-     * Verifica si el token ha expirado
-     */
     private Boolean isTokenExpired(String token) {
         final Date expiration = getExpirationDateFromToken(token);
         return expiration.before(new Date());
     }
 
-    /**
-     * Valida el token JWT
-     *
-     * @param token Token JWT a validar
-     * @return true si el token es válido, false en caso contrario
-     */
     public Boolean validateToken(String token) {
         try {
-            return !isTokenExpired(token);
+            boolean isValid = !isTokenExpired(token);
+
+            if (isValid) {
+                log.debug("Token válido para usuario: {}", getUsernameFromToken(token));
+            } else {
+                log.warn("Token expirado");
+            }
+
+            return isValid;
         } catch (Exception e) {
+            log.error("Error validando token: {}", e.getMessage());
             return false;
         }
     }
 
-    /**
-     * Extrae el rol del usuario del token
-     */
     public String getRoleFromToken(String token) {
         Claims claims = getAllClaimsFromToken(token);
-        return claims.get("rol", String.class);  // ← Busca "rol"
+        String role = claims.get("rol", String.class);
+        if (role == null) {
+            role = claims.get("role", String.class);
+        }
+        log.debug("Rol extraído del token: {}", role);
+        return role;
     }
 
-    /**
-     * Extrae el ID del usuario del token
-     */
-    // Cambia userId por usuarioId para que coincida con tu JSON
     public Long getUserIdFromToken(String token) {
         Claims claims = getAllClaimsFromToken(token);
-        Object userId = claims.get("userId"); // El token dice "userId"
-        return userId != null ? Long.valueOf(userId.toString()) : null;
+        Object userId = claims.get("userId");
+        if (userId == null) {
+            userId = claims.get("usuarioId");
+        }
+        if (userId != null) {
+            Long id = Long.valueOf(userId.toString());
+            log.debug("Usuario ID extraído del token: {}", id);
+            return id;
+        }
+        log.warn("No se encontró userId ni usuarioId en el token");
+        return null;
     }
-
-
-
 }
