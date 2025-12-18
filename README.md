@@ -4,7 +4,8 @@ Gateway centralizado para la arquitectura de microservicios de Legacy Pharmacy.
 
 ## 📋 Descripción
 
-Este API Gateway actúa como punto de entrada único para todos los microservicios del sistema Legacy Pharmacy, proporcionando:
+Este API Gateway actúa como punto de entrada único para todos los microservicios del sistema Legacy Pharmacy,
+proporcionando:
 
 - ✅ **Enrutamiento inteligente** hacia microservicios
 - 🔐 **Autenticación JWT centralizada**
@@ -43,12 +44,12 @@ Este API Gateway actúa como punto de entrada único para todos los microservici
 
 ## 🎯 Microservicios Conectados
 
-| Microservicio | Puerto | Base de Datos | Rutas en Gateway |
-|--------------|--------|---------------|------------------|
-| **Usuarios** | 8082 | MySQL | `/api/usuarios/**`, `/api/auth/**` |
-| **Inventario** | 8081 | MySQL | `/api/inventario/**` |
-| **Ventas** | 8083 | PostgreSQL | `/api/ventas/**`, `/api/facturas/**` |
-| **Reportes** | 8084 | - | `/api/reportes/**` |
+| Microservicio  | Puerto | Base de Datos | Rutas en Gateway                     |
+|----------------|--------|---------------|--------------------------------------|
+| **Usuarios**   | 8082   | MySQL         | `/api/usuarios/**`, `/api/auth/**`   |
+| **Inventario** | 8081   | MySQL         | `/api/inventario/**`                 |
+| **Ventas**     | 8083   | PostgreSQL    | `/api/ventas/**`, `/api/facturas/**` |
+| **Reportes**   | 8084   | -             | `/api/reportes/**`                   |
 
 ## 🚦 Rutas Disponibles
 
@@ -62,6 +63,7 @@ POST   /api/auth/registro    → Registro de nuevo usuario
 ### 🔐 Rutas Protegidas (Requieren JWT)
 
 #### Usuarios
+
 ```
 GET    /api/usuarios              → Listar usuarios
 GET    /api/usuarios/{id}         → Obtener usuario por ID
@@ -70,6 +72,7 @@ DELETE /api/usuarios/{id}         → Eliminar usuario
 ```
 
 #### Inventario
+
 ```
 GET    /api/inventario/productos           → Listar productos
 POST   /api/inventario/productos           → Crear producto
@@ -85,6 +88,7 @@ POST   /api/inventario/entrada             → Entrada de mercancía
 ```
 
 #### Ventas
+
 ```
 GET    /api/ventas                → Listar ventas
 POST   /api/ventas                → Crear venta
@@ -93,6 +97,7 @@ GET    /api/facturas/{id}         → Obtener factura
 ```
 
 #### Reportes
+
 ```
 GET    /api/reportes/ventas/{periodo}      → Reporte de ventas
 GET    /api/reportes/inventario            → Reporte de inventario
@@ -110,6 +115,7 @@ GET    /api/reportes/financieros           → Reporte financiero
 ### Pasos
 
 1. **Clonar el repositorio**
+
 ```bash
 git clone https://github.com/14Fabyzz/Legacy_Pharmacy_Backend.git
 cd gateway-service
@@ -126,11 +132,13 @@ export JWT_SECRET="tu-clave-secreta-muy-segura-minimo-256-bits"
 ⚠️ **IMPORTANTE**: El JWT_SECRET debe ser el **mismo** en todos los microservicios.
 
 3. **Compilar**
+
 ```bash
 mvn clean install
 ```
 
 4. **Ejecutar**
+
 ```bash
 mvn spring-boot:run
 ```
@@ -162,6 +170,7 @@ El Gateway estará disponible en: `http://localhost:8080`
 ### Flujo de Autenticación
 
 1. **Login** (Ruta pública)
+
 ```bash
 curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
@@ -172,6 +181,7 @@ curl -X POST http://localhost:8080/api/auth/login \
 ```
 
 Respuesta:
+
 ```json
 {
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -181,6 +191,7 @@ Respuesta:
 ```
 
 2. **Usar el token** en peticiones protegidas
+
 ```bash
 curl -X GET http://localhost:8080/api/inventario/productos \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
@@ -225,6 +236,7 @@ resilience4j:
 ## 🌐 CORS
 
 Configurado para permitir peticiones desde:
+
 - `http://localhost:4200` (Angular)
 - `http://localhost:3000` (React)
 
@@ -233,6 +245,7 @@ Modificar en `application.yml` según necesidad.
 ## 📝 Logging
 
 Todos los requests se registran con:
+
 - Timestamp
 - Método HTTP
 - Ruta
@@ -243,6 +256,7 @@ Todos los requests se registran con:
 Logs se guardan en: `logs/gateway.log`
 
 Ejemplo:
+
 ```
 ╔═══════════════════════════════════════════════════════
 ║ REQUEST  → GET /api/inventario/productos
@@ -262,11 +276,13 @@ Ejemplo:
 Para habilitar rate limiting con Redis:
 
 1. **Instalar Redis**
+
 ```bash
 docker run -d -p 6379:6379 redis:alpine
 ```
 
 2. **Descomentar en application.yml**
+
 ```yaml
 spring:
   data:
@@ -279,14 +295,14 @@ spring:
 
 ## 🔧 Variables de Entorno
 
-| Variable | Descripción | Valor por Defecto |
-|----------|-------------|-------------------|
-| `SERVER_PORT` | Puerto del Gateway | 8080 |
-| `JWT_SECRET` | Clave secreta JWT | (ver application.yml) |
-| `USUARIOS_URL` | URL microservicio usuarios | http://localhost:8082 |
+| Variable         | Descripción                  | Valor por Defecto     |
+|------------------|------------------------------|-----------------------|
+| `SERVER_PORT`    | Puerto del Gateway           | 8080                  |
+| `JWT_SECRET`     | Clave secreta JWT            | (ver application.yml) |
+| `USUARIOS_URL`   | URL microservicio usuarios   | http://localhost:8082 |
 | `INVENTARIO_URL` | URL microservicio inventario | http://localhost:8081 |
-| `VENTAS_URL` | URL microservicio ventas | http://localhost:8083 |
-| `REPORTES_URL` | URL microservicio reportes | http://localhost:8084 |
+| `VENTAS_URL`     | URL microservicio ventas     | http://localhost:8083 |
+| `REPORTES_URL`   | URL microservicio reportes   | http://localhost:8084 |
 
 ## 📦 Estructura del Proyecto
 
@@ -314,18 +330,22 @@ gateway-service/
 ## 🐛 Troubleshooting
 
 ### Error: "No se encontró el header de autorización"
+
 - Asegúrate de enviar el header `Authorization: Bearer <token>`
 
 ### Error: "Token expirado o inválido"
+
 - Verifica que el JWT_SECRET sea el mismo en Gateway y microservicio de usuarios
 - El token expira en 24 horas por defecto
 
 ### Error: "Service Unavailable"
+
 - Verifica que los microservicios estén corriendo
 - Revisa los puertos configurados
 - Consulta los logs: `logs/gateway.log`
 
 ### Microservicio no responde
+
 - Verifica conectividad: `curl http://localhost:8082/actuator/health`
 - Revisa logs del microservicio específico
 - Verifica que las rutas en `application.yml` sean correctas

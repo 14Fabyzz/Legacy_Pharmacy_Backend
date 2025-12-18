@@ -40,6 +40,7 @@ Crear una colección en Postman y definir estas variables:
 **Endpoint**: `POST /api/auth/login`
 
 **cURL**:
+
 ```bash
 curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
@@ -50,6 +51,7 @@ curl -X POST http://localhost:8080/api/auth/login \
 ```
 
 **Respuesta Esperada** (200 OK):
+
 ```json
 {
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsInVzZXJJZCI6MSwicm9sIjoiQURNSU4iLCJpYXQiOjE3MDI...",
@@ -60,11 +62,13 @@ curl -X POST http://localhost:8080/api/auth/login \
 ```
 
 **Postman**:
+
 1. Crear request POST
 2. URL: `{{gateway_url}}/api/auth/login`
 3. Body → raw → JSON
 4. Copiar el JSON del request
 5. En Tests, agregar:
+
 ```javascript
 pm.test("Login exitoso", function () {
     pm.response.to.have.status(200);
@@ -76,6 +80,7 @@ pm.test("Login exitoso", function () {
 ### 2. Login Fallido - Credenciales Incorrectas
 
 **cURL**:
+
 ```bash
 curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
@@ -86,6 +91,7 @@ curl -X POST http://localhost:8080/api/auth/login \
 ```
 
 **Respuesta Esperada** (401 Unauthorized):
+
 ```json
 {
   "error": "Credenciales inválidas"
@@ -101,6 +107,7 @@ curl -X POST http://localhost:8080/api/auth/login \
 **Endpoint**: `GET /api/inventario/productos`
 
 **cURL**:
+
 ```bash
 TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 
@@ -109,6 +116,7 @@ curl -X GET http://localhost:8080/api/inventario/productos \
 ```
 
 **Respuesta Esperada** (200 OK):
+
 ```json
 [
   {
@@ -122,6 +130,7 @@ curl -X GET http://localhost:8080/api/inventario/productos \
 ```
 
 **Postman**:
+
 1. GET → `{{gateway_url}}/api/inventario/productos`
 2. Authorization → Type: Bearer Token
 3. Token: `{{token}}`
@@ -131,6 +140,7 @@ curl -X GET http://localhost:8080/api/inventario/productos \
 **Endpoint**: `POST /api/inventario/productos`
 
 **cURL**:
+
 ```bash
 curl -X POST http://localhost:8080/api/inventario/productos \
   -H "Authorization: Bearer $TOKEN" \
@@ -152,6 +162,7 @@ curl -X POST http://localhost:8080/api/inventario/productos \
 **Endpoint**: `POST /api/inventario/entrada`
 
 **cURL**:
+
 ```bash
 curl -X POST http://localhost:8080/api/inventario/entrada \
   -H "Authorization: Bearer $TOKEN" \
@@ -176,6 +187,7 @@ curl -X POST http://localhost:8080/api/inventario/entrada \
 **Endpoint**: `POST /api/ventas`
 
 **cURL**:
+
 ```bash
 curl -X POST http://localhost:8080/api/ventas \
   -H "Authorization: Bearer $TOKEN" \
@@ -201,6 +213,7 @@ curl -X POST http://localhost:8080/api/ventas \
 ```
 
 **Respuesta Esperada**:
+
 ```json
 {
   "ventaId": 123,
@@ -214,6 +227,7 @@ curl -X POST http://localhost:8080/api/ventas \
 ### 7. Consultar Venta por ID
 
 **cURL**:
+
 ```bash
 curl -X GET http://localhost:8080/api/ventas/123 \
   -H "Authorization: Bearer $TOKEN"
@@ -228,6 +242,7 @@ curl -X GET http://localhost:8080/api/ventas/123 \
 **Endpoint**: `GET /api/usuarios`
 
 **cURL**:
+
 ```bash
 curl -X GET http://localhost:8080/api/usuarios \
   -H "Authorization: Bearer $TOKEN"
@@ -236,6 +251,7 @@ curl -X GET http://localhost:8080/api/usuarios \
 ### 9. Obtener Usuario por ID
 
 **cURL**:
+
 ```bash
 curl -X GET http://localhost:8080/api/usuarios/1 \
   -H "Authorization: Bearer $TOKEN"
@@ -244,6 +260,7 @@ curl -X GET http://localhost:8080/api/usuarios/1 \
 ### 10. Actualizar Usuario
 
 **cURL**:
+
 ```bash
 curl -X PUT http://localhost:8080/api/usuarios/5 \
   -H "Authorization: Bearer $TOKEN" \
@@ -262,11 +279,13 @@ curl -X PUT http://localhost:8080/api/usuarios/5 \
 ### 11. Acceso sin Token (Debe Fallar)
 
 **cURL**:
+
 ```bash
 curl -X GET http://localhost:8080/api/inventario/productos
 ```
 
 **Respuesta Esperada** (401 Unauthorized):
+
 ```json
 {
   "error": "Unauthorized",
@@ -278,12 +297,14 @@ curl -X GET http://localhost:8080/api/inventario/productos
 ### 12. Token Inválido (Debe Fallar)
 
 **cURL**:
+
 ```bash
 curl -X GET http://localhost:8080/api/inventario/productos \
   -H "Authorization: Bearer token-invalido-12345"
 ```
 
 **Respuesta Esperada** (401 Unauthorized):
+
 ```json
 {
   "error": "Unauthorized",
@@ -295,12 +316,14 @@ curl -X GET http://localhost:8080/api/inventario/productos \
 ### 13. Token sin "Bearer" (Debe Fallar)
 
 **cURL**:
+
 ```bash
 curl -X GET http://localhost:8080/api/inventario/productos \
   -H "Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 ```
 
 **Respuesta Esperada** (401 Unauthorized):
+
 ```json
 {
   "error": "Unauthorized",
@@ -316,16 +339,19 @@ curl -X GET http://localhost:8080/api/inventario/productos \
 ### 14. Simular Microservicio Caído
 
 **Pasos**:
+
 1. Detener el microservicio de inventario (puerto 8081)
 2. Intentar acceder a productos:
 
 **cURL**:
+
 ```bash
 curl -X GET http://localhost:8080/api/inventario/productos \
   -H "Authorization: Bearer $TOKEN"
 ```
 
 **Respuesta Esperada** (503 Service Unavailable):
+
 ```json
 {
   "timestamp": "2024-12-16T10:30:00",
@@ -343,11 +369,13 @@ curl -X GET http://localhost:8080/api/inventario/productos \
 ### 15. Health Check
 
 **cURL**:
+
 ```bash
 curl -X GET http://localhost:8080/actuator/health
 ```
 
 **Respuesta Esperada**:
+
 ```json
 {
   "status": "UP"
@@ -357,6 +385,7 @@ curl -X GET http://localhost:8080/actuator/health
 ### 16. Ver Rutas Configuradas
 
 **cURL**:
+
 ```bash
 curl -X GET http://localhost:8080/actuator/gateway/routes
 ```
@@ -473,14 +502,14 @@ curl -X GET http://localhost:8080/actuator/gateway/routes
 
 ## 🎯 Resultados Esperados
 
-| Prueba | Código Esperado | Tiempo Respuesta |
-|--------|----------------|------------------|
-| Login | 200 OK | < 500ms |
-| GET productos | 200 OK | < 300ms |
-| POST producto | 201 Created | < 500ms |
-| Sin token | 401 Unauthorized | < 100ms |
-| Token inválido | 401 Unauthorized | < 100ms |
-| Servicio caído | 503 Unavailable | < 100ms |
+| Prueba         | Código Esperado  | Tiempo Respuesta |
+|----------------|------------------|------------------|
+| Login          | 200 OK           | < 500ms          |
+| GET productos  | 200 OK           | < 300ms          |
+| POST producto  | 201 Created      | < 500ms          |
+| Sin token      | 401 Unauthorized | < 100ms          |
+| Token inválido | 401 Unauthorized | < 100ms          |
+| Servicio caído | 503 Unavailable  | < 100ms          |
 
 ---
 

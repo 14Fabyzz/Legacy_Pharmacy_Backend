@@ -14,14 +14,14 @@ import java.time.LocalDateTime;
 
 /**
  * Filtro global de logging
- * 
+ * <p>
  * Registra todas las peticiones que pasan por el gateway:
  * - Timestamp
  * - Método HTTP
  * - Ruta solicitada
  * - IP del cliente
  * - User-Agent
- * 
+ * <p>
  * Útil para:
  * - Auditoría
  * - Debugging
@@ -35,13 +35,13 @@ public class LoggingFilter implements GlobalFilter, Ordered {
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         ServerHttpRequest request = exchange.getRequest();
-        
+
         // Información de la petición
         String method = request.getMethod().toString();
         String path = request.getPath().toString();
         String clientIp = getClientIp(request);
         String userAgent = request.getHeaders().getFirst("User-Agent");
-        
+
         // Log de entrada
         logger.info("╔═══════════════════════════════════════════════════════");
         logger.info("║ REQUEST  → {} {}", method, path);
@@ -54,9 +54,9 @@ public class LoggingFilter implements GlobalFilter, Ordered {
 
         return chain.filter(exchange).then(Mono.fromRunnable(() -> {
             long duration = System.currentTimeMillis() - startTime;
-            int statusCode = exchange.getResponse().getStatusCode() != null 
-                ? exchange.getResponse().getStatusCode().value() 
-                : 0;
+            int statusCode = exchange.getResponse().getStatusCode() != null
+                    ? exchange.getResponse().getStatusCode().value()
+                    : 0;
 
             // Log de salida
             logger.info("╔═══════════════════════════════════════════════════════");
@@ -75,15 +75,15 @@ public class LoggingFilter implements GlobalFilter, Ordered {
         if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
             return xForwardedFor.split(",")[0].trim();
         }
-        
+
         String xRealIp = request.getHeaders().getFirst("X-Real-IP");
         if (xRealIp != null && !xRealIp.isEmpty()) {
             return xRealIp;
         }
-        
-        return request.getRemoteAddress() != null 
-            ? request.getRemoteAddress().getAddress().getHostAddress() 
-            : "Unknown";
+
+        return request.getRemoteAddress() != null
+                ? request.getRemoteAddress().getAddress().getHostAddress()
+                : "Unknown";
     }
 
     @Override

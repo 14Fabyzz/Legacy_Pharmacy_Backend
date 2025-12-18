@@ -18,11 +18,13 @@ cd Legacy_Pharmacy_Backend
 **IMPORTANTE**: El `JWT_SECRET` debe ser EL MISMO en todos los microservicios.
 
 **Opción A: Variable de entorno (RECOMENDADO)**
+
 ```bash
 export JWT_SECRET="legacypharmacy-super-secret-key-2024-minimum-256-bits-for-security"
 ```
 
 **Opción B: Editar application.yml**
+
 ```yaml
 # src/main/resources/application.yml
 jwt:
@@ -68,10 +70,10 @@ Antes de ejecutar el Gateway, asegúrate de tener:
   ```
 
 - [x] **Microservicios corriendo**:
-  - [ ] MS-Usuarios en puerto 8082
-  - [ ] MS-Inventario en puerto 8081
-  - [ ] MS-Ventas en puerto 8083
-  - [ ] MS-Reportes en puerto 8084 (opcional)
+    - [ ] MS-Usuarios en puerto 8082
+    - [ ] MS-Inventario en puerto 8081
+    - [ ] MS-Ventas en puerto 8083
+    - [ ] MS-Reportes en puerto 8084 (opcional)
 
 ---
 
@@ -116,6 +118,7 @@ curl -X POST http://localhost:8080/api/auth/login \
 ```
 
 **Respuesta esperada:**
+
 ```json
 {
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -135,6 +138,7 @@ curl -X GET http://localhost:8080/api/inventario/productos \
 ```
 
 **Respuesta esperada:**
+
 ```json
 [
   {
@@ -212,16 +216,16 @@ server:
 
 ## 📊 Endpoints Disponibles
 
-| Ruta | Microservicio | Autenticación |
-|------|--------------|---------------|
-| `POST /api/auth/login` | Usuarios | ❌ No |
-| `POST /api/auth/registro` | Usuarios | ❌ No |
-| `GET /api/usuarios/**` | Usuarios | ✅ Sí |
-| `GET /api/inventario/**` | Inventario | ✅ Sí |
-| `GET /api/ventas/**` | Ventas | ✅ Sí |
-| `GET /api/reportes/**` | Reportes | ✅ Sí |
-| `GET /actuator/health` | Gateway | ❌ No |
-| `GET /actuator/gateway/routes` | Gateway | ❌ No |
+| Ruta                           | Microservicio | Autenticación |
+|--------------------------------|---------------|---------------|
+| `POST /api/auth/login`         | Usuarios      | ❌ No          |
+| `POST /api/auth/registro`      | Usuarios      | ❌ No          |
+| `GET /api/usuarios/**`         | Usuarios      | ✅ Sí          |
+| `GET /api/inventario/**`       | Inventario    | ✅ Sí          |
+| `GET /api/ventas/**`           | Ventas        | ✅ Sí          |
+| `GET /api/reportes/**`         | Reportes      | ✅ Sí          |
+| `GET /actuator/health`         | Gateway       | ❌ No          |
+| `GET /actuator/gateway/routes` | Gateway       | ❌ No          |
 
 ---
 
@@ -260,6 +264,7 @@ Si encuentras problemas:
 **¡Todo listo! 🎉 El Gateway está funcionando.**
 
 Para más detalles, consulta:
+
 - **README.md** - Documentación completa
 - **TESTING.md** - Guía de pruebas con cURL y Postman
 - **ARCHITECTURE.md** - Diagramas de arquitectura

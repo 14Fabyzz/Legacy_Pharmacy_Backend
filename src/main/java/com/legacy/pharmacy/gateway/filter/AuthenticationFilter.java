@@ -13,13 +13,13 @@ import reactor.core.publisher.Mono;
 
 /**
  * Filtro de autenticación para validar tokens JWT
- * 
+ * <p>
  * Este filtro:
  * 1. Extrae el token del header Authorization
  * 2. Valida el token usando JwtUtil
  * 3. Si es válido, añade headers con información del usuario
  * 4. Si no es válido, retorna 401 Unauthorized
- * 
+ * <p>
  * Se aplica a todas las rutas que tengan el filtro "AuthenticationFilter"
  */
 @Component
@@ -44,7 +44,7 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
 
             // Extraer el token
             String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-            
+
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
                 return this.onError(exchange, "Token inválido - debe empezar con 'Bearer '", HttpStatus.UNAUTHORIZED);
             }
@@ -83,16 +83,16 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
     private Mono<Void> onError(ServerWebExchange exchange, String message, HttpStatus httpStatus) {
         exchange.getResponse().setStatusCode(httpStatus);
         exchange.getResponse().getHeaders().add("Content-Type", "application/json");
-        
+
         String errorResponse = String.format(
-            "{\"error\": \"%s\", \"message\": \"%s\", \"timestamp\": \"%s\"}",
-            httpStatus.getReasonPhrase(),
-            message,
-            java.time.LocalDateTime.now()
+                "{\"error\": \"%s\", \"message\": \"%s\", \"timestamp\": \"%s\"}",
+                httpStatus.getReasonPhrase(),
+                message,
+                java.time.LocalDateTime.now()
         );
-        
+
         return exchange.getResponse().writeWith(
-            Mono.just(exchange.getResponse().bufferFactory().wrap(errorResponse.getBytes()))
+                Mono.just(exchange.getResponse().bufferFactory().wrap(errorResponse.getBytes()))
         );
     }
 

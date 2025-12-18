@@ -11,7 +11,7 @@ import java.util.Map;
 
 /**
  * Controlador de fallback para circuit breaker
- * 
+ * <p>
  * Cuando un microservicio no está disponible o falla repetidamente,
  * el circuit breaker redirige aquí para dar una respuesta amigable
  */
@@ -26,7 +26,7 @@ public class FallbackController {
         response.put("error", "Service Unavailable");
         response.put("message", "El servicio solicitado no está disponible temporalmente. Por favor, intente más tarde.");
         response.put("suggestion", "Si el problema persiste, contacte al administrador del sistema.");
-        
+
         return ResponseEntity
                 .status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(response);

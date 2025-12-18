@@ -13,12 +13,12 @@ import java.util.function.Function;
 
 /**
  * Utilidad para validación de tokens JWT
- * 
+ * <p>
  * Esta clase se encarga de:
  * - Validar tokens JWT recibidos del microservicio de usuarios
  * - Extraer información del usuario (username, roles)
  * - Verificar expiración
- * 
+ * <p>
  * IMPORTANTE: La clave secreta debe ser la MISMA que usa el microservicio de usuarios
  */
 @Component
@@ -81,7 +81,7 @@ public class JwtUtil {
 
     /**
      * Valida el token JWT
-     * 
+     *
      * @param token Token JWT a validar
      * @return true si el token es válido, false en caso contrario
      */
@@ -98,14 +98,19 @@ public class JwtUtil {
      */
     public String getRoleFromToken(String token) {
         Claims claims = getAllClaimsFromToken(token);
-        return claims.get("rol", String.class);
+        return claims.get("rol", String.class);  // ← Busca "rol"
     }
 
     /**
      * Extrae el ID del usuario del token
      */
+    // Cambia userId por usuarioId para que coincida con tu JSON
     public Long getUserIdFromToken(String token) {
         Claims claims = getAllClaimsFromToken(token);
-        return claims.get("userId", Long.class);
+        Object userId = claims.get("userId"); // El token dice "userId"
+        return userId != null ? Long.valueOf(userId.toString()) : null;
     }
+
+
+
 }

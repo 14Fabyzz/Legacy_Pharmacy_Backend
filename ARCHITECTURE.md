@@ -267,13 +267,13 @@ graph TD
 
 ## Tecnologías por Capa
 
-| Capa | Tecnología | Versión |
-|------|-----------|---------|
-| **Frontend** | Angular | 17+ |
-| **Gateway** | Spring Cloud Gateway | 2023.0.0 |
-| **Autenticación** | JWT (jjwt) | 0.12.3 |
-| **Circuit Breaker** | Resilience4j | Incluido en Spring Cloud |
-| **MS-Usuarios** | Spring Boot + MySQL | 3.2.0 |
-| **MS-Inventario** | Spring Boot + MySQL | 3.2.0 |
-| **MS-Ventas** | Spring Boot + PostgreSQL | 3.2.0 |
-| **MS-Reportes** | Spring Boot | 3.2.0 |
+| Capa                | Tecnología               | Versión                  |
+|---------------------|--------------------------|--------------------------|
+| **Frontend**        | Angular                  | 17+                      |
+| **Gateway**         | Spring Cloud Gateway     | 2023.0.0                 |
+| **Autenticación**   | JWT (jjwt)               | 0.12.3                   |
+| **Circuit Breaker** | Resilience4j             | Incluido en Spring Cloud |
+| **MS-Usuarios**     | Spring Boot + MySQL      | 3.2.0                    |
+| **MS-Inventario**   | Spring Boot + MySQL      | 3.2.0                    |
+| **MS-Ventas**       | Spring Boot + PostgreSQL | 3.2.0                    |
+| **MS-Reportes**     | Spring Boot              | 3.2.0                    |

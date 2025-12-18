@@ -10,7 +10,7 @@ import java.util.Arrays;
 
 /**
  * Configuración CORS para el Gateway
- * 
+ * <p>
  * Permite que aplicaciones frontend (Angular, React) puedan
  * consumir el API desde diferentes orígenes
  */
@@ -20,25 +20,25 @@ public class CorsConfig {
     @Bean
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration corsConfig = new CorsConfiguration();
-        
+
         // Orígenes permitidos (ajustar según ambiente)
         corsConfig.setAllowedOrigins(Arrays.asList(
-            "http://localhost:4200",  // Angular dev
-            "http://localhost:3000",  // React dev
-            "http://localhost:8080"   // Gateway mismo
+                "http://localhost:4200",  // Angular dev
+                "http://localhost:3000",  // React dev
+                "http://localhost:8080"   // Gateway mismo
         ));
-        
+
         // Métodos HTTP permitidos
         corsConfig.setAllowedMethods(Arrays.asList(
-            "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"
+                "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"
         ));
-        
+
         // Headers permitidos
         corsConfig.setAllowedHeaders(Arrays.asList("*"));
-        
+
         // Permitir credenciales (cookies, authorization headers)
         corsConfig.setAllowCredentials(true);
-        
+
         // Tiempo de caché de preflight
         corsConfig.setMaxAge(3600L);
 

@@ -4,24 +4,80 @@ server:
 spring:
   application:
     name: api-gateway
+
   cloud:
     gateway:
       globalcors:
         cors-configurations:
           '[/**]':
-            allowedOrigins: ["http://localhost:4200", "http://localhost:3000"]
-            allowedMethods: [GET, POST, PUT, DELETE, PATCH, OPTIONS]
+            allowedOrigins:
+              - "http://localhost:4200"
+              - "http://localhost:3000"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - PATCH
+              - OPTIONS
             allowedHeaders: "*"
             allowCredentials: true
             maxAge: 3600
+
       routes:
+        # =================================================================
+        # RUTAS PÚBLICAS (SIN AUTENTICACIÓN)
+        # =================================================================
+        - id: usuarios-login
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/usuarios/login
+            - Method=POST
+          filters:
+            - RewritePath=/api/usuarios/login, /api/login
+
+        - id: usuarios-registro
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/usuarios/registro
+            - Method=POST
+          filters:
+            - RewritePath=/api/usuarios/registro, /api/registro
+
+        # =================================================================
+        # RUTAS PROTEGIDAS (CON AUTENTICACIÓN JWT)
+        # =================================================================
+
+        # Microservicio de Inventario
         - id: inventario-service
           uri: http://localhost:8081
           predicates:
             - Path=/api/inventario/**
           filters:
             - RewritePath=/api/inventario/(?<segment>.*), /api/v1/inventario/$\{segment}
+            - name: AuthenticationFilter
+              args: {}
 
+        # Microservicio de Usuarios (otras rutas protegidas)
+        - id: usuarios-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/usuarios/**
+          filters:
+            - RewritePath=/api/usuarios/(?<segment>.*), /api/$\{segment}
+            - name: AuthenticationFilter
+              args: {}
+
+# =============================================================================
+# JWT CONFIGURATION
+# =============================================================================
+jwt:
+  secret: TXlTZWNyZXRLZXlGb3JKV1RUb2tlbkxlZ2FjeVBoYXJtYWN5MjAyNVNwcmluZ0Jvb3Q0VmVyeVNlY3VyZUtleQ
+  expiration: 86400000
+
+# =============================================================================
+# ACTUATOR
+# =============================================================================
 management:
   endpoints:
     web:
@@ -33,7 +89,11 @@ management:
     gateway:
       enabled: true
 
+# =============================================================================
+# LOGGING
+# =============================================================================
 logging:
   level:
     root: INFO
     org.springframework.cloud.gateway: DEBUG
+    com.legacy.pharmacy.gateway: DEBUG
