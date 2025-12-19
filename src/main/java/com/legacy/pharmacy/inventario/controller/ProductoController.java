@@ -1,8 +1,10 @@
 package com.legacy.pharmacy.inventario.controller;
 
 import com.legacy.pharmacy.inventario.dto.ProductoDTO;
+import com.legacy.pharmacy.inventario.dto.StockDTO;
 import com.legacy.pharmacy.inventario.entity.Lote;
 import com.legacy.pharmacy.inventario.entity.Producto;
+import com.legacy.pharmacy.inventario.service.InventarioService;
 import com.legacy.pharmacy.inventario.service.ProductoService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +20,9 @@ public class ProductoController {
 
     @Autowired
     private ProductoService productoService;
+
+    @Autowired
+    private InventarioService inventarioService;
 
     // --- RUTAS DE PRODUCTOS ---
 
@@ -84,4 +89,69 @@ public class ProductoController {
     public ResponseEntity<Lote> verLotePorId(@PathVariable Integer loteId) {
         return ResponseEntity.ok(productoService.buscarLotePorId(loteId));
     }
+
+
+
+    /**
+     * ===================================================================
+     * NUEVOS ENDPOINTS PARA INTEGRACIÓN CON MS-VENTAS
+     * ===================================================================
+     */
+
+    /**
+     * Consultar stock disponible de un producto
+     */
+    @GetMapping("/productos/{productoId}/stock")
+    public ResponseEntity<StockDTO> consultarStock(@PathVariable Integer productoId) {
+        return ResponseEntity.ok(inventarioService.consultarStock(productoId));
+    }
+
+    /**
+     * Descontar inventario (llamado por MS-Ventas)
+     * Usa el procedimiento almacenado sp_descontar_inventario
+     */
+    @PostMapping("/productos/{productoId}/descontar")
+    public ResponseEntity<?> descontarInventario(
+            @PathVariable Integer productoId,
+            @RequestBody DescontarRequest request) {
+
+        inventarioService.descontarInventario(
+                productoId,
+                request.cantidad(),
+                request.motivo()
+        );
+
+        return ResponseEntity.ok(Map.of(
+                "mensaje", "Inventario descontado exitosamente",
+                "productoId", productoId,
+                "cantidad", request.cantidad()
+        ));
+    }
+
+    /**
+     * Devolver inventario (cuando se anula una venta)
+     * Usa el procedimiento almacenado sp_registrar_entrada
+     */
+    @PostMapping("/productos/{productoId}/devolver")
+    public ResponseEntity<?> devolverInventario(
+            @PathVariable Integer productoId,
+            @RequestBody DevolverRequest request) {
+
+        inventarioService.devolverInventario(
+                productoId,
+                request.cantidad(),
+                request.motivo()
+        );
+
+        return ResponseEntity.ok(Map.of(
+                "mensaje", "Inventario devuelto exitosamente",
+                "productoId", productoId,
+                "cantidad", request.cantidad()
+        ));
+    }
+
+    // DTOs
+    public record DescontarRequest(Integer cantidad, String motivo) {}
+    public record DevolverRequest(Integer cantidad, String motivo) {}
 }
+
