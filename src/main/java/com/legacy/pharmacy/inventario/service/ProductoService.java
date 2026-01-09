@@ -105,4 +105,10 @@ public class ProductoService {
     public Lote buscarLotePorId(Integer id) {
         return loteRepository.findById(id).orElseThrow(() -> new RuntimeException("Lote no encontrado"));
     }
+
+    public List<Lote> obtenerLotesDisponiblesParaVenta(Integer productoId) {
+        // Usamos 0 para traer cualquier lote que tenga al menos 1 unidad (Stock Real)
+        // El repositorio ya se encarga de ordenar por fecha (FEFO)
+        return loteRepository.findByProductoIdAndCantidadActualGreaterThanOrderByFechaVencimientoAsc(productoId, 0);
+    }
 }

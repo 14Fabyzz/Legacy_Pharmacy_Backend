@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/dashboard")
+@RequestMapping("/dashboard")
 public class DashboardController {
 
     @Autowired
@@ -20,8 +20,8 @@ public class DashboardController {
     @GetMapping("/cards")
     public ResponseEntity<List<ProductoCard>> obtenerTarjetas(@RequestParam(required = false) String busqueda) {
         if (busqueda != null && !busqueda.isEmpty()) {
-            // Enviamos la misma cadena de búsqueda 3 veces (para que busque en los 3 campos)
-            return ResponseEntity.ok(cardRepository.findByNombreContainingIgnoreCaseOrCodigoInternoContainingIgnoreCaseOrCodigoBarrasContainingIgnoreCase(busqueda, busqueda, busqueda));
+            // ✅ Actualizamos la llamada al nuevo método
+            return ResponseEntity.ok(cardRepository.findByNombreComercialContainingIgnoreCaseOrCodigoInternoContainingIgnoreCaseOrCodigoBarrasContainingIgnoreCase(busqueda, busqueda, busqueda));
         }
         return ResponseEntity.ok(cardRepository.findAll());
     }

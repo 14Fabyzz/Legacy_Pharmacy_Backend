@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController // Indica que esta clase responde JSON
-@RequestMapping("/api/v1/inventario") // La ruta base: localhost:8080/api/v1/inventario
+@RequestMapping("") // La ruta base: localhost:8080/api/v1/inventario
 public class InventarioController {
 
     @Autowired

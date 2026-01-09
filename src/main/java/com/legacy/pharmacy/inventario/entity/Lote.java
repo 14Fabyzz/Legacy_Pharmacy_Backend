@@ -24,8 +24,9 @@ public class Lote {
 
     // Relación: Un lote pertenece a un Producto
     // @OnDelete(action = OnDeleteAction.CASCADE) ayuda a Hibernate a entender el ON DELETE CASCADE de SQL
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY) // O puede que no tengas el fetch explícito, es LAZY por defecto
     @JoinColumn(name = "producto_id", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonIgnore // <--- AGREGA ESTA LÍNEA
     private Producto producto;
 
     @Column(name = "numero_lote", nullable = false, length = 50)

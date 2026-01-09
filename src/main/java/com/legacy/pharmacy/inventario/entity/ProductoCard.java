@@ -6,41 +6,53 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Data;
 import org.hibernate.annotations.Immutable;
-import java.math.BigDecimal;
+import java.time.LocalDate; // ⚠️ IMPORTANTE
 
+@Data
 @Entity
 @Immutable
 @Table(name = "v_stock_productos")
-@Data
 public class ProductoCard {
 
     @Id
     @Column(name = "producto_id")
-    private Integer id;
+    private Long id;
 
+    // ... tus otros campos (codigo, nombre, etc) ...
     @Column(name = "codigo_interno")
     private String codigoInterno;
 
-    // --- NUEVO CAMPO AGREGADO ---
     @Column(name = "codigo_barras")
     private String codigoBarras;
-    // ----------------------------
 
     @Column(name = "nombre_comercial")
-    private String nombre;
+    private String nombreComercial;
 
-    private String laboratorio;
-    private String categoria;
+    private String concentracion;
+    private String presentacion;
 
-    @Column(name = "principio_activo")
-    private String principioActivo;
+    @Column(name = "precio_venta_base")
+    private Double precioVentaBase;
 
     @Column(name = "stock_total")
     private Integer stockTotal;
 
-    @Column(name = "precio_venta_base")
-    private BigDecimal precio;
+    @Column(name = "stock_minimo")
+    private Integer stockMinimo;
+
+    // ✅ EL NUEVO CAMPO:
+    @Column(name = "proximo_vencimiento")
+    private LocalDate proximoVencimiento;
 
     @Column(name = "nivel_stock")
     private String nivelStock;
+
+    @Column(name = "laboratorio_nombre")
+    private String laboratorio;
+
+    @Column(name = "categoria_nombre")
+    private String categoria;
+
+    @Column(name = "principio_activo_nombre")
+    private String principioActivo;
 }

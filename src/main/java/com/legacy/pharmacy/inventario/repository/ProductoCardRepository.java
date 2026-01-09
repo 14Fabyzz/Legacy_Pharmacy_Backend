@@ -2,14 +2,13 @@ package com.legacy.pharmacy.inventario.repository;
 
 import com.legacy.pharmacy.inventario.entity.ProductoCard;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
-
 import java.util.List;
 
-@Repository
-public interface ProductoCardRepository extends JpaRepository<ProductoCard, Integer> {
+public interface ProductoCardRepository extends JpaRepository<ProductoCard, Long> {
 
-    // Método para el buscador del dashboard (Búsqueda rápida por nombre o código)
-    // SELECT * FROM v_stock_productos WHERE nombre_comercial LIKE %x% OR codigo_interno LIKE %x%
-    List<ProductoCard> findByNombreContainingIgnoreCaseOrCodigoInternoContainingIgnoreCaseOrCodigoBarrasContainingIgnoreCase(String nombre, String codigoInterno, String codigoBarras);
+    // ❌ ANTES (Daba error porque no existe el campo "nombre"):
+    // List<ProductoCard> findByNombreContainingIgnoreCaseOrCodigoInternoContainingIgnoreCaseOrCodigoBarrasContainingIgnoreCase(String nombre, String codigoInterno, String codigoBarras);
+
+    // ✅ AHORA (Correcto, usa "NombreComercial"):
+    List<ProductoCard> findByNombreComercialContainingIgnoreCaseOrCodigoInternoContainingIgnoreCaseOrCodigoBarrasContainingIgnoreCase(String nombre, String codigoInterno, String codigoBarras);
 }
