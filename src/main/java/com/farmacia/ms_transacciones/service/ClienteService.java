@@ -1,12 +1,10 @@
 package com.farmacia.ms_transacciones.service;
-
-import com.farmacia.ms_transacciones.entity.Cliente;
+import com.farmacia.ms_transacciones.model.Cliente;
 import java.util.List;
+import java.util.Optional;
 
 public interface ClienteService {
     Cliente crearCliente(Cliente cliente);
-    Cliente obtenerClientePorId(Long id);
-    List<Cliente> listarClientes();
-    // Para el modal de búsqueda
-    List<Cliente> buscarClientes(String query);
+    Cliente buscarPorIdentificacion(String identificacion);
+    List<Cliente> buscarPorNombre(String nombre);
 }

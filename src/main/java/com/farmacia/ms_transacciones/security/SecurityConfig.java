@@ -12,30 +12,24 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 public class SecurityConfig {
 
-    private final JwtTokenFilter jwtTokenFilter;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    public SecurityConfig(JwtTokenFilter jwtTokenFilter) {
-        this.jwtTokenFilter = jwtTokenFilter;
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(csrf -> csrf.disable())
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        return http
+                .csrf(csrf -> csrf.disable()) // Deshabilitar CSRF para APIs REST
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // Sin sesiones
                 .authorizeHttpRequests(auth -> auth
-                        // --- AGREGA ESTAS LÍNEAS AQUÍ ---
-                        .requestMatchers(
-                                "/v3/api-docs/**",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html"
-                        ).permitAll() // <--- ¡Dejar pasar sin token!
-                        // -------------------------------
-
+                        // Permitir Swagger o Actuator si los usas
+                        .requestMatchers("/actuator/**").permitAll()
+                        // Todo lo demás requiere autenticación
                         .anyRequest().authenticated()
                 )
-                .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .addFilterBefore(jwtTokenFilter, UsernamePasswordAuthenticationFilter.class);
-
-        return http.build();
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .build();
     }
 }
