@@ -59,25 +59,32 @@ public class TurnoCajaServiceImpl implements TurnoCajaService {
         TurnoCaja turno = obtenerTurnoAbiertoActual();
 
         // 2. Calcular Total de Ventas en el sistema (Teórico)
-        // Buscamos todas las ventas asociadas a este turno
-        // *Nota: Necesitarás agregar el método findByTurnoId en VentaRepository
         List<Venta> ventasDelTurno = ventaRepository.findByTurnoId(turno.getId());
-
         BigDecimal totalVentas = ventasDelTurno.stream()
                 .map(Venta::getTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // 3. Actualizar datos de cierre
-        turno.setFechaCierre(LocalDateTime.now());
+        // 3. Calcular diferencia
+        BigDecimal esperado = turno.getSaldoInicial().add(totalVentas);
+        BigDecimal diferencia = datos.getTotalEfectivoReal().subtract(esperado);
+
+        // 4. Actualizar datos de cierre en el objeto turno
+        turno.setDiferencia(diferencia);
         turno.setTotalVentasTeorico(totalVentas);
         turno.setTotalEfectivoReal(datos.getTotalEfectivoReal());
-
-        // Diferencia = (Saldo Inicial + Ventas) - (Lo que hay en caja)
-        // Ojo: Simplificado: Diferencia = (Efectivo Real) - (Ventas + Saldo Inicial)
-        BigDecimal esperado = turno.getSaldoInicial().add(totalVentas);
-        turno.setDiferencia(datos.getTotalEfectivoReal().subtract(esperado));
-
         turno.setObservacionesCierre(datos.getObservaciones());
+
+        // --- VALIDACIÓN DE JUSTIFICACIÓN ---
+        // Si la diferencia NO es cero (positiva o negativa)
+        if (diferencia.compareTo(BigDecimal.ZERO) != 0) {
+            // Y las observaciones están vacías o nulas
+            if (datos.getObservaciones() == null || datos.getObservaciones().trim().isEmpty()) {
+                throw new RuntimeException("ERROR AL CERRAR: Existe un descuadre de " + diferencia + ". Debe ingresar una observación justificando el faltante o sobrante.");
+            }
+        }
+        // -----------------------------------
+
+        turno.setFechaCierre(LocalDateTime.now());
         turno.setEstado("CERRADO");
 
         return turnoCajaRepository.save(turno);

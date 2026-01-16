@@ -14,7 +14,7 @@ public class InventarioClient {
     @Autowired private RestTemplate restTemplate;
 
     @Value("${microservices.inventario.url}")
-    private String inventarioUrl;
+    private String inventarioBaseUrl;
 
     private HttpHeaders getHeaders() {
         HttpHeaders headers = new HttpHeaders();
@@ -27,9 +27,11 @@ public class InventarioClient {
         return headers;
     }
 
+    // VALIDAR SI LOS ENDPOINTS DE MSPRODUCTOS SIGUE SIENDO ESTE DE AQU
+
     public ProductoInventarioDTO obtenerProducto(Integer id) {
         try {
-            String url = inventarioUrl + "/productos/" + id;
+            String url = inventarioBaseUrl + "/productos/" + id;
             HttpEntity<Void> entity = new HttpEntity<>(getHeaders());
             ResponseEntity<ProductoInventarioDTO> res = restTemplate.exchange(url, HttpMethod.GET, entity, ProductoInventarioDTO.class);
             return res.getBody();
@@ -40,7 +42,7 @@ public class InventarioClient {
 
     public void registrarSalida(Integer productoId, Integer cantidad) {
         try {
-            String url = inventarioUrl + "/salida";
+            String url = inventarioBaseUrl + "/salida";
             String jsonBody = String.format("{\"productoId\": %d, \"cantidad\": %d, \"motivo\": \"VENTA\"}", productoId, cantidad);
             HttpEntity<String> entity = new HttpEntity<>(jsonBody, getHeaders());
             ResponseEntity<Void> res = restTemplate.exchange(url, HttpMethod.POST, entity, Void.class);
@@ -50,11 +52,10 @@ public class InventarioClient {
         }
     }
 
-    // 3. Registrar Entrada (Devolución de Stock)
     public void registrarEntrada(Integer productoId, Integer cantidad) {
         try {
-            // Ajusta la URL según lo que defina tu compañero
-            String url = inventarioUrl + "/entrada";
+
+            String url = inventarioBaseUrl + "/entrada";
 
             String jsonBody = String.format("{\"productoId\": %d, \"cantidad\": %d, \"motivo\": \"DEVOLUCION\"}", productoId, cantidad);
 

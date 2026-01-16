@@ -15,11 +15,26 @@ public class Venta {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     private String numeroFactura;
-    private String vendedorId; // Del Token
     private LocalDateTime fechaVenta;
+
+    // --- DATOS DEL VENDEDOR Y SUCURSAL (Para el Voucher) ---
+    private String vendedorId;      // ID del usuario (Token)
+    private String vendedorNombre;  // Nombre (Token) -> NUEVO
+    private Integer sucursalId;     // Sucursal del turno -> NUEVO
+    // -------------------------------------------------------
+
     private BigDecimal total;
-    private String metodoPago;
+
+    private BigDecimal montoRecibido;
+    private BigDecimal cambio;
+
+    // --- DATOS DE PAGO ---
+    private String metodoPago;      // 'EFECTIVO', 'TRANSFERENCIA'
+    private String referenciaPago;  // Ej: "Bancolombia a la cuenta 987..." -> NUEVO
+    // ---------------------
+
     private String estado;
 
     @ManyToOne
