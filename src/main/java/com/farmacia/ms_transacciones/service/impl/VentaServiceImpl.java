@@ -93,8 +93,11 @@ public class VentaServiceImpl implements VentaService {
             total = total.add(sub);
 
             // C. Descontar Inventario
-            inventarioClient.registrarSalida(item.getProductoId(), item.getCantidad());
-
+            inventarioClient.registrarSalida(
+                    item.getProductoId(),
+                    item.getCantidad(),
+                    turnoActual.getSucursalId()
+            );
         }
 
         venta.setTotal(total);

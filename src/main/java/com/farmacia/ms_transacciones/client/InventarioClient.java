@@ -27,8 +27,6 @@ public class InventarioClient {
         return headers;
     }
 
-    // VALIDAR SI LOS ENDPOINTS DE MSPRODUCTOS SIGUE SIENDO ESTE DE AQU
-
     public ProductoInventarioDTO obtenerProducto(Integer id) {
         try {
             String url = inventarioBaseUrl + "/productos/" + id;
@@ -40,36 +38,39 @@ public class InventarioClient {
         }
     }
 
-    public void registrarSalida(Integer productoId, Integer cantidad) {
+    // --- MÉTODO ACTUALIZADO: Recibe sucursalId ---
+    public void registrarSalida(Integer productoId, Integer cantidad, Integer sucursalId) {
         try {
-            String url = inventarioBaseUrl + "/salida";
-            String jsonBody = String.format("{\"productoId\": %d, \"cantidad\": %d, \"motivo\": \"VENTA\"}", productoId, cantidad);
+            // NOTA: La ruta cambió a .../productos/{id}/descontar
+            String url = inventarioBaseUrl + "/productos/" + productoId + "/descontar";
+
+            // Enviamos la sucursal en el JSON
+            String jsonBody = String.format("{\"cantidad\": %d, \"motivo\": \"VENTA\", \"sucursalId\": %d}", cantidad, sucursalId);
+
             HttpEntity<String> entity = new HttpEntity<>(jsonBody, getHeaders());
             ResponseEntity<Void> res = restTemplate.exchange(url, HttpMethod.POST, entity, Void.class);
-            if (!res.getStatusCode().is2xxSuccessful()) throw new RuntimeException("Error en salida inventario");
+
+            if (!res.getStatusCode().is2xxSuccessful()) throw new RuntimeException("Error: Stock insuficiente");
         } catch (Exception e) {
             throw new RuntimeException("Error registrando salida: " + e.getMessage());
         }
     }
 
-    public void registrarEntrada(Integer productoId, Integer cantidad) {
+    // --- MÉTODO RENOMBRADO: registrarDevolucion ---
+    public void registrarDevolucion(Integer productoId, Integer cantidad) {
         try {
-
-            String url = inventarioBaseUrl + "/entrada";
-
-            String jsonBody = String.format("{\"productoId\": %d, \"cantidad\": %d, \"motivo\": \"DEVOLUCION\"}", productoId, cantidad);
+            // NOTA: La ruta cambió a .../productos/{id}/devolver
+            String url = inventarioBaseUrl + "/productos/" + productoId + "/devolver";
+            String jsonBody = String.format("{\"cantidad\": %d, \"motivo\": \"DEVOLUCION_CLIENTE\"}", cantidad);
 
             HttpEntity<String> entity = new HttpEntity<>(jsonBody, getHeaders());
-
-            ResponseEntity<Void> response = restTemplate.exchange(
-                    url, HttpMethod.POST, entity, Void.class
-            );
+            ResponseEntity<Void> response = restTemplate.exchange(url, HttpMethod.POST, entity, Void.class);
 
             if (!response.getStatusCode().is2xxSuccessful()) {
-                throw new RuntimeException("Inventario rechazó la devolución del producto " + productoId);
+                throw new RuntimeException("Inventario rechazó la devolución");
             }
         } catch (Exception e) {
-            throw new RuntimeException("Error al devolver stock a inventario: " + e.getMessage());
+            throw new RuntimeException("Error al devolver stock: " + e.getMessage());
         }
     }
 }

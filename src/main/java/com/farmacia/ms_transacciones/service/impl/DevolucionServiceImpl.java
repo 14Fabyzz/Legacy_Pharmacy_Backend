@@ -56,7 +56,7 @@ public class DevolucionServiceImpl implements DevolucionService {
             totalReembolso = totalReembolso.add(subtotal);
 
             // 4. RETORNAR STOCK A INVENTARIO (Llamada al otro MS)
-            inventarioClient.registrarEntrada(item.getProductoId(), item.getCantidad());
+            inventarioClient.registrarDevolucion(item.getProductoId(), item.getCantidad());
         }
 
         devolucion.setTotalDevolucion(totalReembolso);
