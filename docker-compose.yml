@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  # --- 1. BASE DE DATOS (El Corazón) ---
+  db-general:
+    image: mysql:8.0
+    container_name: farmacia_db_container
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: fabian
+      MYSQL_DATABASE: legacy_pharmacy_usuarios
+    ports:
+      # Usamos el 3308 afuera para evitar choques con otros MySQL en tu PC
+      - "3308:3306"
+    command: --default-authentication-plugin=mysql_native_password
+    # ESTA ES LA CLAVE: Un "ping" cada 10s para ver si ya despertó
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pfabian"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # --- 2. MICROSERVICIO DE USUARIOS ---
+  ms-usuarios:
+    build: ./ms-usuarios
+    container_name: ms-usuarios
+    ports:
+      - "8082:8082"
+    environment:
+      - SERVER_PORT=8082
+      # Conexión interna al puerto 3306 del contenedor (no al 3308 de tu PC)
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db-general:3306/legacy_pharmacy_usuarios?allowPublicKeyRetrieval=true&useSSL=false&createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=fabian
+      - SPRING_DATASOURCE_DRIVER-CLASS-NAME=com.mysql.cj.jdbc.Driver
+    depends_on:
+      db-general:
+        condition: service_healthy  # ¡ESPERARÁ A QUE LA BD ESTÉ LISTA!
+
+  # --- 3. MICROSERVICIO DE INVENTARIO ---
+  ms-inventario:
+    build: ./inventory-service
+    container_name: ms-inventario
+    ports:
+      - "8081:8081"
+    environment:
+      - SERVER_PORT=8081
+      # Asumiendo que inventario usa la misma BD (si no, borra estas 3 lineas)
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db-general:3306/legacy03?allowPublicKeyRetrieval=true&useSSL=false&createDatabaseIfNotExist=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=fabian
+    depends_on:
+      db-general:
+        condition: service_healthy  # ¡TAMBIÉN ESPERARÁ!
+
+  # --- 4. API GATEWAY (El Portero) ---
+  gateway:
+    build: ./gateway-service
+    container_name: gateway-service
+    ports:
+      - "8080:8080"
+    depends_on:
+      - ms-usuarios
+      - ms-inventario
+    environment:
+      - SERVER_PORT=8080
+      - URI_USUARIOS=http://ms-usuarios:8082
+      - URI_INVENTARIO=http://ms-inventario:8081
