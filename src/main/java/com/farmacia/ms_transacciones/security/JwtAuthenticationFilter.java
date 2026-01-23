@@ -7,12 +7,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -35,15 +37,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Long userId = jwtUtils.getUserIdFromToken(token);
                 String role = jwtUtils.getRoleFromToken(token);
 
-                // 2. Configurar Spring Security (Para que deje pasar la petición)
+                System.out.println("✅ TOKEN VALIDO - Usuario: " + username + " - Rol: " + role);
+                // ... lógica de autenticación ...
+
+                // 2. Configurar Spring Security CON EL ROL
+// Spring Security suele esperar el prefijo "ROLE_" o usa hasAuthority en el config
+
+                SimpleGrantedAuthority authority = new SimpleGrantedAuthority(role);
+
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        username, null, Collections.emptyList()); // Aquí podrías cargar roles reales
+                        username,
+                        null,
+                        List.of(authority) // <--- ¡EL CAMBIO IMPORTANTE!
+                );
+
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                // 3. LLENAR TU USER CONTEXT (Para que el resto de tu código funcione igual)
+                // 3. LLENAR USER CONTEXT (Para que el resto de código funcione igual)
                 UserContext.setUserId(userId);
                 UserContext.setUsername(username);
                 UserContext.setUserRole(role);
+            } else {
+                System.out.println("❌ TOKEN INVALIDO O FIRMA NO COINCIDE EN DOCKER");
             }
         }
 

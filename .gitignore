@@ -36,4 +36,4 @@ build/
 .DS_Store
 
 # Ignorar generador de tokens local
-src/main/java/com/farmacia/ms_transacciones/GeneradorTokenTest.java
+src/main/java/com/farmacia/ms_transacciones/security/GeneradorTokenDocker.java

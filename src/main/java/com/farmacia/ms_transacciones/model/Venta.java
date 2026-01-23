@@ -47,5 +47,6 @@ public class Venta {
     private TurnoCaja turno;
 
     @OneToMany(mappedBy = "venta", cascade = CascadeType.ALL)
+    @JsonIgnoreProperties("venta")
     private List<DetalleVenta> detalles = new ArrayList<>();
 }

@@ -1,47 +1,50 @@
 version: '3.8'
 
 services:
+  # --- CONTENEDOR DE LA APP (JAVA 21) ---
   ms-transacciones:
     build: .
     container_name: ms-transacciones
+    restart: on-failure
     ports:
-      - "8080:8080"
+      - "8083:8083"
+    environment:
+      # Conexión a la BD del contenedor de abajo
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db-transacciones:5432/db_transacciones
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=santi2703
+
+      # Conexión al MS-INVENTARIO
+      # 'host.docker.internal' apunta a tu localhost de Windows
+      - MICROSERVICES_INVENTARIO_URL=http://host.docker.internal:8081/api/v1/inventario
+
+      # Seguridad
+      - JWT_SECRET=TXlTZWNyZXRLZXlGb3JKV1RUb2tlbkxlZ2FjeVBoYXJtYWN5MjAyNVNwcmluZ0Jvb3Q0VmVyeVNlY3VyZUtleQ
     depends_on:
-      db-postgres:
-        condition: service_healthy  # Mejora la dependencia
+      - db-transacciones
     networks:
       - farmacia-network
-    environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://db-postgres:5432/db_transacciones?stringtype=unspecified
-      - SPRING_DATASOURCE_USERNAME=${DB_USER:-postgres}
-      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-root}
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
-      - JWT_SECRET=${JWT_SECRET:-TGVnYWN5UGhhcm1hY3lJc1RoZUJlc3RTRU5BUHJveWVjdDIwMjY=}
-      - MS_PRODUCTOS_URL=${MS_PRODUCTOS_URL:-http://host.docker.internal:8081}
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # Compatibilidad para Linux/Windows
 
-  db-postgres:
+  # --- CONTENEDOR DE BASE DE DATOS ---
+  db-transacciones:
     image: postgres:15-alpine
-    container_name: postgres-transacciones
-    ports:
-      - "${DB_PORT:-5432}:5432"
+    container_name: db-postgres-transacciones
     environment:
-      - POSTGRES_DB=${DB_NAME:-db_transacciones}
-      - POSTGRES_USER=${DB_USER:-postgres}
-      - POSTGRES_PASSWORD=${DB_PASSWORD:-root}
-      - TZ=America/Bogota
+      - POSTGRES_DB=db_transacciones
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=santi2703
+    ports:
+      - "5434:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - farmacia-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+
+volumes:
+  postgres_data:
 
 networks:
   farmacia-network:
     driver: bridge
-
-volumes:
-  postgres_data:

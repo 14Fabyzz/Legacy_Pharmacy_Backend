@@ -41,11 +41,14 @@ public class InventarioClient {
     // --- MÉTODO ACTUALIZADO: Recibe sucursalId ---
     public void registrarSalida(Integer productoId, Integer cantidad, Integer sucursalId) {
         try {
-            // NOTA: La ruta cambió a .../productos/{id}/descontar
+
             String url = inventarioBaseUrl + "/productos/" + productoId + "/descontar";
 
             // Enviamos la sucursal en el JSON
-            String jsonBody = String.format("{\"cantidad\": %d, \"motivo\": \"VENTA\", \"sucursalId\": %d}", cantidad, sucursalId);
+            String jsonBody = String.format(
+                    "{\"cantidad\": %d, \"motivo\": \"VENTA_SUCURSAL_%d\", \"sucursalId\": %d}",
+                    cantidad, sucursalId, sucursalId
+            );
 
             HttpEntity<String> entity = new HttpEntity<>(jsonBody, getHeaders());
             ResponseEntity<Void> res = restTemplate.exchange(url, HttpMethod.POST, entity, Void.class);

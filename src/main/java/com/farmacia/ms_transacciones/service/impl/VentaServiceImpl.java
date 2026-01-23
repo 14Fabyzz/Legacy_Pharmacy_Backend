@@ -2,9 +2,18 @@ package com.farmacia.ms_transacciones.service.impl;
 
 import com.farmacia.ms_transacciones.client.InventarioClient;
 import com.farmacia.ms_transacciones.config.UserContext;
-import com.farmacia.ms_transacciones.dto.*;
-import com.farmacia.ms_transacciones.model.*;
-import com.farmacia.ms_transacciones.repository.*;
+import com.farmacia.ms_transacciones.dto.CrearVentaDTO;
+import com.farmacia.ms_transacciones.dto.ItemVentaDTO;
+import com.farmacia.ms_transacciones.dto.ProductoInventarioDTO;
+import com.farmacia.ms_transacciones.dto.VentaResponseDTO;
+import com.farmacia.ms_transacciones.model.Cliente;
+import com.farmacia.ms_transacciones.model.DetalleVenta;
+import com.farmacia.ms_transacciones.model.TurnoCaja;
+import com.farmacia.ms_transacciones.model.Venta;
+import com.farmacia.ms_transacciones.repository.ClienteRepository;
+import com.farmacia.ms_transacciones.repository.DetalleVentaRepository;
+import com.farmacia.ms_transacciones.repository.TurnoCajaRepository;
+import com.farmacia.ms_transacciones.repository.VentaRepository;
 import com.farmacia.ms_transacciones.service.VentaService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -40,30 +49,26 @@ public class VentaServiceImpl implements VentaService {
             }
         }
 
-        // 3. CREAR VENTA Y LLENAR DATOS
+        // 3. CREAR VENTA CABECERA
         Venta venta = new Venta();
         venta.setNumeroFactura(UUID.randomUUID().toString());
         venta.setFechaVenta(LocalDateTime.now());
         venta.setEstado("COMPLETADA");
-
-        // Asignar Pago
         venta.setMetodoPago(datosVenta.getMetodoPago());
-        venta.setReferenciaPago(datosVenta.getReferenciaPago()); // Puede ser null si es efectivo
-
-        // Asignar Datos de Auditoría (Quién y Dónde)
+        venta.setReferenciaPago(datosVenta.getReferenciaPago()); 
         venta.setTurno(turnoActual);
-        venta.setSucursalId(turnoActual.getSucursalId()); // La sucursal viene del turno
+        venta.setSucursalId(turnoActual.getSucursalId());
 
-        // Datos del Vendedor (Token)
+        // Datos del Vendedor
         if (UserContext.getUserId() != null) {
             venta.setVendedorId(String.valueOf(UserContext.getUserId()));
-            venta.setVendedorNombre(UserContext.getUsername()); // Guardamos el nombre para el voucher
+            venta.setVendedorNombre(UserContext.getUsername());
         } else {
             venta.setVendedorId("ANONIMO");
             venta.setVendedorNombre("Cajero Genérico");
         }
 
-        // Lógica de Cliente
+        // Cliente
         if (datosVenta.getClienteId() != null) {
              Cliente cliente = clienteRepository.findById(datosVenta.getClienteId())
                 .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
@@ -72,11 +77,18 @@ public class VentaServiceImpl implements VentaService {
 
         venta = ventaRepository.save(venta);
 
-        // Lógica de Detalles e Inventario
+        // --- LÓGICA DE DETALLES ---
         BigDecimal total = BigDecimal.ZERO;
+        
         for (ItemVentaDTO item : datosVenta.getItems()) {
             // A. Consultar Inventario
             ProductoInventarioDTO prod = inventarioClient.obtenerProducto(item.getProductoId());
+
+            // VALIDACIÓN AGREGADA: BLOQUEAR SI NO HAY STOCK
+            if (prod.getStockActual() < item.getCantidad()) {
+                throw new RuntimeException("Stock insuficiente para: " + prod.getNombreComercial() + 
+                                           ". Disponible: " + prod.getStockActual() + ", Solicitado: " + item.getCantidad());
+            }
 
             // B. Crear Detalle
             DetalleVenta det = new DetalleVenta();
@@ -104,25 +116,18 @@ public class VentaServiceImpl implements VentaService {
 
         // --- LÓGICA DE PAGO Y CAMBIO ---
         if ("EFECTIVO".equalsIgnoreCase(venta.getMetodoPago())) {
-            // Validar que hayan enviado cuánto pagó
             if (datosVenta.getMontoRecibido() == null) {
                 throw new RuntimeException("En pagos en efectivo debe indicar el monto recibido.");
             }
-            
-            // Validar que el dinero alcance
             if (datosVenta.getMontoRecibido().compareTo(total) < 0) {
                 throw new RuntimeException("Dinero insuficiente. Faltan: " + total.subtract(datosVenta.getMontoRecibido()));
             }
-
-            // Calcular cambio
             venta.setMontoRecibido(datosVenta.getMontoRecibido());
             venta.setCambio(datosVenta.getMontoRecibido().subtract(total));
         } else {
-            // Si es transferencia, no hay cambio
             venta.setMontoRecibido(total);
             venta.setCambio(BigDecimal.ZERO);
         }
-        // -------------------------------
 
         return mapToDTO(ventaRepository.save(venta));
     }
