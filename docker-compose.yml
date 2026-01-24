@@ -13,6 +13,8 @@ services:
       # Usamos el 3308 afuera para evitar choques con otros MySQL en tu PC
       - "3308:3306"
     command: --default-authentication-plugin=mysql_native_password
+    volumes:
+      - mysql_data:/var/lib/mysql
     # ESTA ES LA CLAVE: Un "ping" cada 10s para ver si ya despertó
     healthcheck:
       test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pfabian" ]
@@ -109,3 +111,4 @@ services:
 
 volumes:
   postgres_data:
+  mysql_data:

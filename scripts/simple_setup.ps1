@@ -4,7 +4,7 @@ Write-Host "1. Login..."
 $headers = @{ "Content-Type" = "application/json" }
 $loginBody = @{ login="admin"; password="Admin123!" } | ConvertTo-Json
 $loginResponse = Invoke-RestMethod -Method Post -Uri "http://localhost:8080/api/usuarios/login" -Body $loginBody -Headers $headers
-$token = $loginResponse.token
+$token = $loginResponse.token.Trim()
 $headers["Authorization"] = "Bearer $token"
 Write-Host "Token: $token"
 
