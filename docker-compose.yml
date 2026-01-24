@@ -15,11 +15,30 @@ services:
     command: --default-authentication-plugin=mysql_native_password
     # ESTA ES LA CLAVE: Un "ping" cada 10s para ver si ya despertó
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pfabian"]
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pfabian" ]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 30s
+
+  # --- 1.1 BASE DE DATOS POSTGRES (Para Ventas) ---
+  postgres-db:
+    image: postgres:15-alpine
+    container_name: farmacia_postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: santi2703
+      POSTGRES_DB: db_transacciones
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # --- 2. MICROSERVICIO DE USUARIOS ---
   ms-usuarios:
@@ -36,7 +55,7 @@ services:
       - SPRING_DATASOURCE_DRIVER-CLASS-NAME=com.mysql.cj.jdbc.Driver
     depends_on:
       db-general:
-        condition: service_healthy  # ¡ESPERARÁ A QUE LA BD ESTÉ LISTA!
+        condition: service_healthy # ¡ESPERARÁ A QUE LA BD ESTÉ LISTA!
 
   # --- 3. MICROSERVICIO DE INVENTARIO ---
   ms-inventario:
@@ -52,7 +71,26 @@ services:
       - SPRING_DATASOURCE_PASSWORD=fabian
     depends_on:
       db-general:
-        condition: service_healthy  # ¡TAMBIÉN ESPERARÁ!
+        condition: service_healthy # ¡TAMBIÉN ESPERARÁ!
+
+  # --- 4. MICROSERVICIO DE VENTAS ---
+  ms-ventas:
+    build: ./MS-ventas
+    container_name: ms-ventas
+    ports:
+      - "8083:8083"
+    environment:
+      - SERVER_PORT=8083
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/db_transacciones
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=santi2703
+      - SPRING_DATASOURCE_DRIVER-CLASS-NAME=org.postgresql.Driver
+      - URI_INVENTARIO=http://ms-inventario:8081/api/v1/inventario
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      ms-inventario:
+        condition: service_started
 
   # --- 4. API GATEWAY (El Portero) ---
   gateway:
@@ -67,3 +105,7 @@ services:
       - SERVER_PORT=8080
       - URI_USUARIOS=http://ms-usuarios:8082
       - URI_INVENTARIO=http://ms-inventario:8081
+      - URI_VENTAS=http://ms-ventas:8083
+
+volumes:
+  postgres_data:

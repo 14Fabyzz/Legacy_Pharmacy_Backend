@@ -1,0 +1,27 @@
+Verification Report - 01/24/2026 18:08:59
+Starting Pre-Merge Verification...
+
+[TEST] Verifying: Admin Login
+DEBUG: Headers = {
+  "Authorization": "Bearer eyJhbGciOiJIUzUxMiJ9.eyJ1c2VySWQiOjEsInJvbCI6IkFETUlOSVNUUkFET1IiLCJzdWIiOiJhZG1pbiIsImlhdCI6MTc2OTI5NjEzMywiZXhwIjoxNzY5MzgyNTMzfQ.zytivq1cqC4UWGbuGtzx1QjX0rJSUQoIV5BQ49maKQhhuuUKtS0rzIVHgir1j2nVRzan3xOnh79ewWDXKB6ARg"
+}
+   [PASS] Admin Login
+
+[TEST] Verifying: Create Test Product & Stock
+   [PASS] Create Test Product & Stock
+
+[TEST] Verifying: Full Sales Flow (Box Open -> Sale -> Stock Check)
+Warning: Pre-stock mismatch (200)
+   [PASS] Full Sales Flow (Box Open -> Sale -> Stock Check)
+
+[TEST] Verifying: Reject Insufficient Stock
+   [PASS] Reject Insufficient Stock
+
+[TEST] Verifying: Reject Non-Existent Product
+   [PASS] Reject Non-Existent Product
+
+[TEST] Verifying: Reject Invalid Token
+   [PASS] Reject Invalid Token
+
+----------------------------------------
+VERIFICATION COMPLETE. See verification_report.txt for details.
