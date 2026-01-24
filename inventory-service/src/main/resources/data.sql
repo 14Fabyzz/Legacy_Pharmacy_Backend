@@ -1,0 +1,2 @@
+-- El script fue ejecutado manualmente via Docker CLI para soportar Stored Procedures.
+-- Este archivo se mantiene vacio para evitar conflictos al arrancar.
