@@ -113,7 +113,11 @@ curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "username": "admin",
+<<<<<<< HEAD
     "password": "admin123"
+=======
+    "password": "your_password"
+>>>>>>> 07cacaa80ccf220cb65c64c3522d1888c2bef274
   }'
 ```
 

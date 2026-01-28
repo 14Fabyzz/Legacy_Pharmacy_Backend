@@ -36,4 +36,15 @@ public class ProductoDTO {
     private Integer stockMinimo;
     private Boolean esControlado;
     private Boolean refrigerado;
+
+    // Campos para unidades fraccionadas
+    @com.fasterxml.jackson.annotation.JsonProperty("esFraccionable")
+    private Boolean esFraccionable;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("unidadesPorCaja")
+    @jakarta.validation.constraints.Min(value = 1, message = "Las unidades por caja deben ser al menos 1")
+    private Integer unidadesPorCaja;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("precioVentaUnidad")
+    private BigDecimal precioVentaUnidad;
 }

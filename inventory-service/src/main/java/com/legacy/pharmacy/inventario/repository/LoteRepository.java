@@ -14,42 +14,42 @@ import java.util.Map;
 @Repository
 public interface LoteRepository extends JpaRepository<Lote, Integer> {
 
-    /// Método para buscar lotes (útil para consultas normales)
-    List<Lote> findByProductoIdAndCantidadActualGreaterThanOrderByFechaVencimientoAsc(Integer productoId, Integer cantidadMinima);
+        /// Método para buscar lotes (útil para consultas normales)
+        List<Lote> findByProductoIdAndCantidadActualGreaterThanOrderByFechaVencimientoAsc(Integer productoId,
+                        Integer cantidadMinima);
 
-    // --- EL MÉTODO DE ENTRADA CORREGIDO ---
-    // Usamos CALL nativo para manejar el resultado del SP
-    @Query(value = "CALL registrar_entrada_mercancia(:p_producto_id, :p_numero_lote, :p_cantidad, :p_costo_compra, :p_fecha_vencimiento, :p_usuario, :p_sucursal_id, :p_observaciones)", nativeQuery = true)
-    Map<String, Object> registrarEntrada(
-            @Param("p_producto_id") Integer productoId,
-            @Param("p_numero_lote") String numeroLote,
-            @Param("p_cantidad") Integer cantidad,
-            @Param("p_costo_compra") BigDecimal costoCompra,
-            @Param("p_fecha_vencimiento") LocalDate fechaVencimiento,
-            @Param("p_usuario") String usuario,
-            @Param("p_sucursal_id") Integer sucursalId,
-            @Param("p_observaciones") String observaciones
-    );
+        // --- EL MÉTODO DE ENTRADA CORREGIDO ---
+        // Usamos CALL nativo para manejar el resultado del SP
+        @Query(value = "CALL registrar_entrada_mercancia(:p_producto_id, :p_numero_lote, :p_cantidad, :p_costo_compra, :p_fecha_vencimiento, :p_usuario, :p_sucursal_id, :p_observaciones)", nativeQuery = true)
+        Map<String, Object> registrarEntrada(
+                        @Param("p_producto_id") Integer productoId,
+                        @Param("p_numero_lote") String numeroLote,
+                        @Param("p_cantidad") Integer cantidad,
+                        @Param("p_costo_compra") BigDecimal costoCompra,
+                        @Param("p_fecha_vencimiento") LocalDate fechaVencimiento,
+                        @Param("p_usuario") String usuario,
+                        @Param("p_sucursal_id") Integer sucursalId,
+                        @Param("p_observaciones") String observaciones);
 
-    // --- NUEVO MÉTODO PARA SALIDAS ---
-    @Query(value = "CALL registrar_salida_mercancia(:p_producto_id, :p_cantidad, :p_usuario, :p_sucursal_id, :p_venta_id, :p_observaciones)", nativeQuery = true)
-    List<Map<String, Object>> registrarSalida(
-            @Param("p_producto_id") Integer productoId,
-            @Param("p_cantidad") Integer cantidad,
-            @Param("p_usuario") String usuario,
-            @Param("p_sucursal_id") Integer sucursalId,
-            @Param("p_venta_id") Integer ventaId,
-            @Param("p_observaciones") String observaciones
-    );
+        // --- NUEVO MÉTODO PARA SALIDAS ---
+        @Query(value = "CALL registrar_salida_mercancia(:p_producto_id, :p_cantidad, :p_usuario, :p_sucursal_id, :p_venta_id, :p_observaciones, :p_es_venta_por_caja)", nativeQuery = true)
+        List<Map<String, Object>> registrarSalida(
+                        @Param("p_producto_id") Integer productoId,
+                        @Param("p_cantidad") Integer cantidad,
+                        @Param("p_usuario") String usuario,
+                        @Param("p_sucursal_id") Integer sucursalId,
+                        @Param("p_venta_id") Integer ventaId,
+                        @Param("p_observaciones") String observaciones,
+                        @Param("p_es_venta_por_caja") Boolean esVentaPorCaja);
 
+        // Buscar lotes de un producto específico
+        List<Lote> findByProductoId(Integer productoId);
 
-    // Buscar lotes de un producto específico
-    List<Lote> findByProductoId(Integer productoId);
+        // Buscar lotes vencidos (fecha menor a hoy) y que tengan saldo (> 0)
+        List<Lote> findByFechaVencimientoBeforeAndCantidadActualGreaterThan(LocalDate fecha, Integer cantidad);
 
-    // Buscar lotes vencidos (fecha menor a hoy) y que tengan saldo (> 0)
-    List<Lote> findByFechaVencimientoBeforeAndCantidadActualGreaterThan(LocalDate fecha, Integer cantidad);
-
-    // Buscar próximos a vencer (Entre hoy y X días) con saldo
-    List<Lote> findByFechaVencimientoBetweenAndCantidadActualGreaterThan(LocalDate inicio, LocalDate fin, Integer cantidad);
+        // Buscar próximos a vencer (Entre hoy y X días) con saldo
+        List<Lote> findByFechaVencimientoBetweenAndCantidadActualGreaterThan(LocalDate inicio, LocalDate fin,
+                        Integer cantidad);
 
 }

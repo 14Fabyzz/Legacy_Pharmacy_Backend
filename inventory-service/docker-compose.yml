@@ -24,6 +24,9 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:mysql://db-inventory:3306/legacy03?useSSL=false&serverTimezone=America/Bogota&allowPublicKeyRetrieval=true
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=root_password
+      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}_password
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
     depends_on:
       - db-inventory

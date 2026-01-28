@@ -42,7 +42,8 @@ public class Producto {
     @JoinColumn(name = "laboratorio_id", nullable = false)
     private Laboratorio laboratorio;
 
-    // Un producto tiene UN principio activo (puede ser nulo si es un cosmético, por ejemplo)
+    // Un producto tiene UN principio activo (puede ser nulo si es un cosmético, por
+    // ejemplo)
     @ManyToOne
     @JoinColumn(name = "principio_activo_id")
     private PrincipioActivo principioActivo;
@@ -69,6 +70,9 @@ public class Producto {
     @Column(name = "iva_porcentaje")
     private BigDecimal ivaPorcentaje;
 
+    @Column(name = "margen_minimo_porcentaje")
+    private BigDecimal margenMinimoPorcentaje;
+
     @Column(name = "stock_minimo")
     private Integer stockMinimo = 10;
 
@@ -81,6 +85,17 @@ public class Producto {
     // Usamos String para el ENUM por simplicidad (ACTIVO, DESCONTINUADO)
     @Column(length = 20)
     private String estado = "ACTIVO";
+
+    // --- DATOS DE FRACCIONAMIENTO (NUEVO) ---
+
+    @Column(name = "es_fraccionable")
+    private Boolean esFraccionable = false;
+
+    @Column(name = "unidades_por_caja")
+    private Integer unidadesPorCaja = 1;
+
+    @Column(name = "precio_venta_unidad")
+    private BigDecimal precioVentaUnidad;
 
     // --- AUDITORÍA ---
 

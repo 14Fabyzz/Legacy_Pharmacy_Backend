@@ -54,7 +54,11 @@ curl -X POST http://localhost:8080/api/auth/login \
 
 ```json
 {
+<<<<<<< HEAD
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsInVzZXJJZCI6MSwicm9sIjoiQURNSU4iLCJpYXQiOjE3MDI...",
+=======
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+>>>>>>> 07cacaa80ccf220cb65c64c3522d1888c2bef274
   "username": "admin",
   "rol": "ADMIN",
   "userId": 1

@@ -29,6 +29,7 @@ function Invoke-Api {
         Write-Host "Error calling $Uri" -ForegroundColor Red
         Write-Host "Message: $($_.Exception.Message)" -ForegroundColor Red
         if ($_.Exception.Response) {
+<<<<<<< HEAD
              Write-Host "Status Code: $($_.Exception.Response.StatusCode)" -ForegroundColor Yellow
              
              try {
@@ -38,6 +39,18 @@ function Invoke-Api {
              } catch {
                 Write-Host "Could not read response body." -ForegroundColor DarkGray
              }
+=======
+            Write-Host "Status Code: $($_.Exception.Response.StatusCode)" -ForegroundColor Yellow
+             
+            try {
+                $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
+                $responseBody = $reader.ReadToEnd()
+                Write-Host "Response Body: $responseBody" -ForegroundColor Yellow
+            }
+            catch {
+                Write-Host "Could not read response body." -ForegroundColor DarkGray
+            }
+>>>>>>> 07cacaa80ccf220cb65c64c3522d1888c2bef274
         }
         return $null
     }
@@ -47,7 +60,11 @@ function Invoke-Api {
 Write-Host "`n--- 1. Logging In as Admin ---" -ForegroundColor Cyan
 $loginBody = @{
     login    = "admin"
+<<<<<<< HEAD
     password = "Admin123!"
+=======
+    password = $env:ADMIN_PASSWORD
+>>>>>>> 07cacaa80ccf220cb65c64c3522d1888c2bef274
 }
 $loginResponse = Invoke-Api -Method Post -Uri "http://localhost:8080/api/usuarios/login" -Body $loginBody
 
@@ -68,7 +85,12 @@ try {
     if ($boxState) {
         Write-Host "Box State: $($boxState | ConvertTo-Json -Depth 2)" -ForegroundColor Gray
     }
+<<<<<<< HEAD
 } catch {
+=======
+}
+catch {
+>>>>>>> 07cacaa80ccf220cb65c64c3522d1888c2bef274
     Write-Host "Box is likely closed (404/Empty)." -ForegroundColor Yellow
     $boxState = $null
 }
@@ -85,7 +107,12 @@ $client = Invoke-Api -Method Post -Uri "http://localhost:8080/api/ventas/cliente
 
 if (-not $client) {
     Write-Host "Failed to create client. Creating sale might fail." -ForegroundColor Red
+<<<<<<< HEAD
 } else {
+=======
+}
+else {
+>>>>>>> 07cacaa80ccf220cb65c64c3522d1888c2bef274
     Write-Host "Client created with ID: $($client.id)" -ForegroundColor Green
 }
 
@@ -99,9 +126,16 @@ if (-not $boxState) {
     }
     $boxOpen = Invoke-Api -Method Post -Uri "http://localhost:8080/api/ventas/caja/abrir" -Body $openBoxBody -Headers $headers
     if ($boxOpen) {
+<<<<<<< HEAD
          Write-Host "Box Opened: $($boxOpen | ConvertTo-Json -Depth 2)" -ForegroundColor Green
     }
 } else {
+=======
+        Write-Host "Box Opened: $($boxOpen | ConvertTo-Json -Depth 2)" -ForegroundColor Green
+    }
+}
+else {
+>>>>>>> 07cacaa80ccf220cb65c64c3522d1888c2bef274
     Write-Host "Box already open." -ForegroundColor Yellow
 }
 
@@ -109,16 +143,26 @@ if (-not $boxState) {
 if ($client) {
     Write-Host "`n--- 5. Creating Sale ---" -ForegroundColor Cyan
     $saleBody = @{
+<<<<<<< HEAD
         clienteId      = $client.id
         items          = @(
+=======
+        clienteId     = $client.id
+        items         = @(
+>>>>>>> 07cacaa80ccf220cb65c64c3522d1888c2bef274
             @{
                 productoId     = 5
                 cantidad       = 2
                 precioUnitario = 500
             }
         )
+<<<<<<< HEAD
         metodoPago     = "EFECTIVO"
         montoRecibido  = 20000
+=======
+        metodoPago    = "EFECTIVO"
+        montoRecibido = 20000
+>>>>>>> 07cacaa80ccf220cb65c64c3522d1888c2bef274
     }
     $sale = Invoke-Api -Method Post -Uri "http://localhost:8080/api/ventas/ventas" -Body $saleBody -Headers $headers
     if ($sale) {

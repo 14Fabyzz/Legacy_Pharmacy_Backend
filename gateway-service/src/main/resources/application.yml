@@ -88,7 +88,7 @@ spring:
 # JWT CONFIGURATION
 # =============================================================================
 jwt:
-  secret: TXlTZWNyZXRLZXlGb3JKV1RUb2tlbkxlZ2FjeVBoYXJtYWN5MjAyNVNwcmluZ0Jvb3Q0VmVyeVNlY3VyZUtleQ
+  secret: ${JWT_SECRET:your_jwt_secret_here_for_local_dev}
   expiration: 86400000
 
 # =============================================================================

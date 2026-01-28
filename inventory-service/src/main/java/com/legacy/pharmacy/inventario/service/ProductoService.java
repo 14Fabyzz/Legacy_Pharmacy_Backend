@@ -12,11 +12,16 @@ import java.util.List;
 @Service
 public class ProductoService {
 
-    @Autowired private ProductoRepository productoRepository;
-    @Autowired private CategoriaRepository categoriaRepository;
-    @Autowired private LaboratorioRepository laboratorioRepository;
-    @Autowired private PrincipioActivoRepository principioActivoRepository;
-    @Autowired private LoteRepository loteRepository;
+    @Autowired
+    private ProductoRepository productoRepository;
+    @Autowired
+    private CategoriaRepository categoriaRepository;
+    @Autowired
+    private LaboratorioRepository laboratorioRepository;
+    @Autowired
+    private PrincipioActivoRepository principioActivoRepository;
+    @Autowired
+    private LoteRepository loteRepository;
 
     // --- PRODUCTOS ---
 
@@ -60,11 +65,14 @@ public class ProductoService {
         p.setPresentacion(dto.getPresentacion());
         p.setRegistroInvima(dto.getRegistroInvima());
         p.setEstado("ACTIVO");
+        p.setEsFraccionable(dto.getEsFraccionable() != null ? dto.getEsFraccionable() : false);
+        p.setUnidadesPorCaja(dto.getUnidadesPorCaja() != null ? dto.getUnidadesPorCaja() : 1);
+        p.setPrecioVentaUnidad(dto.getPrecioVentaUnidad());
 
         // Relaciones
         p.setCategoria(categoriaRepository.findById(dto.getCategoriaId()).orElseThrow());
         p.setLaboratorio(laboratorioRepository.findById(dto.getLaboratorioId()).orElseThrow());
-        if(dto.getPrincipioActivoId() != null) {
+        if (dto.getPrincipioActivoId() != null) {
             p.setPrincipioActivo(principioActivoRepository.findById(dto.getPrincipioActivoId()).orElse(null));
         }
 
@@ -73,10 +81,48 @@ public class ProductoService {
 
     public Producto actualizarProducto(Integer id, ProductoDTO dto) {
         Producto p = buscarPorId(id);
+
         // Actualizamos campos clave
-        p.setNombreComercial(dto.getNombreComercial());
-        p.setPrecioVentaBase(dto.getPrecioVentaBase());
-        // ... (Agregar el resto de campos si es necesario)
+        if (dto.getNombreComercial() != null)
+            p.setNombreComercial(dto.getNombreComercial());
+        if (dto.getPrecioVentaBase() != null)
+            p.setPrecioVentaBase(dto.getPrecioVentaBase());
+        if (dto.getCodigoInterno() != null)
+            p.setCodigoInterno(dto.getCodigoInterno());
+        if (dto.getCodigoBarras() != null)
+            p.setCodigoBarras(dto.getCodigoBarras());
+        if (dto.getConcentracion() != null)
+            p.setConcentracion(dto.getConcentracion());
+        if (dto.getPresentacion() != null)
+            p.setPresentacion(dto.getPresentacion());
+        if (dto.getRegistroInvima() != null)
+            p.setRegistroInvima(dto.getRegistroInvima());
+        if (dto.getStockMinimo() != null)
+            p.setStockMinimo(dto.getStockMinimo());
+        if (dto.getEsControlado() != null)
+            p.setEsControlado(dto.getEsControlado());
+        if (dto.getRefrigerado() != null)
+            p.setRefrigerado(dto.getRefrigerado());
+
+        // Actualizamos campos de fraccionamiento
+        if (dto.getEsFraccionable() != null)
+            p.setEsFraccionable(dto.getEsFraccionable());
+        if (dto.getUnidadesPorCaja() != null)
+            p.setUnidadesPorCaja(dto.getUnidadesPorCaja());
+        if (dto.getPrecioVentaUnidad() != null)
+            p.setPrecioVentaUnidad(dto.getPrecioVentaUnidad());
+
+        // Actualizamos relaciones si vienen en el DTO
+        if (dto.getCategoriaId() != null) {
+            p.setCategoria(categoriaRepository.findById(dto.getCategoriaId()).orElseThrow());
+        }
+        if (dto.getLaboratorioId() != null) {
+            p.setLaboratorio(laboratorioRepository.findById(dto.getLaboratorioId()).orElseThrow());
+        }
+        if (dto.getPrincipioActivoId() != null) {
+            p.setPrincipioActivo(principioActivoRepository.findById(dto.getPrincipioActivoId()).orElse(null));
+        }
+
         return productoRepository.save(p);
     }
 

@@ -40,6 +40,16 @@ public class ProductoCard {
     @Column(name = "stock_minimo")
     private Integer stockMinimo;
 
+    // ✅ NUEVOS CAMPOS FRACCIONAMIENTO
+    @Column(name = "es_fraccionable")
+    private Boolean esFraccionable;
+
+    @Column(name = "unidades_por_caja")
+    private Integer unidadesPorCaja;
+
+    @Column(name = "precio_venta_unidad")
+    private Double precioVentaUnidad;
+
     // ✅ EL NUEVO CAMPO:
     @Column(name = "proximo_vencimiento")
     private LocalDate proximoVencimiento;
