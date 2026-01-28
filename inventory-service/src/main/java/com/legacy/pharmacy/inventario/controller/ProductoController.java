@@ -24,6 +24,9 @@ public class ProductoController {
     @Autowired
     private InventarioService inventarioService;
 
+    @Autowired
+    private com.legacy.pharmacy.inventario.service.MovimientoService movimientoService;
+
     // --- RUTAS DE PRODUCTOS ---
 
     // GET /productos (Opcional ?estado=ACTIVO)
@@ -66,6 +69,13 @@ public class ProductoController {
     public ResponseEntity<?> cambiarEstado(@PathVariable Integer id, @RequestParam String nuevoEstado) {
         productoService.cambiarEstado(id, nuevoEstado);
         return ResponseEntity.ok(Map.of("mensaje", "Estado actualizado a " + nuevoEstado));
+    }
+
+    // --- KARDEX (MOVIMIENTOS) ---
+    @GetMapping("/productos/{id}/kardex")
+    public ResponseEntity<List<com.legacy.pharmacy.inventario.dto.MovimientoKardexDTO>> verKardexProducto(
+            @PathVariable Integer id) {
+        return ResponseEntity.ok(movimientoService.obtenerKardexProducto(id));
     }
 
     // --- RUTAS DE LOTES (CONSULTAS) ---

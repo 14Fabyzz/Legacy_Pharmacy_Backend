@@ -13,18 +13,20 @@ public interface MovimientoRepository extends JpaRepository<Movimiento, Long> {
 
     // Consulta optimizada para traer todo el historial con nombres reales
     @Query(value = """
-        SELECT 
-            m.fecha_movimiento as fecha, 
-            p.nombre_comercial as nombreProducto, 
-            l.numero_lote as numeroLote, 
-            m.tipo_movimiento as tipoMovimiento, 
-            CONCAT('#', m.tipo_movimiento, '-', m.id) as documento, 
-            m.cantidad as cantidad, 
-            m.usuario_responsable as responsable
-        FROM movimientos m
-        JOIN lotes l ON m.lote_id = l.id
-        JOIN productos p ON l.producto_id = p.id
-        ORDER BY m.fecha_movimiento DESC
-    """, nativeQuery = true)
+                SELECT
+                    m.fecha_movimiento as fecha,
+                    p.nombre_comercial as nombreProducto,
+                    l.numero_lote as numeroLote,
+                    m.tipo_movimiento as tipoMovimiento,
+                    CONCAT('#', m.tipo_movimiento, '-', m.id) as documento,
+                    m.cantidad as cantidad,
+                    m.usuario_responsable as responsable
+                FROM movimientos m
+                JOIN lotes l ON m.lote_id = l.id
+                JOIN productos p ON l.producto_id = p.id
+                ORDER BY m.fecha_movimiento DESC
+            """, nativeQuery = true)
     List<AuditoriaDTO> obtenerAuditoriaCompleta();
+
+    List<Movimiento> findByLote_Producto_IdOrderByFechaMovimientoAsc(Integer productoId);
 }
