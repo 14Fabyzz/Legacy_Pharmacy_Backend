@@ -21,6 +21,7 @@ Thumbs.db
 
 # --- IGNORAR LOGS ---
 *.log
+logs/
 **/logs/.env
 .env
 .env.bak
