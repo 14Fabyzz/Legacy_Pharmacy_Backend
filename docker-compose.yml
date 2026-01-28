@@ -26,6 +26,11 @@ services:
       # MS-Inventario usa su propia configuración interna (application.properties)
       # que ya apunta a Aiven MySQL.
       - SPRING_PROFILES_ACTIVE=default
+      # Configuración Aiven MySQL para Inventario
+      - SPRING_DATASOURCE_URL=jdbc:mysql://legacy03-fbenjumeau-515c.g.aivencloud.com:17293/defaultdb?sslMode=REQUIRED&serverTimezone=America/Bogota&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=${AIVEN_USER}
+      - SPRING_DATASOURCE_PASSWORD=${AIVEN_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
     networks:
       - pharmacy-network
 
