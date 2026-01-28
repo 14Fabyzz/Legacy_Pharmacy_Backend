@@ -1,0 +1,29 @@
+# --- IGNORAR BASURA DE JAVA (CRÍTICO) ---
+# El ** busca en todas las subcarpetas (gateway, usuarios, etc)
+**/target/
+**/*.class
+**/*.jar
+**/*.war
+
+# --- IGNORAR IDEs (CONFIGURACIONES PERSONALES) ---
+.idea/
+**/.idea/
+*.iml
+.vscode/
+**/.vscode/
+.settings/
+.classpath
+.project
+
+# --- IGNORAR SISTEMA OPERATIVO ---
+.DS_Store
+Thumbs.db
+
+# --- IGNORAR LOGS ---
+*.log
+logs/
+**/logs/.env
+.env
+.env.bak
+.env.example
+
