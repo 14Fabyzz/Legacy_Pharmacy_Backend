@@ -10,6 +10,7 @@ services:
       - URI_INVENTARIO=http://ms-inventario:8081
       - URI_USUARIOS=http://ms-usuarios:8082
       - URI_VENTAS=http://ms-ventas:8083
+      - JWT_SECRET=${JWT_SECRET}
     networks:
       - pharmacy-network
     depends_on:
@@ -44,6 +45,7 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:mysql://legacy03-fbenjumeau-515c.g.aivencloud.com:17293/defaultdb?sslMode=REQUIRED&serverTimezone=America/Bogota&allowPublicKeyRetrieval=true
       - SPRING_DATASOURCE_USERNAME=${AIVEN_USER}
       - SPRING_DATASOURCE_PASSWORD=${AIVEN_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
     networks:
       - pharmacy-network
 
@@ -57,6 +59,7 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://pg-2714c85d-hincapiemaya66-ca69.h.aivencloud.com:16558/defaultdb?sslmode=require
       - SPRING_DATASOURCE_USERNAME=${AIVEN_USER}
       - SPRING_DATASOURCE_PASSWORD=${AIVEN_PG_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
     networks:
       - pharmacy-network
 
