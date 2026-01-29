@@ -24,9 +24,6 @@ public class ProductoController {
     @Autowired
     private InventarioService inventarioService;
 
-    @Autowired
-    private com.legacy.pharmacy.inventario.service.MovimientoService movimientoService;
-
     // --- RUTAS DE PRODUCTOS ---
 
     // GET /productos (Opcional ?estado=ACTIVO)
@@ -71,13 +68,6 @@ public class ProductoController {
         return ResponseEntity.ok(Map.of("mensaje", "Estado actualizado a " + nuevoEstado));
     }
 
-    // --- KARDEX (MOVIMIENTOS) ---
-    @GetMapping("/productos/{id}/kardex")
-    public ResponseEntity<List<com.legacy.pharmacy.inventario.dto.MovimientoKardexDTO>> verKardexProducto(
-            @PathVariable Integer id) {
-        return ResponseEntity.ok(movimientoService.obtenerKardexProducto(id));
-    }
-
     // --- RUTAS DE LOTES (CONSULTAS) ---
 
     @GetMapping("/lotes/producto/{productoId}")
@@ -99,6 +89,8 @@ public class ProductoController {
     public ResponseEntity<Lote> verLotePorId(@PathVariable Integer loteId) {
         return ResponseEntity.ok(productoService.buscarLotePorId(loteId));
     }
+
+
 
     /**
      * ===================================================================
@@ -126,13 +118,14 @@ public class ProductoController {
         inventarioService.descontarInventario(
                 productoId,
                 request.cantidad(),
-                request.motivo(),
-                request.esVentaPorCaja() != null ? request.esVentaPorCaja() : false);
+                request.motivo()
+        );
 
         return ResponseEntity.ok(Map.of(
                 "mensaje", "Inventario descontado exitosamente",
                 "productoId", productoId,
-                "cantidad", request.cantidad()));
+                "cantidad", request.cantidad()
+        ));
     }
 
     /**
@@ -147,18 +140,18 @@ public class ProductoController {
         inventarioService.devolverInventario(
                 productoId,
                 request.cantidad(),
-                request.motivo());
+                request.motivo()
+        );
 
         return ResponseEntity.ok(Map.of(
                 "mensaje", "Inventario devuelto exitosamente",
                 "productoId", productoId,
-                "cantidad", request.cantidad()));
+                "cantidad", request.cantidad()
+        ));
     }
 
     // DTOs
-    public record DescontarRequest(Integer cantidad, String motivo, Boolean esVentaPorCaja) {
-    }
-
-    public record DevolverRequest(Integer cantidad, String motivo) {
-    }
+    public record DescontarRequest(Integer cantidad, String motivo) {}
+    public record DevolverRequest(Integer cantidad, String motivo) {}
 }
+

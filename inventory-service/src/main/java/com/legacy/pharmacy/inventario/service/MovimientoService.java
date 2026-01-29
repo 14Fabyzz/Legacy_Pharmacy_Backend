@@ -22,9 +22,11 @@ public class MovimientoService {
         return movimientoRepository.obtenerAuditoriaCompleta();
     }
 
-    // Método utilitario para registrar movimientos desde otros servicios (Ventas, Compras)
+    // Método utilitario para registrar movimientos desde otros servicios (Ventas,
+    // Compras)
     @Transactional
-    public void registrarMovimiento(Lote lote, TipoMovimiento tipo, Integer cantidad, String responsable, String observacion) {
+    public void registrarMovimiento(Lote lote, TipoMovimiento tipo, Integer cantidad, String responsable,
+            String observacion) {
         Movimiento movimiento = Movimiento.builder()
                 .lote(lote)
                 .tipoMovimiento(tipo)
@@ -34,5 +36,37 @@ public class MovimientoService {
                 .build();
 
         movimientoRepository.save(movimiento);
+    }
+
+    public List<com.legacy.pharmacy.inventario.dto.MovimientoKardexDTO> obtenerKardexProducto(Integer productoId) {
+        // 1. Obtener todos los movimientos ordenados por fecha ascendente
+        List<Movimiento> movimientos = movimientoRepository.findByLote_Producto_IdOrderByFechaMovimientoAsc(productoId);
+
+        // 2. Calcular saldos acumulativos
+        int saldoAcumulado = 0;
+        List<com.legacy.pharmacy.inventario.dto.MovimientoKardexDTO> kardex = new java.util.ArrayList<>();
+
+        for (Movimiento m : movimientos) {
+            saldoAcumulado += m.getCantidad();
+
+            kardex.add(com.legacy.pharmacy.inventario.dto.MovimientoKardexDTO.builder()
+                    .id(m.getId())
+                    .fecha(m.getFechaMovimiento())
+                    .tipo(m.getTipoMovimiento().name())
+                    .cantidad(m.getCantidad())
+                    .saldoResultante(saldoAcumulado)
+                    .documentoRef(m.getObservacion()) // Usamos observación como referencia por ahora
+                    .usuario(m.getUsuarioResponsable())
+                    .detalle(m.getObservacion())
+                    .lote(m.getLote().getNumeroLote())
+                    .costoUnitario(m.getLote().getCostoCompra())
+                    .build());
+        }
+
+        // 3. Invertir lista para mostrar lo más reciente primero (opcional, pero común
+        // en UIs)
+        java.util.Collections.reverse(kardex);
+
+        return kardex;
     }
 }
