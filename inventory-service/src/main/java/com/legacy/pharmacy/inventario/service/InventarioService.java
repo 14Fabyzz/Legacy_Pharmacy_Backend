@@ -33,13 +33,24 @@ public class InventarioService {
 
         @Transactional
         public Map<String, Object> registrarEntrada(EntradaMercanciaDTO entrada) {
-                // La lógica de conversión ahora reside en el Procedimiento Almacenado
-                // Enviamos la cantidad tal cual (CAJAS o UNIDADES)
+                // 1. Validar producto y obtener datos de conversión
+                Producto producto = productoRepository.findById(entrada.getProductoId())
+                                .orElseThrow(() -> new RuntimeException(
+                                                "Producto no encontrado: " + entrada.getProductoId()));
 
+                // 2. LÓGICA DE NEGOCIO: Conversión de Presentación a Unidades Base
+                // El usuario ingresa "Cajas", nosotros guardamos "Pastillas"
+                int cantidadReal = entrada.getCantidad();
+
+                if (Boolean.TRUE.equals(producto.getEsFraccionable()) && producto.getUnidadesPorCaja() > 1) {
+                        cantidadReal = entrada.getCantidad() * producto.getUnidadesPorCaja();
+                }
+
+                // 3. Persistir en Base de Datos (Ahora enviamos UNIDADES reales)
                 return loteRepository.registrarEntrada(
                                 entrada.getProductoId(),
                                 entrada.getNumeroLote(),
-                                entrada.getCantidad(), // Enviamos cantidad cruda
+                                cantidadReal, // <--- CAMBIO CLAVE
                                 entrada.getCostoCompra(),
                                 entrada.getFechaVencimiento(),
                                 entrada.getUsuarioResponsable() != null ? entrada.getUsuarioResponsable() : "SISTEMA",
@@ -124,11 +135,14 @@ public class InventarioService {
                 stock.setProductoId(producto.getId());
                 stock.setNombreProducto(producto.getNombreComercial());
 
-                // --- NUEVO: Agregamos el precio para ventas ---
-                // El Frontend debería decidir qué precio mostrar (Caja o Unidad).
-                // Aquí enviamos el base (Caja) y el de Unidad.
-                stock.setPrecioVenta(producto.getPrecioVentaBase());
-                // ---------------------------------------------
+                // --- CONFIGURACIÓN DE PRECIOS Y FRACCIONAMIENTO ---
+                // Estos datos permiten al MS-Ventas calcular correctamente el precio según
+                // si la venta es por Caja o por Unidad
+                stock.setPrecioVentaBase(producto.getPrecioVentaBase());
+                stock.setPrecioVentaUnidad(producto.getPrecioVentaUnidad());
+                stock.setEsFraccionable(producto.getEsFraccionable());
+                stock.setUnidadesPorCaja(producto.getUnidadesPorCaja());
+                // ----------------------------------------------
 
                 stock.setCantidadDisponible(disponible != null ? disponible : 0);
                 stock.setCantidadMinima(producto.getStockMinimo());
