@@ -67,6 +67,12 @@ public class ProductoService {
         p.setPresentacion(dto.getPresentacion());
         p.setRegistroInvima(dto.getRegistroInvima());
         p.setEstado("ACTIVO");
+        // Tipo de producto (TANGIBLE o SERVICIO)
+        if (dto.getTipo() != null) {
+            p.setTipo(com.legacy.pharmacy.inventario.entity.TipoProducto.valueOf(dto.getTipo()));
+        } else {
+            p.setTipo(com.legacy.pharmacy.inventario.entity.TipoProducto.TANGIBLE);
+        }
         p.setEsFraccionable(dto.getEsFraccionable() != null ? dto.getEsFraccionable() : false);
         p.setUnidadesPorCaja(dto.getUnidadesPorCaja() != null ? dto.getUnidadesPorCaja() : 1);
         p.setUnidadesPorBlister(dto.getUnidadesPorBlister()); // Informativo para UX
@@ -107,6 +113,11 @@ public class ProductoService {
             p.setEsControlado(dto.getEsControlado());
         if (dto.getRefrigerado() != null)
             p.setRefrigerado(dto.getRefrigerado());
+
+        // Actualizar tipo si viene en el DTO
+        if (dto.getTipo() != null) {
+            p.setTipo(com.legacy.pharmacy.inventario.entity.TipoProducto.valueOf(dto.getTipo()));
+        }
 
         // Actualizamos campos de fraccionamiento
         if (dto.getEsFraccionable() != null)

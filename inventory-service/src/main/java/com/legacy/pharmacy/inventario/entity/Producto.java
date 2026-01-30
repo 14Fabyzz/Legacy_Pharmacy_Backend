@@ -86,6 +86,11 @@ public class Producto {
     @Column(length = 20)
     private String estado = "ACTIVO";
 
+    // Tipo de producto (TANGIBLE con stock vs SERVICIO sin stock)
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private TipoProducto tipo = TipoProducto.TANGIBLE;
+
     // --- DATOS DE FRACCIONAMIENTO (NUEVO) ---
 
     @Column(name = "es_fraccionable")

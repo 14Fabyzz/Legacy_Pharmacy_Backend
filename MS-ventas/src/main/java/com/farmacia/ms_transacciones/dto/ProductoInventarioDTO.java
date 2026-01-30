@@ -12,6 +12,9 @@ public class ProductoInventarioDTO {
     @JsonProperty("nombreProducto")
     private String nombreComercial;
 
+    @JsonProperty("tipo")
+    private String tipo; // TANGIBLE o SERVICIO
+
     @JsonProperty("precioVentaBase")
     private BigDecimal precioVentaBase; // Precio por Caja
 

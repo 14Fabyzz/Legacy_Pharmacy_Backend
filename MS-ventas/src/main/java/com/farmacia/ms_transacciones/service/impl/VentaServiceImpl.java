@@ -89,7 +89,10 @@ public class VentaServiceImpl implements VentaService {
             // A. Consultar Inventario
             ProductoInventarioDTO prod = inventarioClient.obtenerProducto(item.getProductoId());
 
-            // B. Determinar tipo de venta y precio a usar
+            // B. Verificar si es producto TANGIBLE o SERVICIO
+            boolean esServicio = "SERVICIO".equalsIgnoreCase(prod.getTipo());
+
+            // C. Determinar tipo de venta y precio a usar
             Boolean esVentaCaja = Boolean.TRUE.equals(item.getEsVentaPorCaja());
             BigDecimal precioAUsar;
 
@@ -107,13 +110,15 @@ public class VentaServiceImpl implements VentaService {
                 }
             }
 
-            // C. Validar stock disponible
-            if (prod.getStockActual() < item.getCantidad()) {
-                throw new RuntimeException("Stock insuficiente para: " + prod.getNombreComercial() +
-                        ". Disponible: " + prod.getStockActual() + ", Solicitado: " + item.getCantidad());
+            // D. Validar stock SOLO si es producto TANGIBLE
+            if (!esServicio) {
+                if (prod.getStockActual() < item.getCantidad()) {
+                    throw new RuntimeException("Stock insuficiente para: " + prod.getNombreComercial() +
+                            ". Disponible: " + prod.getStockActual() + ", Solicitado: " + item.getCantidad());
+                }
             }
 
-            // D. Crear Detalle con precio dinámico
+            // E. Crear Detalle con precio dinámico
             DetalleVenta det = new DetalleVenta();
             det.setVenta(venta);
             det.setProductoId(item.getProductoId());
@@ -128,13 +133,15 @@ public class VentaServiceImpl implements VentaService {
             detalleVentaRepository.save(det);
             total = total.add(sub);
 
-            // E. Descontar Inventario con el flag de tipo de venta
-            inventarioClient.registrarSalida(
-                    item.getProductoId(),
-                    item.getCantidad(),
-                    turnoActual.getSucursalId(),
-                    esVentaCaja // ← NUEVO PARÁMETRO
-            );
+            // F. Descontar Inventario SOLO si es producto TANGIBLE
+            if (!esServicio) {
+                inventarioClient.registrarSalida(
+                        item.getProductoId(),
+                        item.getCantidad(),
+                        turnoActual.getSucursalId(),
+                        esVentaCaja // ← NUEVO PARÁMETRO
+                );
+            }
         }
 
         venta.setTotal(total);

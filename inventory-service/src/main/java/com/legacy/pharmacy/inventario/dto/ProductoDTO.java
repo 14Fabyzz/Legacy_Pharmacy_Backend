@@ -37,6 +37,9 @@ public class ProductoDTO {
     private Boolean esControlado;
     private Boolean refrigerado;
 
+    @com.fasterxml.jackson.annotation.JsonProperty("tipo")
+    private String tipo; // TANGIBLE o SERVICIO
+
     // Campos para unidades fraccionadas
     @com.fasterxml.jackson.annotation.JsonProperty("esFraccionable")
     private Boolean esFraccionable;

@@ -134,6 +134,7 @@ public class InventarioService {
                 StockDTO stock = new StockDTO();
                 stock.setProductoId(producto.getId());
                 stock.setNombreProducto(producto.getNombreComercial());
+                stock.setTipo(producto.getTipo() != null ? producto.getTipo().name() : "TANGIBLE");
 
                 // --- CONFIGURACIÓN DE PRECIOS Y FRACCIONAMIENTO ---
                 // Estos datos permiten al MS-Ventas calcular correctamente el precio según
