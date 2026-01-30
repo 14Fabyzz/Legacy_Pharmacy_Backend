@@ -142,6 +142,7 @@ public class InventarioService {
                 stock.setPrecioVentaUnidad(producto.getPrecioVentaUnidad());
                 stock.setEsFraccionable(producto.getEsFraccionable());
                 stock.setUnidadesPorCaja(producto.getUnidadesPorCaja());
+                stock.setUnidadesPorBlister(producto.getUnidadesPorBlister()); // Informativo para UX
                 // ----------------------------------------------
 
                 stock.setCantidadDisponible(disponible != null ? disponible : 0);

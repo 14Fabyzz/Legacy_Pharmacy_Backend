@@ -94,6 +94,9 @@ public class Producto {
     @Column(name = "unidades_por_caja")
     private Integer unidadesPorCaja = 1;
 
+    @Column(name = "unidades_por_blister")
+    private Integer unidadesPorBlister; // Informativo para UX (Ej: 10 pastillas/blister)
+
     @Column(name = "precio_venta_unidad")
     private BigDecimal precioVentaUnidad;
 

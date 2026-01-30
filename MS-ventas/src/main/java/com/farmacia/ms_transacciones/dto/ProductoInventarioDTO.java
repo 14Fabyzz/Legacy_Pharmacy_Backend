@@ -24,6 +24,9 @@ public class ProductoInventarioDTO {
     @JsonProperty("unidadesPorCaja")
     private Integer unidadesPorCaja; // Factor de conversión
 
+    @JsonProperty("unidadesPorBlister")
+    private Integer unidadesPorBlister; // Informativo para UX (botones rápidos)
+
     @JsonProperty("cantidadDisponible")
     private Integer stockActual;
 }

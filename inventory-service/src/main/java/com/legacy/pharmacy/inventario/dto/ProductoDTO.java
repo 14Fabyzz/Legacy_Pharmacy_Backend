@@ -45,6 +45,9 @@ public class ProductoDTO {
     @jakarta.validation.constraints.Min(value = 1, message = "Las unidades por caja deben ser al menos 1")
     private Integer unidadesPorCaja;
 
+    @com.fasterxml.jackson.annotation.JsonProperty("unidadesPorBlister")
+    private Integer unidadesPorBlister; // Informativo para UX
+
     @com.fasterxml.jackson.annotation.JsonProperty("precioVentaUnidad")
     private BigDecimal precioVentaUnidad;
 }

@@ -69,6 +69,7 @@ public class ProductoService {
         p.setEstado("ACTIVO");
         p.setEsFraccionable(dto.getEsFraccionable() != null ? dto.getEsFraccionable() : false);
         p.setUnidadesPorCaja(dto.getUnidadesPorCaja() != null ? dto.getUnidadesPorCaja() : 1);
+        p.setUnidadesPorBlister(dto.getUnidadesPorBlister()); // Informativo para UX
         p.setPrecioVentaUnidad(dto.getPrecioVentaUnidad());
 
         // Relaciones
@@ -112,6 +113,8 @@ public class ProductoService {
             p.setEsFraccionable(dto.getEsFraccionable());
         if (dto.getUnidadesPorCaja() != null)
             p.setUnidadesPorCaja(dto.getUnidadesPorCaja());
+        if (dto.getUnidadesPorBlister() != null)
+            p.setUnidadesPorBlister(dto.getUnidadesPorBlister()); // Informativo para UX
         if (dto.getPrecioVentaUnidad() != null)
             p.setPrecioVentaUnidad(dto.getPrecioVentaUnidad());
 
