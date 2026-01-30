@@ -38,6 +38,11 @@ public class VentaServiceImpl implements VentaService {
     @Autowired
     private InventarioClient inventarioClient;
 
+    // ID del Cliente Genérico (Mostrador) - NO permitido para medicamentos
+    // controlados
+    @org.springframework.beans.factory.annotation.Value("${ventas.cliente-generico-id:1}")
+    private Integer clienteGenericoId;
+
     @Override
     @Transactional
     public VentaResponseDTO crearVenta(CrearVentaDTO datosVenta) {
@@ -88,6 +93,22 @@ public class VentaServiceImpl implements VentaService {
         for (ItemVentaDTO item : datosVenta.getItems()) {
             // A. Consultar Inventario
             ProductoInventarioDTO prod = inventarioClient.obtenerProducto(item.getProductoId());
+
+            // --- 🛡️ VALIDACIÓN LEGAL: MEDICAMENTOS CONTROLADOS ---
+            if (Boolean.TRUE.equals(prod.getEsControlado())) {
+                Integer clienteVenta = datosVenta.getClienteId();
+
+                // Si no hay cliente (null) o es el Cliente Genérico (ID 1), BLOQUEAR.
+                // Esto obliga al cajero a cambiar el cliente por una persona real con cédula.
+                if (clienteVenta == null || clienteVenta.equals(clienteGenericoId)) {
+                    throw new com.farmacia.ms_transacciones.exception.BusinessException(
+                            String.format("⛔ BLOQUEO LEGAL: El producto '%s' es CONTROLADO. " +
+                                    "La ley prohíbe su venta a 'Cliente Mostrador'. " +
+                                    "Acción: Asocie un cliente real con Cédula y Nombre a esta venta.",
+                                    prod.getNombreComercial()));
+                }
+            }
+            // -----------------------------------------------------
 
             // B. Verificar si es producto TANGIBLE o SERVICIO
             boolean esServicio = "SERVICIO".equalsIgnoreCase(prod.getTipo());

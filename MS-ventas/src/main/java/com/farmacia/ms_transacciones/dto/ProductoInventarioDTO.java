@@ -30,6 +30,9 @@ public class ProductoInventarioDTO {
     @JsonProperty("unidadesPorBlister")
     private Integer unidadesPorBlister; // Informativo para UX (botones rápidos)
 
+    @JsonProperty("esControlado")
+    private Boolean esControlado; // Medicamento controlado (requiere cliente real)
+
     @JsonProperty("cantidadDisponible")
     private Integer stockActual;
 }

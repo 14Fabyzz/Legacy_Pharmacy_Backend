@@ -144,6 +144,7 @@ public class InventarioService {
                 stock.setEsFraccionable(producto.getEsFraccionable());
                 stock.setUnidadesPorCaja(producto.getUnidadesPorCaja());
                 stock.setUnidadesPorBlister(producto.getUnidadesPorBlister()); // Informativo para UX
+                stock.setEsControlado(producto.getEsControlado()); // Control legal
                 // ----------------------------------------------
 
                 stock.setCantidadDisponible(disponible != null ? disponible : 0);

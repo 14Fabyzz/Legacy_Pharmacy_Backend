@@ -18,6 +18,7 @@ public class StockDTO {
     private Boolean esFraccionable; // ¿Permite venta menudeada?
     private Integer unidadesPorCaja; // Factor de conversión
     private Integer unidadesPorBlister; // Informativo para UX (botones rápidos)
+    private Boolean esControlado; // Medicamento controlado (requiere cliente real)
     private Integer cantidadDisponible; // Stock TOTAL en unidades
     private Integer cantidadMinima;
     private String estado; // STOCK_OK, BAJO, SIN_STOCK
