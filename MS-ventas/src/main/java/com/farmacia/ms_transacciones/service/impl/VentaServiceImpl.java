@@ -96,11 +96,11 @@ public class VentaServiceImpl implements VentaService {
 
             // --- 🛡️ VALIDACIÓN LEGAL: MEDICAMENTOS CONTROLADOS ---
             if (Boolean.TRUE.equals(prod.getEsControlado())) {
-                Integer clienteVenta = datosVenta.getClienteId();
+                Long clienteVenta = datosVenta.getClienteId();
 
                 // Si no hay cliente (null) o es el Cliente Genérico (ID 1), BLOQUEAR.
                 // Esto obliga al cajero a cambiar el cliente por una persona real con cédula.
-                if (clienteVenta == null || clienteVenta.equals(clienteGenericoId)) {
+                if (clienteVenta == null || clienteVenta.equals(clienteGenericoId.longValue())) {
                     throw new com.farmacia.ms_transacciones.exception.BusinessException(
                             String.format("⛔ BLOQUEO LEGAL: El producto '%s' es CONTROLADO. " +
                                     "La ley prohíbe su venta a 'Cliente Mostrador'. " +
