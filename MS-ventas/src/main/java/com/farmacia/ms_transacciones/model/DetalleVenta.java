@@ -21,6 +21,9 @@ public class DetalleVenta {
     private BigDecimal precioUnitario;
     private BigDecimal subtotal;
 
+    @Column(name = "es_venta_por_caja")
+    private Boolean esVentaPorCaja; // true = Caja, false = Unidad
+
     @ManyToOne
     @JoinColumn(name = "venta_id")
     @JsonIgnore // Rompe el bucle infinito JSON

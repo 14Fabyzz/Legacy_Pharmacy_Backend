@@ -27,11 +27,16 @@ import java.util.stream.Collectors;
 @Service
 public class VentaServiceImpl implements VentaService {
 
-    @Autowired private VentaRepository ventaRepository;
-    @Autowired private DetalleVentaRepository detalleVentaRepository;
-    @Autowired private ClienteRepository clienteRepository;
-    @Autowired private TurnoCajaRepository turnoCajaRepository;
-    @Autowired private InventarioClient inventarioClient;
+    @Autowired
+    private VentaRepository ventaRepository;
+    @Autowired
+    private DetalleVentaRepository detalleVentaRepository;
+    @Autowired
+    private ClienteRepository clienteRepository;
+    @Autowired
+    private TurnoCajaRepository turnoCajaRepository;
+    @Autowired
+    private InventarioClient inventarioClient;
 
     @Override
     @Transactional
@@ -55,7 +60,7 @@ public class VentaServiceImpl implements VentaService {
         venta.setFechaVenta(LocalDateTime.now());
         venta.setEstado("COMPLETADA");
         venta.setMetodoPago(datosVenta.getMetodoPago());
-        venta.setReferenciaPago(datosVenta.getReferenciaPago()); 
+        venta.setReferenciaPago(datosVenta.getReferenciaPago());
         venta.setTurno(turnoActual);
         venta.setSucursalId(turnoActual.getSucursalId());
 
@@ -70,45 +75,65 @@ public class VentaServiceImpl implements VentaService {
 
         // Cliente
         if (datosVenta.getClienteId() != null) {
-             Cliente cliente = clienteRepository.findById(datosVenta.getClienteId())
-                .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
+            Cliente cliente = clienteRepository.findById(datosVenta.getClienteId())
+                    .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
             venta.setCliente(cliente);
         }
 
         venta = ventaRepository.save(venta);
 
-        // --- LÓGICA DE DETALLES ---
+        // --- LÓGICA DE DETALLES CON PRECIO DUAL ---
         BigDecimal total = BigDecimal.ZERO;
-        
+
         for (ItemVentaDTO item : datosVenta.getItems()) {
             // A. Consultar Inventario
             ProductoInventarioDTO prod = inventarioClient.obtenerProducto(item.getProductoId());
 
-            // VALIDACIÓN AGREGADA: BLOQUEAR SI NO HAY STOCK
-            if (prod.getStockActual() < item.getCantidad()) {
-                throw new RuntimeException("Stock insuficiente para: " + prod.getNombreComercial() + 
-                                           ". Disponible: " + prod.getStockActual() + ", Solicitado: " + item.getCantidad());
+            // B. Determinar tipo de venta y precio a usar
+            Boolean esVentaCaja = Boolean.TRUE.equals(item.getEsVentaPorCaja());
+            BigDecimal precioAUsar;
+
+            if (esVentaCaja) {
+                // Venta por CAJA
+                precioAUsar = prod.getPrecioVentaBase();
+            } else {
+                // Venta por UNIDAD
+                if (Boolean.TRUE.equals(prod.getEsFraccionable())) {
+                    precioAUsar = prod.getPrecioVentaUnidad();
+                } else {
+                    // Producto no fraccionable, se cobra por caja forzosamente
+                    precioAUsar = prod.getPrecioVentaBase();
+                    esVentaCaja = true; // Override para consistencia
+                }
             }
 
-            // B. Crear Detalle
+            // C. Validar stock disponible
+            if (prod.getStockActual() < item.getCantidad()) {
+                throw new RuntimeException("Stock insuficiente para: " + prod.getNombreComercial() +
+                        ". Disponible: " + prod.getStockActual() + ", Solicitado: " + item.getCantidad());
+            }
+
+            // D. Crear Detalle con precio dinámico
             DetalleVenta det = new DetalleVenta();
             det.setVenta(venta);
             det.setProductoId(item.getProductoId());
             det.setProductoNombre(prod.getNombreComercial());
-            det.setPrecioUnitario(prod.getPrecioVentaBase());
             det.setCantidad(item.getCantidad());
+            det.setPrecioUnitario(precioAUsar); // ← PRECIO DINÁMICO
+            det.setEsVentaPorCaja(esVentaCaja); // ← REGISTRO DEL TIPO DE VENTA
 
-            BigDecimal sub = prod.getPrecioVentaBase().multiply(new BigDecimal(item.getCantidad()));
+            BigDecimal sub = precioAUsar.multiply(new BigDecimal(item.getCantidad()));
             det.setSubtotal(sub);
 
             detalleVentaRepository.save(det);
             total = total.add(sub);
 
-            // C. Descontar Inventario
+            // E. Descontar Inventario con el flag de tipo de venta
             inventarioClient.registrarSalida(
                     item.getProductoId(),
                     item.getCantidad(),
-                    turnoActual.getSucursalId()
+                    turnoActual.getSucursalId(),
+                    esVentaCaja // ← NUEVO PARÁMETRO
             );
         }
 
@@ -120,7 +145,8 @@ public class VentaServiceImpl implements VentaService {
                 throw new RuntimeException("En pagos en efectivo debe indicar el monto recibido.");
             }
             if (datosVenta.getMontoRecibido().compareTo(total) < 0) {
-                throw new RuntimeException("Dinero insuficiente. Faltan: " + total.subtract(datosVenta.getMontoRecibido()));
+                throw new RuntimeException(
+                        "Dinero insuficiente. Faltan: " + total.subtract(datosVenta.getMontoRecibido()));
             }
             venta.setMontoRecibido(datosVenta.getMontoRecibido());
             venta.setCambio(datosVenta.getMontoRecibido().subtract(total));
@@ -146,23 +172,25 @@ public class VentaServiceImpl implements VentaService {
         dto.setVendedorNombre(v.getVendedorNombre());
         dto.setSucursalId(v.getSucursalId());
 
-        if(v.getCliente() != null) dto.setClienteId(v.getCliente().getId());
-        
+        if (v.getCliente() != null)
+            dto.setClienteId(v.getCliente().getId());
+
         // Mapeo de items
-        if(v.getDetalles() != null) {
+        if (v.getDetalles() != null) {
             dto.setItems(v.getDetalles().stream().map(d -> {
                 ItemVentaDTO i = new ItemVentaDTO();
                 i.setProductoId(d.getProductoId());
                 i.setCantidad(d.getCantidad());
                 i.setPrecioUnitario(d.getPrecioUnitario());
                 i.setSubtotal(d.getSubtotal());
+                i.setEsVentaPorCaja(d.getEsVentaPorCaja()); // ← NUEVO CAMPO EN RESPUESTA
                 return i;
             }).collect(Collectors.toList()));
         }
-        
+
         dto.setMontoRecibido(v.getMontoRecibido());
         dto.setCambio(v.getCambio());
-        
+
         return dto;
     }
 }

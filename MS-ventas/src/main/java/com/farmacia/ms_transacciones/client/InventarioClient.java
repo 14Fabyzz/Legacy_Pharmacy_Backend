@@ -40,16 +40,16 @@ public class InventarioClient {
         }
     }
 
-    // --- MÉTODO ACTUALIZADO: Recibe sucursalId ---
-    public void registrarSalida(Integer productoId, Integer cantidad, Integer sucursalId) {
+    // --- MÉTODO ACTUALIZADO: Recibe sucursalId y esVentaPorCaja ---
+    public void registrarSalida(Integer productoId, Integer cantidad, Integer sucursalId, Boolean esVentaPorCaja) {
         try {
 
             String url = inventarioBaseUrl + "/productos/" + productoId + "/descontar";
 
-            // Enviamos la sucursal en el JSON
+            // Enviamos la sucursal y el tipo de venta en el JSON
             String jsonBody = String.format(
-                    "{\"cantidad\": %d, \"motivo\": \"VENTA_SUCURSAL_%d\", \"sucursalId\": %d}",
-                    cantidad, sucursalId, sucursalId);
+                    "{\"cantidad\": %d, \"motivo\": \"VENTA_SUCURSAL_%d\", \"sucursalId\": %d, \"esVentaPorCaja\": %s}",
+                    cantidad, sucursalId, sucursalId, esVentaPorCaja != null ? esVentaPorCaja : false);
 
             HttpEntity<String> entity = new HttpEntity<>(jsonBody, getHeaders());
             ResponseEntity<Void> res = restTemplate.exchange(url, HttpMethod.POST, entity, Void.class);
