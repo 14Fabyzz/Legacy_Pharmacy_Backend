@@ -154,16 +154,12 @@ BEGIN
                 SET v_descuento = v_cantidad_lote;
             END IF;
 
-            -- Actualizar Lote
-            UPDATE lotes 
-            SET cantidad_actual = cantidad_actual - v_descuento 
-            WHERE id = v_lote_id;
-
-            -- Registrar Movimiento
+            -- NO hacemos UPDATE manual aquí, el trigger lo hará
+            -- Registrar Movimiento con cantidad NEGATIVA para que el trigger funcione
             INSERT INTO movimientos (
-                lote_id, tipo_movimiento, cantidad, usuario_responsable, sucursal_id, ref_venta_id, observaciones
+                lote_id, tipo_movimiento, cantidad, usuario_responsable, sucursal_id, venta_id, observaciones
             ) VALUES (
-                v_lote_id, 'SALIDA', v_descuento, p_usuario, p_sucursal_id, p_venta_id, p_observaciones
+                v_lote_id, 'SALIDA', -v_descuento, p_usuario, p_sucursal_id, p_venta_id, p_observaciones
             );
 
             SET v_cantidad_restante = v_cantidad_restante - v_descuento;
