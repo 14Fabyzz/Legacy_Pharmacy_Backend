@@ -9,7 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/caja")
+@RequestMapping("/caja") // Los endpoints de caja siguen necesitando /caja
 public class TurnoCajaController {
 
     @Autowired

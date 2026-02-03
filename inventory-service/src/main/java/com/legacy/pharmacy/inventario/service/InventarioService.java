@@ -191,24 +191,35 @@ public class InventarioService {
         /**
          * Consultar stock disponible de un producto
          * Este método será llamado por MS-Ventas antes de crear una venta
+         * 
+         * @param productoId ID del producto
+         * @param sucursalId ID de la sucursal (opcional, para filtrar stock por
+         *                   sucursal)
          */
-        public StockDTO consultarStock(Integer productoId) {
-                log.info("Consultando stock del producto {} - Usuario: {}",
-                                productoId, UserContext.getUsername());
+        public StockDTO consultarStock(Integer productoId, Integer sucursalId) {
+                log.info("Consultando stock del producto {} en sucursal {} - Usuario: {}",
+                                productoId, sucursalId != null ? sucursalId : "TODAS", UserContext.getUsername());
 
                 // 1. Buscas el producto
                 Producto producto = productoRepository.findById(productoId)
                                 .orElseThrow(() -> new RuntimeException("Producto no encontrado: " + productoId));
 
-                // 2. Calculas el disponible
-                Integer disponible = jdbcTemplate.queryForObject(
-                                "SELECT COALESCE(SUM(cantidad_actual), 0) " +
-                                                "FROM lotes " +
-                                                "WHERE producto_id = ? " +
-                                                "AND cantidad_actual > 0 " +
-                                                "AND fecha_vencimiento > CURDATE()",
-                                Integer.class,
-                                productoId);
+                // 2. Calculas el disponible desde lotes
+                String sql = "SELECT COALESCE(SUM(cantidad_actual), 0) " +
+                                "FROM lotes " +
+                                "WHERE producto_id = ? " +
+                                "AND cantidad_actual > 0 " +
+                                "AND fecha_vencimiento > CURDATE()";
+
+                Integer disponible;
+                if (sucursalId != null) {
+                        sql += " AND sucursal_id = ?";
+                        disponible = jdbcTemplate.queryForObject(sql, Integer.class, productoId, sucursalId);
+                        log.debug("Query con filtro de sucursal: sucursalId={}", sucursalId);
+                } else {
+                        disponible = jdbcTemplate.queryForObject(sql, Integer.class, productoId);
+                        log.debug("Query sin filtro de sucursal (stock global)");
+                }
 
                 // 3. Determinar estado del stock (Esta parte faltaba en tu resumen)
                 String estado;

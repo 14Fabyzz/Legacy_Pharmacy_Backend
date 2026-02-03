@@ -108,10 +108,16 @@ public class ProductoController {
 
     /**
      * Consultar stock disponible de un producto
+     * 
+     * @param productoId ID del producto
+     * @param sucursalId ID de la sucursal (opcional, para filtrar stock por
+     *                   sucursal)
      */
     @GetMapping("/productos/{productoId}/stock")
-    public ResponseEntity<StockDTO> consultarStock(@PathVariable Integer productoId) {
-        return ResponseEntity.ok(inventarioService.consultarStock(productoId));
+    public ResponseEntity<StockDTO> consultarStock(
+            @PathVariable Integer productoId,
+            @RequestParam(required = false) Integer sucursalId) {
+        return ResponseEntity.ok(inventarioService.consultarStock(productoId, sucursalId));
     }
 
     /**

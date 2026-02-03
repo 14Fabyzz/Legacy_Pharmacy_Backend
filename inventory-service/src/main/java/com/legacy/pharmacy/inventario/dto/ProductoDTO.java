@@ -53,4 +53,7 @@ public class ProductoDTO {
 
     @com.fasterxml.jackson.annotation.JsonProperty("precioVentaUnidad")
     private BigDecimal precioVentaUnidad;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("precioVentaBlister")
+    private BigDecimal precioVentaBlister;
 }

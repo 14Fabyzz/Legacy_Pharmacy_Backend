@@ -6,6 +6,7 @@ import com.farmacia.ms_transacciones.dto.CrearVentaDTO;
 import com.farmacia.ms_transacciones.dto.ItemVentaDTO;
 import com.farmacia.ms_transacciones.dto.ProductoInventarioDTO;
 import com.farmacia.ms_transacciones.dto.VentaResponseDTO;
+import com.farmacia.ms_transacciones.enums.TipoVenta;
 import com.farmacia.ms_transacciones.model.Cliente;
 import com.farmacia.ms_transacciones.model.DetalleVenta;
 import com.farmacia.ms_transacciones.model.TurnoCaja;
@@ -113,25 +114,59 @@ public class VentaServiceImpl implements VentaService {
             // B. Verificar si es producto TANGIBLE o SERVICIO
             boolean esServicio = "SERVICIO".equalsIgnoreCase(prod.getTipo());
 
-            // C. Determinar tipo de venta y precio a usar
-            Boolean esVentaCaja = Boolean.TRUE.equals(item.getEsVentaPorCaja());
-            BigDecimal precioAUsar;
-
-            if (esVentaCaja) {
-                // Venta por CAJA
-                precioAUsar = prod.getPrecioVentaBase();
-            } else {
-                // Venta por UNIDAD
-                if (Boolean.TRUE.equals(prod.getEsFraccionable())) {
-                    precioAUsar = prod.getPrecioVentaUnidad();
-                } else {
-                    // Producto no fraccionable, se cobra por caja forzosamente
-                    precioAUsar = prod.getPrecioVentaBase();
-                    esVentaCaja = true; // Override para consistencia
-                }
+            // C. Determinar TipoVenta (Prioridad: Enum > Boolean legacy)
+            TipoVenta tipoVenta = item.getTipoVenta();
+            if (tipoVenta == null) {
+                // Backward compatibility: convertir esVentaPorCaja a TipoVenta
+                @SuppressWarnings("deprecation")
+                Boolean esVentaPorCaja = item.getEsVentaPorCaja();
+                tipoVenta = Boolean.TRUE.equals(esVentaPorCaja) ? TipoVenta.CAJA : TipoVenta.UNIDAD;
             }
 
-            // D. Validar stock SOLO si es producto TANGIBLE
+            // D. Calcular precio según TipoVenta
+            BigDecimal precioAUsar;
+            switch (tipoVenta) {
+                case CAJA:
+                    precioAUsar = prod.getPrecioVentaBase();
+                    break;
+
+                case BLISTER:
+                    // Validar que el producto tiene configuración de blister
+                    if (!Boolean.TRUE.equals(prod.getEsFraccionable())) {
+                        throw new RuntimeException(
+                                String.format("El producto '%s' no permite venta fraccionada por blister",
+                                        prod.getNombreComercial()));
+                    }
+                    if (prod.getUnidadesPorBlister() == null || prod.getUnidadesPorBlister() == 0) {
+                        throw new RuntimeException(
+                                String.format("El producto '%s' no tiene configurado unidades por blister",
+                                        prod.getNombreComercial()));
+                    }
+                    // Usar precio blister si existe, sino calcular
+                    if (prod.getPrecioVentaBlister() != null
+                            && prod.getPrecioVentaBlister().compareTo(BigDecimal.ZERO) > 0) {
+                        precioAUsar = prod.getPrecioVentaBlister();
+                    } else {
+                        precioAUsar = prod.getPrecioVentaUnidad()
+                                .multiply(new BigDecimal(prod.getUnidadesPorBlister()));
+                    }
+                    break;
+
+                case UNIDAD:
+                    if (Boolean.TRUE.equals(prod.getEsFraccionable())) {
+                        precioAUsar = prod.getPrecioVentaUnidad();
+                    } else {
+                        // Producto no fraccionable, forzar venta por caja
+                        precioAUsar = prod.getPrecioVentaBase();
+                        tipoVenta = TipoVenta.CAJA; // Override para consistencia
+                    }
+                    break;
+
+                default:
+                    throw new RuntimeException("TipoVenta no soportado: " + tipoVenta);
+            }
+
+            // E. Validar stock SOLO si es producto TANGIBLE
             if (!esServicio) {
                 if (prod.getStockActual() < item.getCantidad()) {
                     throw new RuntimeException("Stock insuficiente para: " + prod.getNombreComercial() +
@@ -139,14 +174,19 @@ public class VentaServiceImpl implements VentaService {
                 }
             }
 
-            // E. Crear Detalle con precio dinámico
+            // F. Crear Detalle con precio dinámico
             DetalleVenta det = new DetalleVenta();
             det.setVenta(venta);
             det.setProductoId(item.getProductoId());
             det.setProductoNombre(prod.getNombreComercial());
             det.setCantidad(item.getCantidad());
             det.setPrecioUnitario(precioAUsar); // ← PRECIO DINÁMICO
-            det.setEsVentaPorCaja(esVentaCaja); // ← REGISTRO DEL TIPO DE VENTA
+            det.setTipoVenta(tipoVenta); // ← NUEVO: Registro de TipoVenta
+
+            // Backward compatibility: mapear también al campo deprecated
+            @SuppressWarnings("deprecation")
+            Boolean esVentaPorCajaDeprecated = (tipoVenta == TipoVenta.CAJA);
+            det.setEsVentaPorCaja(esVentaPorCajaDeprecated);
 
             BigDecimal sub = precioAUsar.multiply(new BigDecimal(item.getCantidad()));
             det.setSubtotal(sub);
@@ -154,13 +194,13 @@ public class VentaServiceImpl implements VentaService {
             detalleVentaRepository.save(det);
             total = total.add(sub);
 
-            // F. Descontar Inventario SOLO si es producto TANGIBLE
+            // G. Descontar Inventario SOLO si es producto TANGIBLE
             if (!esServicio) {
                 inventarioClient.registrarSalida(
                         item.getProductoId(),
                         item.getCantidad(),
                         turnoActual.getSucursalId(),
-                        esVentaCaja // ← NUEVO PARÁMETRO
+                        tipoVenta // ← NUEVO: Enviar TipoVenta en lugar de Boolean
                 );
             }
         }

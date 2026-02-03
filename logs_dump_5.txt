@@ -1,0 +1,208 @@
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.0.0)
+
+2026-02-03T18:05:36.616Z  INFO 1 --- [ms-inventario] [           main] c.l.p.i.InventoryServiceApplication      : Starting InventoryServiceApplication v0.0.1-SNAPSHOT using Java 21.0.10 with PID 1 (/app/app.jar started by root in /app)
+2026-02-03T18:05:36.623Z DEBUG 1 --- [ms-inventario] [           main] c.l.p.i.InventoryServiceApplication      : Running with Spring Boot v4.0.0, Spring v7.0.1
+2026-02-03T18:05:36.625Z  INFO 1 --- [ms-inventario] [           main] c.l.p.i.InventoryServiceApplication      : The following 1 profile is active: "default"
+2026-02-03T18:05:37.717Z  INFO 1 --- [ms-inventario] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-02-03T18:05:37.790Z  INFO 1 --- [ms-inventario] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 62 ms. Found 8 JPA repository interfaces.
+2026-02-03T18:05:38.613Z  INFO 1 --- [ms-inventario] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 8081 (http)
+2026-02-03T18:05:38.632Z  INFO 1 --- [ms-inventario] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-02-03T18:05:38.633Z  INFO 1 --- [ms-inventario] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.14]
+2026-02-03T18:05:38.664Z  INFO 1 --- [ms-inventario] [           main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 1947 ms
+2026-02-03T18:05:39.038Z  INFO 1 --- [ms-inventario] [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-02-03T18:05:39.111Z  INFO 1 --- [ms-inventario] [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 7.1.8.Final
+2026-02-03T18:05:39.673Z  INFO 1 --- [ms-inventario] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-02-03T18:05:39.703Z  INFO 1 --- [ms-inventario] [           main] com.zaxxer.hikari.HikariDataSource       : InventarioHikariPool - Starting...
+2026-02-03T18:05:41.958Z  INFO 1 --- [ms-inventario] [           main] com.zaxxer.hikari.pool.HikariPool        : InventarioHikariPool - Added connection com.mysql.cj.jdbc.ConnectionImpl@50ef2906
+2026-02-03T18:05:41.960Z  INFO 1 --- [ms-inventario] [           main] com.zaxxer.hikari.HikariDataSource       : InventarioHikariPool - Start completed.
+2026-02-03T18:05:42.332Z  WARN 1 --- [ms-inventario] [           main] org.hibernate.orm.deprecation            : HHH90000025: MySQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-02-03T18:05:42.511Z  INFO 1 --- [ms-inventario] [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:mysql://legacy03-fbenjumeau-515c.g.aivencloud.com:17293/defaultdb?sslMode=REQUIRED&serverTimezone=America/Bogota&allowPublicKeyRetrieval=true]
+	Database driver: MySQL Connector/J
+	Database dialect: MySQLDialect
+	Database version: 8.0.35
+	Default catalog/schema: defaultdb/undefined
+	Autocommit mode: undefined/unknown
+	Isolation level: REPEATABLE_READ [default REPEATABLE_READ]
+	JDBC fetch size: none
+	Pool: DatasourceConnectionProviderImpl
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-02-03T18:05:41.327Z  INFO 1 --- [ms-inventario] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-02-03T18:05:44.686Z  INFO 1 --- [ms-inventario] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-02-03T18:05:44.778Z  INFO 1 --- [ms-inventario] [           main] o.s.d.j.r.query.QueryEnhancerFactories   : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-02-03T18:06:13.578Z  INFO 1 --- [ms-inventario] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 3 endpoints beneath base path '/actuator'
+2026-02-03T18:06:13.682Z  INFO 1 --- [ms-inventario] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 8081 (http) with context path '/api/v1/inventario'
+2026-02-03T18:06:13.703Z  INFO 1 --- [ms-inventario] [           main] c.l.p.i.InventoryServiceApplication      : Started InventoryServiceApplication in 37.629 seconds (process running for 43.274)
+2026-02-03T18:09:18.217Z  INFO 1 --- [ms-inventario] [nio-8081-exec-2] o.a.c.c.C.[.[.[/api/v1/inventario]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-02-03T18:09:18.218Z  INFO 1 --- [ms-inventario] [nio-8081-exec-2] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-02-03T18:09:18.220Z  INFO 1 --- [ms-inventario] [nio-8081-exec-2] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+2026-02-03T18:09:18.253Z DEBUG 1 --- [ms-inventario] [nio-8081-exec-2] c.l.p.i.config.UserContextInterceptor    : Request from user: ID=1, Username=admin, Role=ADMIN
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.activa,
+        c1_0.created_at,
+        c1_0.descripcion,
+        c1_0.nombre,
+        c1_0.updated_at 
+    from
+        categorias c1_0 
+    where
+        c1_0.id=?
+Hibernate: 
+    select
+        l1_0.id,
+        l1_0.activo,
+        l1_0.created_at,
+        l1_0.email,
+        l1_0.nombre,
+        l1_0.pais,
+        l1_0.telefono,
+        l1_0.updated_at 
+    from
+        laboratorios l1_0 
+    where
+        l1_0.id=?
+Hibernate: 
+    insert 
+    into
+        productos
+        (categoria_id, codigo_barras, codigo_interno, concentracion, created_at, es_controlado, es_fraccionable, estado, iva_porcentaje, laboratorio_id, margen_minimo_porcentaje, nombre_comercial, precio_compra_referencia, precio_venta_base, precio_venta_blister, precio_venta_unidad, presentacion, principio_activo_id, refrigerado, registro_invima, stock_minimo, tipo, unidades_por_blister, unidades_por_caja, updated_at) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-02-03T18:09:21.463Z DEBUG 1 --- [ms-inventario] [nio-8081-exec-4] c.l.p.i.config.UserContextInterceptor    : Request from user: ID=1, Username=admin, Role=ADMIN
+Hibernate: 
+    select
+        p1_0.id,
+        p1_0.categoria_id,
+        c1_0.id,
+        c1_0.activa,
+        c1_0.created_at,
+        c1_0.descripcion,
+        c1_0.nombre,
+        c1_0.updated_at,
+        p1_0.codigo_barras,
+        p1_0.codigo_interno,
+        p1_0.concentracion,
+        p1_0.created_at,
+        p1_0.es_controlado,
+        p1_0.es_fraccionable,
+        p1_0.estado,
+        p1_0.iva_porcentaje,
+        p1_0.laboratorio_id,
+        l1_0.id,
+        l1_0.activo,
+        l1_0.created_at,
+        l1_0.email,
+        l1_0.nombre,
+        l1_0.pais,
+        l1_0.telefono,
+        l1_0.updated_at,
+        p1_0.margen_minimo_porcentaje,
+        p1_0.nombre_comercial,
+        p1_0.precio_compra_referencia,
+        p1_0.precio_venta_base,
+        p1_0.precio_venta_blister,
+        p1_0.precio_venta_unidad,
+        p1_0.presentacion,
+        pa1_0.id,
+        pa1_0.activo,
+        pa1_0.created_at,
+        pa1_0.descripcion,
+        pa1_0.nombre,
+        pa1_0.updated_at,
+        p1_0.refrigerado,
+        p1_0.registro_invima,
+        p1_0.stock_minimo,
+        p1_0.tipo,
+        p1_0.unidades_por_blister,
+        p1_0.unidades_por_caja,
+        p1_0.updated_at 
+    from
+        productos p1_0 
+    join
+        categorias c1_0 
+            on c1_0.id=p1_0.categoria_id 
+    join
+        laboratorios l1_0 
+            on l1_0.id=p1_0.laboratorio_id 
+    left join
+        principios_activos pa1_0 
+            on pa1_0.id=p1_0.principio_activo_id 
+    where
+        p1_0.id=?
+2026-02-03T18:09:21.796Z  INFO 1 --- [ms-inventario] [nio-8081-exec-4] c.l.p.i.service.InventarioService        : DEBUG_STOCK: ProductoId=1478, UnidadesPorCaja=30, EsFraccionable=true, CantidadEntrada=10
+Hibernate: 
+    CALL registrar_entrada_mercancia(?, ?, ?, ?, ?, ?, ?, ?)
+2026-02-03T18:09:22.372Z DEBUG 1 --- [ms-inventario] [nio-8081-exec-6] c.l.p.i.config.UserContextInterceptor    : Request from user: ID=1, Username=admin, Role=ADMIN
+2026-02-03T18:09:22.375Z  INFO 1 --- [ms-inventario] [nio-8081-exec-6] c.l.p.i.service.InventarioService        : Consultando stock del producto 1478 - Usuario: admin
+Hibernate: 
+    select
+        p1_0.id,
+        p1_0.categoria_id,
+        c1_0.id,
+        c1_0.activa,
+        c1_0.created_at,
+        c1_0.descripcion,
+        c1_0.nombre,
+        c1_0.updated_at,
+        p1_0.codigo_barras,
+        p1_0.codigo_interno,
+        p1_0.concentracion,
+        p1_0.created_at,
+        p1_0.es_controlado,
+        p1_0.es_fraccionable,
+        p1_0.estado,
+        p1_0.iva_porcentaje,
+        p1_0.laboratorio_id,
+        l1_0.id,
+        l1_0.activo,
+        l1_0.created_at,
+        l1_0.email,
+        l1_0.nombre,
+        l1_0.pais,
+        l1_0.telefono,
+        l1_0.updated_at,
+        p1_0.margen_minimo_porcentaje,
+        p1_0.nombre_comercial,
+        p1_0.precio_compra_referencia,
+        p1_0.precio_venta_base,
+        p1_0.precio_venta_blister,
+        p1_0.precio_venta_unidad,
+        p1_0.presentacion,
+        pa1_0.id,
+        pa1_0.activo,
+        pa1_0.created_at,
+        pa1_0.descripcion,
+        pa1_0.nombre,
+        pa1_0.updated_at,
+        p1_0.refrigerado,
+        p1_0.registro_invima,
+        p1_0.stock_minimo,
+        p1_0.tipo,
+        p1_0.unidades_por_blister,
+        p1_0.unidades_por_caja,
+        p1_0.updated_at 
+    from
+        productos p1_0 
+    join
+        categorias c1_0 
+            on c1_0.id=p1_0.categoria_id 
+    join
+        laboratorios l1_0 
+            on l1_0.id=p1_0.laboratorio_id 
+    left join
+        principios_activos pa1_0 
+            on pa1_0.id=p1_0.principio_activo_id 
+    where
+        p1_0.id=?
+2026-02-03T18:09:22.547Z DEBUG 1 --- [ms-inventario] [nio-8081-exec-6] c.l.p.i.service.InventarioService        : Stock consultado: disponible=600, estado=STOCK_OK

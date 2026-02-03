@@ -77,6 +77,7 @@ public class ProductoService {
         p.setUnidadesPorCaja(dto.getUnidadesPorCaja() != null ? dto.getUnidadesPorCaja() : 1);
         p.setUnidadesPorBlister(dto.getUnidadesPorBlister()); // Informativo para UX
         p.setPrecioVentaUnidad(dto.getPrecioVentaUnidad());
+        p.setPrecioVentaBlister(dto.getPrecioVentaBlister());
 
         // Relaciones
         p.setCategoria(categoriaRepository.findById(dto.getCategoriaId()).orElseThrow());
@@ -128,6 +129,8 @@ public class ProductoService {
             p.setUnidadesPorBlister(dto.getUnidadesPorBlister()); // Informativo para UX
         if (dto.getPrecioVentaUnidad() != null)
             p.setPrecioVentaUnidad(dto.getPrecioVentaUnidad());
+        if (dto.getPrecioVentaBlister() != null)
+            p.setPrecioVentaBlister(dto.getPrecioVentaBlister());
 
         // Actualizamos relaciones si vienen en el DTO
         if (dto.getCategoriaId() != null) {
@@ -184,31 +187,48 @@ public class ProductoService {
      */
     private void calcularPrecioUnitario(Producto producto, ProductoDTO dto) {
         // 1. ESCENARIO MANUAL: Si el usuario envía precio, se respeta
-        if (dto.getPrecioVentaUnidad() != null && dto.getPrecioVentaUnidad().compareTo(BigDecimal.ZERO) > 0) {
+        boolean precioUnidadManual = dto.getPrecioVentaUnidad() != null
+                && dto.getPrecioVentaUnidad().compareTo(BigDecimal.ZERO) > 0;
+
+        if (precioUnidadManual) {
             producto.setPrecioVentaUnidad(dto.getPrecioVentaUnidad());
-            return;
+        } else {
+            // 2. ESCENARIO AUTOMÁTICO: Cálculo matemático
+            if (Boolean.TRUE.equals(producto.getEsFraccionable())
+                    && producto.getUnidadesPorCaja() != null
+                    && producto.getUnidadesPorCaja() > 1) {
+
+                // Validación de seguridad (Null safe)
+                if (producto.getPrecioVentaBase() == null) {
+                    producto.setPrecioVentaBase(BigDecimal.ZERO);
+                }
+
+                BigDecimal precioCaja = producto.getPrecioVentaBase();
+                BigDecimal unidades = new BigDecimal(producto.getUnidadesPorCaja());
+
+                // División con redondeo bancario a 2 decimales
+                BigDecimal precioCalculado = precioCaja.divide(unidades, 2, RoundingMode.HALF_UP);
+
+                producto.setPrecioVentaUnidad(precioCalculado);
+            } else {
+                // 3. ESCENARIO NO FRACCIONABLE (Unidad = Caja)
+                producto.setPrecioVentaUnidad(producto.getPrecioVentaBase());
+            }
         }
 
-        // 2. ESCENARIO AUTOMÁTICO: Cálculo matemático
-        if (Boolean.TRUE.equals(producto.getEsFraccionable())
-                && producto.getUnidadesPorCaja() != null
-                && producto.getUnidadesPorCaja() > 1) {
+        // 4. LÓGICA PRECIO BLISTER (Modificado para soporte Blister)
+        // a. Si viene manual, se respetó arriba (setPrecioVentaBlister en
+        // guardar/actualizar)
+        // Pero debemos asegurar que si NO viene manual, y tenemos unidadesPorBlister,
+        // se calcule
+        if (dto.getPrecioVentaBlister() == null && producto.getUnidadesPorBlister() != null
+                && producto.getUnidadesPorBlister() > 0 && producto.getPrecioVentaUnidad() != null) {
 
-            // Validación de seguridad (Null safe)
-            if (producto.getPrecioVentaBase() == null) {
-                producto.setPrecioVentaBase(BigDecimal.ZERO);
-            }
+            BigDecimal precioUnidad = producto.getPrecioVentaUnidad();
+            BigDecimal factorBlister = new BigDecimal(producto.getUnidadesPorBlister());
 
-            BigDecimal precioCaja = producto.getPrecioVentaBase();
-            BigDecimal unidades = new BigDecimal(producto.getUnidadesPorCaja());
-
-            // División con redondeo bancario a 2 decimales
-            BigDecimal precioCalculado = precioCaja.divide(unidades, 2, RoundingMode.HALF_UP);
-
-            producto.setPrecioVentaUnidad(precioCalculado);
-        } else {
-            // 3. ESCENARIO NO FRACCIONABLE (Unidad = Caja)
-            producto.setPrecioVentaUnidad(producto.getPrecioVentaBase());
+            // Precio Sugerido = Precio Unidad * Unidades por Blister
+            producto.setPrecioVentaBlister(precioUnidad.multiply(factorBlister));
         }
     }
 }

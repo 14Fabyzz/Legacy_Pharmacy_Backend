@@ -21,6 +21,9 @@ public class ProductoInventarioDTO {
     @JsonProperty("precioVentaUnidad")
     private BigDecimal precioVentaUnidad; // Precio por Unidad
 
+    @JsonProperty("precioVentaBlister")
+    private BigDecimal precioVentaBlister; // Precio por Blister (empaque intermedio)
+
     @JsonProperty("esFraccionable")
     private Boolean esFraccionable; // ¿Permite venta por unidad?
 

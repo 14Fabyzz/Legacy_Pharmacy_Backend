@@ -38,6 +38,7 @@ public class MovimientoService {
         movimientoRepository.save(movimiento);
     }
 
+    @Transactional(readOnly = true)
     public List<com.legacy.pharmacy.inventario.dto.MovimientoKardexDTO> obtenerKardexProducto(Integer productoId) {
         // 1. Obtener todos los movimientos ordenados por fecha ascendente
         List<Movimiento> movimientos = movimientoRepository.findByLote_Producto_IdOrderByFechaMovimientoAsc(productoId);

@@ -1,0 +1,12 @@
+{
+  "clienteId": 1,
+  "metodoPago": "EFECTIVO",
+  "montoRecibido": 50000,
+  "items": [
+    {
+      "productoId": 940,
+      "cantidad": 2,
+      "esVentaPorCaja": false
+    }
+  ]
+}

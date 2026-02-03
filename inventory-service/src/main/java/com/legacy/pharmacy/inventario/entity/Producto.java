@@ -105,6 +105,9 @@ public class Producto {
     @Column(name = "precio_venta_unidad")
     private BigDecimal precioVentaUnidad;
 
+    @Column(name = "precio_venta_blister")
+    private BigDecimal precioVentaBlister;
+
     // --- AUDITORÍA ---
 
     @CreationTimestamp
