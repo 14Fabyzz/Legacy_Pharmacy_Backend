@@ -6,6 +6,8 @@ import com.legacy.pharmacy.inventario.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -76,6 +78,7 @@ public class ProductoService {
             p.setPrincipioActivo(principioActivoRepository.findById(dto.getPrincipioActivoId()).orElse(null));
         }
 
+        calcularPrecioUnitario(p, dto);
         return productoRepository.save(p);
     }
 
@@ -123,6 +126,7 @@ public class ProductoService {
             p.setPrincipioActivo(principioActivoRepository.findById(dto.getPrincipioActivoId()).orElse(null));
         }
 
+        calcularPrecioUnitario(p, dto);
         return productoRepository.save(p);
     }
 
@@ -156,5 +160,41 @@ public class ProductoService {
         // Usamos 0 para traer cualquier lote que tenga al menos 1 unidad (Stock Real)
         // El repositorio ya se encarga de ordenar por fecha (FEFO)
         return loteRepository.findByProductoIdAndCantidadActualGreaterThanOrderByFechaVencimientoAsc(productoId, 0);
+    }
+
+    /**
+     * Lógica Centralizada de Precios
+     * 1. Si viene precio manual, se respeta.
+     * 2. Si no, se calcula: Precio Caja / Unidades.
+     * 3. Se protege contra división por cero.
+     */
+    private void calcularPrecioUnitario(Producto producto, ProductoDTO dto) {
+        // 1. ESCENARIO MANUAL: Si el usuario envía precio, se respeta
+        if (dto.getPrecioVentaUnidad() != null && dto.getPrecioVentaUnidad().compareTo(BigDecimal.ZERO) > 0) {
+            producto.setPrecioVentaUnidad(dto.getPrecioVentaUnidad());
+            return;
+        }
+
+        // 2. ESCENARIO AUTOMÁTICO: Cálculo matemático
+        if (Boolean.TRUE.equals(producto.getEsFraccionable())
+                && producto.getUnidadesPorCaja() != null
+                && producto.getUnidadesPorCaja() > 1) {
+
+            // Validación de seguridad (Null safe)
+            if (producto.getPrecioVentaBase() == null) {
+                producto.setPrecioVentaBase(BigDecimal.ZERO);
+            }
+
+            BigDecimal precioCaja = producto.getPrecioVentaBase();
+            BigDecimal unidades = new BigDecimal(producto.getUnidadesPorCaja());
+
+            // División con redondeo bancario a 2 decimales
+            BigDecimal precioCalculado = precioCaja.divide(unidades, 2, RoundingMode.HALF_UP);
+
+            producto.setPrecioVentaUnidad(precioCalculado);
+        } else {
+            // 3. ESCENARIO NO FRACCIONABLE (Unidad = Caja)
+            producto.setPrecioVentaUnidad(producto.getPrecioVentaBase());
+        }
     }
 }
