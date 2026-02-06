@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  gateway-service:
+    build: ./gateway-service
+    container_name: gateway-service
+    ports:
+      - "8080:8080"
+    environment:
+      - URI_INVENTARIO=http://ms-inventario:8081
+      - URI_USUARIOS=http://ms-usuarios:8082
+      - URI_VENTAS=http://ms-ventas:8083
+      - JWT_SECRET=${JWT_SECRET}
+    networks:
+      - pharmacy-network
+    depends_on:
+      - ms-inventario
+      - ms-usuarios
+      - ms-ventas
+
+  ms-inventario:
+    build: ./inventory-service
+    container_name: ms-inventario
+    ports:
+      - "8081:8081"
+    environment:
+      # MS-Inventario usa su propia configuración interna (application.properties)
+      # que ya apunta a Aiven MySQL.
+      - SPRING_PROFILES_ACTIVE=default
+      # Configuración Aiven MySQL para Inventario
+      - SPRING_DATASOURCE_URL=jdbc:mysql://legacy03-fbenjumeau-515c.g.aivencloud.com:17293/defaultdb?sslMode=REQUIRED&serverTimezone=America/Bogota&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=${AIVEN_USER}
+      - SPRING_DATASOURCE_PASSWORD=${AIVEN_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+    networks:
+      - pharmacy-network
+
+  ms-usuarios:
+    build: ./ms-usuarios
+    container_name: ms-usuarios
+    ports:
+      - "8082:8082"
+    environment:
+      # Conexión a Aiven MySQL
+      - SPRING_DATASOURCE_URL=jdbc:mysql://legacy03-fbenjumeau-515c.g.aivencloud.com:17293/defaultdb?sslMode=REQUIRED&serverTimezone=America/Bogota&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=${AIVEN_USER}
+      - SPRING_DATASOURCE_PASSWORD=${AIVEN_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+    networks:
+      - pharmacy-network
+
+  ms-ventas:
+    build: ./MS-ventas
+    container_name: ms-ventas
+    ports:
+      - "8083:8083"
+    environment:
+      # Conexión a Aiven PostgreSQL
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://pg-2714c85d-hincapiemaya66-ca69.h.aivencloud.com:16558/defaultdb?sslmode=require
+      - SPRING_DATASOURCE_USERNAME=${AIVEN_USER}
+      - SPRING_DATASOURCE_PASSWORD=${AIVEN_PG_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+    networks:
+      - pharmacy-network
+
+networks:
+  pharmacy-network:
+    driver: bridge
