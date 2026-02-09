@@ -55,6 +55,15 @@ public class ProductoController {
         return ResponseEntity.ok(productoService.buscarPorNombre(nombre));
     }
 
+    /**
+     * Búsqueda Universal para Kiosco de Precios
+     * Query: Puede ser EAN (Barras), Código Interno, o Nombre
+     */
+    @GetMapping("/productos/busqueda-publica")
+    public ResponseEntity<List<StockDTO>> busquedaPublica(@RequestParam String query) {
+        return ResponseEntity.ok(productoService.buscarProductosUniversal(query));
+    }
+
     @PostMapping("/productos")
     public ResponseEntity<Producto> crearProducto(@RequestBody @Valid ProductoDTO dto) {
         return ResponseEntity.ok(productoService.guardarProducto(dto));

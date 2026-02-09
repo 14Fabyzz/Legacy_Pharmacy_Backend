@@ -179,6 +179,9 @@ public class ProductoService {
         return loteRepository.findByProductoIdAndCantidadActualGreaterThanOrderByFechaVencimientoAsc(productoId, 0);
     }
 
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
     /**
      * Lógica Centralizada de Precios
      * 1. Si viene precio manual, se respeta.
@@ -230,5 +233,48 @@ public class ProductoService {
             // Precio Sugerido = Precio Unidad * Unidades por Blister
             producto.setPrecioVentaBlister(precioUnidad.multiply(factorBlister));
         }
+    }
+
+    // --- INTEGRACIÓN KIOSCO (BÚSQUEDA UNIVERSAL) ---
+    public java.util.List<com.legacy.pharmacy.inventario.dto.StockDTO> buscarProductosUniversal(String query) {
+        // 1. Limpieza básica
+        query = query.trim();
+
+        // 2. Búsqueda Única Polimórfica (JPQL)
+        // Ya no validamos si es número o texto, la base de datos decide.
+        java.util.List<Producto> productos = productoRepository.buscarUniversal(query);
+
+        // 4. Mapeo a StockDTO (Reutilizando lógica de InventarioService si es posible,
+        // o manual)
+        // Como InventoryService depende de ProductoService (probable ciclo), mapeamos
+        // aquí manualmente.
+
+        return productos.stream().map(p -> {
+            // Consultamos stock RÁPIDO
+            Integer disponible = jdbcTemplate.queryForObject(
+                    "SELECT COALESCE(SUM(cantidad_actual), 0) FROM lotes WHERE producto_id = ? AND cantidad_actual > 0 AND fecha_vencimiento > CURDATE()",
+                    Integer.class, p.getId());
+
+            String estadoStock = (disponible == null || disponible == 0) ? "SIN_STOCK"
+                    : (disponible <= p.getStockMinimo() ? "STOCK_BAJO" : "STOCK_OK");
+
+            com.legacy.pharmacy.inventario.dto.StockDTO dto = new com.legacy.pharmacy.inventario.dto.StockDTO();
+            dto.setProductoId(p.getId());
+            dto.setNombreProducto(p.getNombreComercial());
+            dto.setTipo(p.getTipo().name());
+            dto.setPrecioVentaBase(p.getPrecioVentaBase());
+            dto.setPrecioVentaUnidad(p.getPrecioVentaUnidad());
+            dto.setPrecioVentaBlister(p.getPrecioVentaBlister());
+            dto.setEsFraccionable(p.getEsFraccionable());
+            dto.setUnidadesPorCaja(p.getUnidadesPorCaja());
+            dto.setUnidadesPorBlister(p.getUnidadesPorBlister());
+            dto.setEsControlado(p.getEsControlado());
+            dto.setCantidadDisponible(disponible != null ? disponible : 0);
+            dto.setCantidadMinima(p.getStockMinimo());
+            dto.setEstado(estadoStock);
+            dto.setDisponibleParaVenta(disponible != null && disponible > 0 && "ACTIVO".equals(p.getEstado()));
+
+            return dto;
+        }).collect(java.util.stream.Collectors.toList());
     }
 }

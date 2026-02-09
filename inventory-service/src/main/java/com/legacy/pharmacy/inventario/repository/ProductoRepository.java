@@ -33,4 +33,13 @@ public interface ProductoRepository extends JpaRepository<Producto, Integer> {
             "       WHERE l.producto.id = p.id AND l.cantidadActual > 0) <= p.stockMinimo " +
             "AND p.estado = 'ACTIVO'")
     List<Producto> findProductosBajoStock();
+
+    // ✅ BÚSQUEDA UNIVERSAL (CORREGIDA)
+    // Busca indiscriminadamente en las 3 columnas sin validar tipos
+    @Query("SELECT p FROM Producto p WHERE " +
+            "(LOWER(p.nombreComercial) LIKE LOWER(CONCAT('%', :query, '%')) " +
+            "OR p.codigoBarras = :query " +
+            "OR p.codigoInterno = :query) " +
+            "AND p.estado = 'ACTIVO'")
+    List<Producto> buscarUniversal(@org.springframework.data.repository.query.Param("query") String query);
 }
