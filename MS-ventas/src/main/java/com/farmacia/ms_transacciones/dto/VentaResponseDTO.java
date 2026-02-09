@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
-public class VentaResponseDTO {
+public class  VentaResponseDTO {
     private Long id;
     private String numeroFactura;
     private LocalDateTime fechaVenta;

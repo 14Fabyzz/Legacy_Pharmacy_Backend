@@ -8,7 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/") // Cambiado de "/ventas" a "/" porque el context-path ya es /api/v1/ventas
+@RequestMapping("/api/v1/ventas")
 public class VentaController {
 
     @Autowired

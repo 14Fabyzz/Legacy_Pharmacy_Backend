@@ -8,7 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/devoluciones")
+@RequestMapping("/api/v1/ventas/devoluciones")
 public class DevolucionController {
 
     @Autowired
