@@ -8,6 +8,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal; // Importante para dinero
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 
 @Entity
@@ -61,11 +62,17 @@ public class Producto {
 
     // --- PRECIOS E INVENTARIO ---
 
-    @Column(name = "precio_compra_referencia")
-    private BigDecimal precioCompraReferencia;
+    @Column(name = "precio_compra_referencia", nullable = false)
+    private BigDecimal precioCompraReferencia = BigDecimal.ZERO;
+
+    @Column(name = "porcentaje_ganancia", nullable = false)
+    private BigDecimal porcentajeGanancia = new BigDecimal("30.00");
 
     @Column(name = "precio_venta_base", nullable = false)
     private BigDecimal precioVentaBase;
+
+    @Column(name = "precio_venta_total", nullable = false)
+    private BigDecimal precioVentaTotal = BigDecimal.ZERO;
 
     @Column(name = "iva_porcentaje")
     private BigDecimal ivaPorcentaje;
@@ -117,4 +124,80 @@ public class Producto {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    // =====================================================
+    // MÉTODO DE NEGOCIO: CÁLCULO DETERMINISTA DE PRECIOS
+    // =====================================================
+
+    /**
+     * Recalcula todos los precios de venta basándose en el costo y margen de
+     * ganancia.
+     * REGLAS DE NEGOCIO:
+     * 1. Precio Base = Costo × (1 + Ganancia%)
+     * 2. Precio Total = Precio Base × (1 + IVA%)
+     * 3. Precio Unidad = redondearCincuentena(Precio Total / Unidades)
+     * 4. Precio Blister = Precio Unidad × Unidades por Blister
+     */
+    public void recalcularPrecios() {
+        // 0. Validaciones defensivas (división por cero, NULLs)
+        if (this.precioCompraReferencia == null) {
+            this.precioCompraReferencia = BigDecimal.ZERO;
+        }
+        if (this.porcentajeGanancia == null) {
+            this.porcentajeGanancia = new BigDecimal("30.00");
+        }
+        if (this.ivaPorcentaje == null) {
+            this.ivaPorcentaje = BigDecimal.ZERO;
+        }
+
+        // 1. Precio Base = Costo × (1 + Ganancia%)
+        BigDecimal gananciaFactor = this.porcentajeGanancia
+                .divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP)
+                .add(BigDecimal.ONE);
+        this.precioVentaBase = this.precioCompraReferencia
+                .multiply(gananciaFactor)
+                .setScale(2, RoundingMode.HALF_UP);
+
+        // 2. Precio Total = Precio Base × (1 + IVA%)
+        BigDecimal ivaFactor = this.ivaPorcentaje
+                .divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP)
+                .add(BigDecimal.ONE);
+        this.precioVentaTotal = this.precioVentaBase
+                .multiply(ivaFactor)
+                .setScale(2, RoundingMode.HALF_UP);
+
+        // 3. Precio Unidad (con redondeo a cincuentena si es fraccionable)
+        if (this.unidadesPorCaja != null && this.unidadesPorCaja > 1) {
+            // División con redondeo UP para favorecer al farmacéutico
+            BigDecimal precioSinRedondear = this.precioVentaTotal
+                    .divide(BigDecimal.valueOf(this.unidadesPorCaja), 2, RoundingMode.UP);
+            this.precioVentaUnidad = redondearCincuentena(precioSinRedondear);
+        } else {
+            // Producto NO fraccionable: precio unidad = precio total
+            this.precioVentaUnidad = this.precioVentaTotal;
+        }
+
+        // 4. Precio Blister (si aplica)
+        if (this.unidadesPorBlister != null && this.unidadesPorBlister > 0
+                && this.unidadesPorCaja != null && this.unidadesPorCaja > 1) {
+            this.precioVentaBlister = this.precioVentaUnidad
+                    .multiply(BigDecimal.valueOf(this.unidadesPorBlister));
+        } else {
+            this.precioVentaBlister = BigDecimal.ZERO;
+        }
+    }
+
+    /**
+     * Redondea un valor al TECHO de la cincuentena más cercana.
+     * Ejemplos: 512 → 550, 560 → 600, 1230 → 1250
+     * REGLA DE ORO: Favorece al farmacéutico para evitar problemas de cambio.
+     */
+    private BigDecimal redondearCincuentena(BigDecimal valor) {
+        if (valor == null || valor.compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.ZERO;
+        }
+        double valorDouble = valor.doubleValue();
+        double redondeado = Math.ceil(valorDouble / 50.0) * 50.0;
+        return BigDecimal.valueOf(redondeado);
+    }
 }

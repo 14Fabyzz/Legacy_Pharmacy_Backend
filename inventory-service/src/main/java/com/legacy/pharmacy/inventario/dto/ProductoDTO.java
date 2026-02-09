@@ -29,9 +29,24 @@ public class ProductoDTO {
     private String presentacion;
     private String registroInvima;
 
-    @NotNull
-    @Positive
+    // === CAMPOS DE ENTRADA (Editables por usuario) ===
+
+    @com.fasterxml.jackson.annotation.JsonProperty("precioCompraReferencia")
+    private BigDecimal precioCompraReferencia;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("porcentajeGanancia")
+    private BigDecimal porcentajeGanancia;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("ivaPorcentaje")
+    private BigDecimal ivaPorcentaje;
+
+    // === CAMPOS CALCULADOS (Solo lectura) ===
+
+    @com.fasterxml.jackson.annotation.JsonProperty(value = "precioVentaBase", access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
     private BigDecimal precioVentaBase;
+
+    @com.fasterxml.jackson.annotation.JsonProperty(value = "precioVentaTotal", access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
+    private BigDecimal precioVentaTotal;
 
     private Integer stockMinimo;
     private Boolean esControlado;
@@ -49,11 +64,11 @@ public class ProductoDTO {
     private Integer unidadesPorCaja;
 
     @com.fasterxml.jackson.annotation.JsonProperty("unidadesPorBlister")
-    private Integer unidadesPorBlister; // Informativo para UX
+    private Integer unidadesPorBlister;
 
-    @com.fasterxml.jackson.annotation.JsonProperty("precioVentaUnidad")
+    @com.fasterxml.jackson.annotation.JsonProperty(value = "precioVentaUnidad", access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
     private BigDecimal precioVentaUnidad;
 
-    @com.fasterxml.jackson.annotation.JsonProperty("precioVentaBlister")
+    @com.fasterxml.jackson.annotation.JsonProperty(value = "precioVentaBlister", access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
     private BigDecimal precioVentaBlister;
 }

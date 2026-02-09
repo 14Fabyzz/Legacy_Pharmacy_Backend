@@ -55,29 +55,37 @@ public class ProductoService {
 
     public Producto guardarProducto(ProductoDTO dto) {
         Producto p = new Producto();
-        // Mapeo manual (O usar MapStruct en el futuro)
+
+        // Mapeo de campos básicos
         p.setCodigoInterno(dto.getCodigoInterno());
         p.setCodigoBarras(dto.getCodigoBarras());
         p.setNombreComercial(dto.getNombreComercial());
-        p.setPrecioVentaBase(dto.getPrecioVentaBase());
-        p.setStockMinimo(dto.getStockMinimo() != null ? dto.getStockMinimo() : 10);
-        p.setEsControlado(dto.getEsControlado() != null ? dto.getEsControlado() : false);
-        p.setRefrigerado(dto.getRefrigerado() != null ? dto.getRefrigerado() : false);
         p.setConcentracion(dto.getConcentracion());
         p.setPresentacion(dto.getPresentacion());
         p.setRegistroInvima(dto.getRegistroInvima());
         p.setEstado("ACTIVO");
-        // Tipo de producto (TANGIBLE o SERVICIO)
+
+        // Mapeo de campos de configuración
+        p.setStockMinimo(dto.getStockMinimo() != null ? dto.getStockMinimo() : 10);
+        p.setEsControlado(dto.getEsControlado() != null ? dto.getEsControlado() : false);
+        p.setRefrigerado(dto.getRefrigerado() != null ? dto.getRefrigerado() : false);
+
+        // Tipo de producto
         if (dto.getTipo() != null) {
             p.setTipo(com.legacy.pharmacy.inventario.entity.TipoProducto.valueOf(dto.getTipo()));
         } else {
             p.setTipo(com.legacy.pharmacy.inventario.entity.TipoProducto.TANGIBLE);
         }
+
+        // Fraccionamiento
         p.setEsFraccionable(dto.getEsFraccionable() != null ? dto.getEsFraccionable() : false);
         p.setUnidadesPorCaja(dto.getUnidadesPorCaja() != null ? dto.getUnidadesPorCaja() : 1);
-        p.setUnidadesPorBlister(dto.getUnidadesPorBlister()); // Informativo para UX
-        p.setPrecioVentaUnidad(dto.getPrecioVentaUnidad());
-        p.setPrecioVentaBlister(dto.getPrecioVentaBlister());
+        p.setUnidadesPorBlister(dto.getUnidadesPorBlister());
+
+        // === MAPEO DE CAMPOS DE ENTRADA PARA PRECIOS ===
+        p.setPrecioCompraReferencia(dto.getPrecioCompraReferencia());
+        p.setPorcentajeGanancia(dto.getPorcentajeGanancia());
+        p.setIvaPorcentaje(dto.getIvaPorcentaje());
 
         // Relaciones
         p.setCategoria(categoriaRepository.findById(dto.getCategoriaId()).orElseThrow());
@@ -86,7 +94,9 @@ public class ProductoService {
             p.setPrincipioActivo(principioActivoRepository.findById(dto.getPrincipioActivoId()).orElse(null));
         }
 
-        calcularPrecioUnitario(p, dto);
+        // === CALCULAR PRECIOS AUTOMÁTICAMENTE ===
+        p.recalcularPrecios();
+
         return productoRepository.save(p);
     }
 
@@ -126,11 +136,15 @@ public class ProductoService {
         if (dto.getUnidadesPorCaja() != null)
             p.setUnidadesPorCaja(dto.getUnidadesPorCaja());
         if (dto.getUnidadesPorBlister() != null)
-            p.setUnidadesPorBlister(dto.getUnidadesPorBlister()); // Informativo para UX
-        if (dto.getPrecioVentaUnidad() != null)
-            p.setPrecioVentaUnidad(dto.getPrecioVentaUnidad());
-        if (dto.getPrecioVentaBlister() != null)
-            p.setPrecioVentaBlister(dto.getPrecioVentaBlister());
+            p.setUnidadesPorBlister(dto.getUnidadesPorBlister());
+
+        // === ACTUALIZAR CAMPOS DE ENTRADA PARA PRECIOS ===
+        if (dto.getPrecioCompraReferencia() != null)
+            p.setPrecioCompraReferencia(dto.getPrecioCompraReferencia());
+        if (dto.getPorcentajeGanancia() != null)
+            p.setPorcentajeGanancia(dto.getPorcentajeGanancia());
+        if (dto.getIvaPorcentaje() != null)
+            p.setIvaPorcentaje(dto.getIvaPorcentaje());
 
         // Actualizamos relaciones si vienen en el DTO
         if (dto.getCategoriaId() != null) {
@@ -143,7 +157,9 @@ public class ProductoService {
             p.setPrincipioActivo(principioActivoRepository.findById(dto.getPrincipioActivoId()).orElse(null));
         }
 
-        calcularPrecioUnitario(p, dto);
+        // === RECALCULAR PRECIOS AUTOMÁTICAMENTE ===
+        p.recalcularPrecios();
+
         return productoRepository.save(p);
     }
 
@@ -181,59 +197,6 @@ public class ProductoService {
 
     @Autowired
     private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
-
-    /**
-     * Lógica Centralizada de Precios
-     * 1. Si viene precio manual, se respeta.
-     * 2. Si no, se calcula: Precio Caja / Unidades.
-     * 3. Se protege contra división por cero.
-     */
-    private void calcularPrecioUnitario(Producto producto, ProductoDTO dto) {
-        // 1. ESCENARIO MANUAL: Si el usuario envía precio, se respeta
-        boolean precioUnidadManual = dto.getPrecioVentaUnidad() != null
-                && dto.getPrecioVentaUnidad().compareTo(BigDecimal.ZERO) > 0;
-
-        if (precioUnidadManual) {
-            producto.setPrecioVentaUnidad(dto.getPrecioVentaUnidad());
-        } else {
-            // 2. ESCENARIO AUTOMÁTICO: Cálculo matemático
-            if (Boolean.TRUE.equals(producto.getEsFraccionable())
-                    && producto.getUnidadesPorCaja() != null
-                    && producto.getUnidadesPorCaja() > 1) {
-
-                // Validación de seguridad (Null safe)
-                if (producto.getPrecioVentaBase() == null) {
-                    producto.setPrecioVentaBase(BigDecimal.ZERO);
-                }
-
-                BigDecimal precioCaja = producto.getPrecioVentaBase();
-                BigDecimal unidades = new BigDecimal(producto.getUnidadesPorCaja());
-
-                // División con redondeo bancario a 2 decimales
-                BigDecimal precioCalculado = precioCaja.divide(unidades, 2, RoundingMode.HALF_UP);
-
-                producto.setPrecioVentaUnidad(precioCalculado);
-            } else {
-                // 3. ESCENARIO NO FRACCIONABLE (Unidad = Caja)
-                producto.setPrecioVentaUnidad(producto.getPrecioVentaBase());
-            }
-        }
-
-        // 4. LÓGICA PRECIO BLISTER (Modificado para soporte Blister)
-        // a. Si viene manual, se respetó arriba (setPrecioVentaBlister en
-        // guardar/actualizar)
-        // Pero debemos asegurar que si NO viene manual, y tenemos unidadesPorBlister,
-        // se calcule
-        if (dto.getPrecioVentaBlister() == null && producto.getUnidadesPorBlister() != null
-                && producto.getUnidadesPorBlister() > 0 && producto.getPrecioVentaUnidad() != null) {
-
-            BigDecimal precioUnidad = producto.getPrecioVentaUnidad();
-            BigDecimal factorBlister = new BigDecimal(producto.getUnidadesPorBlister());
-
-            // Precio Sugerido = Precio Unidad * Unidades por Blister
-            producto.setPrecioVentaBlister(precioUnidad.multiply(factorBlister));
-        }
-    }
 
     // --- INTEGRACIÓN KIOSCO (BÚSQUEDA UNIVERSAL) ---
     public java.util.List<com.legacy.pharmacy.inventario.dto.StockDTO> buscarProductosUniversal(String query) {

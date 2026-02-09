@@ -71,6 +71,24 @@ public class InventarioService {
                                         RoundingMode.HALF_UP);
                 }
 
+                // === ACTUALIZAR PRECIO DE REFERENCIA Y RECALCULAR PRECIOS ===
+                // Si el costo cambió, actualizar el precio de compra de referencia
+                // y recalcular automáticamente todos los precios de venta
+                if (costoUnitario.compareTo(BigDecimal.ZERO) > 0) {
+                        BigDecimal costoAnterior = producto.getPrecioCompraReferencia();
+                        if (costoAnterior == null || costoAnterior.compareTo(costoUnitario) != 0) {
+                                log.info("PRECIO: Actualizando costo de referencia. Anterior={}, Nuevo={}",
+                                                costoAnterior, costoUnitario);
+                                producto.setPrecioCompraReferencia(costoUnitario);
+                                producto.recalcularPrecios();
+                                productoRepository.save(producto);
+                                log.info("PRECIO: Precios recalculados. Base={}, Total={}, Unidad={}",
+                                                producto.getPrecioVentaBase(),
+                                                producto.getPrecioVentaTotal(),
+                                                producto.getPrecioVentaUnidad());
+                        }
+                }
+
                 String sqlInsertLote = "INSERT INTO lotes (producto_id, numero_lote, fecha_vencimiento, cantidad_actual, costo_compra, sucursal_id) VALUES (?, ?, ?, ?, ?, ?)";
 
                 KeyHolder keyHolder = new GeneratedKeyHolder();
