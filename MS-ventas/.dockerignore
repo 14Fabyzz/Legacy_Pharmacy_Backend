@@ -4,4 +4,5 @@ mvnw
 mvnw.cmd
 .git
 .gitignore
+.env
 *.md
