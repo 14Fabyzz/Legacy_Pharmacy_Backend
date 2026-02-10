@@ -17,17 +17,14 @@ public class LoteController {
 
     // -------------------------------------------------------------
     // GET /lotes/disponibles/{productoId}
-    // Retorna lotes con stock > 0 ordenados por fecha de vencimiento
+    // Retorna producto con detalles financieros y sus lotes disponibles
     // -------------------------------------------------------------
     @GetMapping("/disponibles/{productoId}")
-    public ResponseEntity<List<Lote>> obtenerLotesDisponibles(@PathVariable Integer productoId) {
-        List<Lote> lotes = productoService.obtenerLotesDisponiblesParaVenta(productoId);
-
-        if (lotes.isEmpty()) {
-            return ResponseEntity.noContent().build(); // Retorna 204 si no hay stock
-        }
-
-        return ResponseEntity.ok(lotes);
+    public ResponseEntity<com.legacy.pharmacy.inventario.dto.ProductoConLotesDTO> obtenerLotesDisponibles(
+            @PathVariable Integer productoId) {
+        com.legacy.pharmacy.inventario.dto.ProductoConLotesDTO resultado = productoService
+                .obtenerProductoConLotesDisponibles(productoId);
+        return ResponseEntity.ok(resultado);
     }
 
     @GetMapping("/por-vencer")

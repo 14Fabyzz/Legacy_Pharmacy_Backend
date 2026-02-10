@@ -197,6 +197,62 @@ public class ProductoService {
         return loteRepository.findByProductoIdAndCantidadActualGreaterThanOrderByFechaVencimientoAsc(productoId, 0);
     }
 
+    /**
+     * Obtiene un producto con sus lotes disponibles y detalles financieros.
+     * Utilizado para el modal de vista rápida en el Frontend.
+     * 
+     * @param productoId ID del producto
+     * @return ProductoConLotesDTO con información financiera y lista de lotes
+     * @throws ResourceNotFoundException si el producto no existe
+     */
+    public com.legacy.pharmacy.inventario.dto.ProductoConLotesDTO obtenerProductoConLotesDisponibles(
+            Integer productoId) {
+        // 1. Buscar el producto (lanza excepción si no existe)
+        Producto producto = productoRepository.findById(productoId)
+                .orElseThrow(() -> new com.legacy.pharmacy.inventario.exception.ResourceNotFoundException(
+                        "Producto con ID " + productoId + " no encontrado"));
+
+        // 2. Buscar lotes disponibles
+        List<Lote> lotes = obtenerLotesDisponiblesParaVenta(productoId);
+
+        // 3. Mapear lotes a LoteDTO
+        List<com.legacy.pharmacy.inventario.dto.LoteDTO> loteDTOs = lotes.stream()
+                .map(lote -> com.legacy.pharmacy.inventario.dto.LoteDTO.builder()
+                        .id(lote.getId())
+                        .numeroLote(lote.getNumeroLote())
+                        .fechaVencimiento(lote.getFechaVencimiento())
+                        .cantidadActual(lote.getCantidadActual())
+                        .costoCompra(lote.getCostoCompra())
+                        .build())
+                .collect(java.util.stream.Collectors.toList());
+
+        // 4. Calcular stock total
+        Integer stockTotal = lotes.stream()
+                .mapToInt(Lote::getCantidadActual)
+                .sum();
+
+        // 5. Mapear producto a DetalleProductoDTO
+        com.legacy.pharmacy.inventario.dto.DetalleProductoDTO detalleProducto = com.legacy.pharmacy.inventario.dto.DetalleProductoDTO
+                .builder()
+                .nombreComercial(producto.getNombreComercial())
+                .codigoInterno(producto.getCodigoInterno())
+                .precioCompraReferencia(producto.getPrecioCompraReferencia())
+                .porcentajeGanancia(producto.getPorcentajeGanancia())
+                .ivaPorcentaje(producto.getIvaPorcentaje())
+                .precioVentaBase(producto.getPrecioVentaBase())
+                .precioVentaTotal(producto.getPrecioVentaTotal())
+                .precioVentaUnidad(producto.getPrecioVentaUnidad())
+                .precioVentaBlister(producto.getPrecioVentaBlister())
+                .stockTotal(stockTotal)
+                .build();
+
+        // 6. Construir y retornar el DTO completo
+        return com.legacy.pharmacy.inventario.dto.ProductoConLotesDTO.builder()
+                .detalleProducto(detalleProducto)
+                .lotes(loteDTOs)
+                .build();
+    }
+
     @Autowired
     private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
