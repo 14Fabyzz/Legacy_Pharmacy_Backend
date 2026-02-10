@@ -7,6 +7,7 @@ import com.legacy.pharmacy.inventario.entity.Producto;
 import com.legacy.pharmacy.inventario.service.InventarioService;
 import com.legacy.pharmacy.inventario.service.ProductoService;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("")
 public class ProductoController {
@@ -61,7 +63,18 @@ public class ProductoController {
      */
     @GetMapping("/productos/busqueda-publica")
     public ResponseEntity<List<StockDTO>> busquedaPublica(@RequestParam String query) {
-        return ResponseEntity.ok(productoService.buscarProductosUniversal(query));
+        // DEBUG: Log para diagnosticar problemas de búsqueda
+        log.info("========== BÚSQUEDA PÚBLICA ==========");
+        log.info("Query recibida (raw): [{}]", query);
+        log.info("Query length: {}", query.length());
+        log.info("Query trimmed: [{}]", query.trim());
+        log.info("Query bytes: {}", java.util.Arrays.toString(query.getBytes()));
+        log.info("=====================================");
+
+        List<StockDTO> resultados = productoService.buscarProductosUniversal(query);
+        log.info("Resultados encontrados: {}", resultados.size());
+
+        return ResponseEntity.ok(resultados);
     }
 
     @PostMapping("/productos")

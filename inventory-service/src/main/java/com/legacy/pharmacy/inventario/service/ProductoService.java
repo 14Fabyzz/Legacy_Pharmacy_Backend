@@ -3,6 +3,7 @@ package com.legacy.pharmacy.inventario.service;
 import com.legacy.pharmacy.inventario.dto.ProductoDTO;
 import com.legacy.pharmacy.inventario.entity.*;
 import com.legacy.pharmacy.inventario.repository.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -11,6 +12,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 
+@Slf4j
 @Service
 public class ProductoService {
 
@@ -200,12 +202,25 @@ public class ProductoService {
 
     // --- INTEGRACIÓN KIOSCO (BÚSQUEDA UNIVERSAL) ---
     public java.util.List<com.legacy.pharmacy.inventario.dto.StockDTO> buscarProductosUniversal(String query) {
+        log.debug("SERVICE: Iniciando búsqueda universal con query: [{}]", query);
+
         // 1. Limpieza básica
-        query = query.trim();
+        String queryTrimmed = query.trim();
+        log.debug("SERVICE: Query después de trim: [{}]", queryTrimmed);
 
         // 2. Búsqueda Única Polimórfica (JPQL)
         // Ya no validamos si es número o texto, la base de datos decide.
-        java.util.List<Producto> productos = productoRepository.buscarUniversal(query);
+        java.util.List<Producto> productos = productoRepository.buscarUniversal(queryTrimmed);
+        log.info("SERVICE: Productos encontrados en BD: {}", productos.size());
+
+        if (productos.isEmpty()) {
+            log.warn("SERVICE: No se encontraron productos para query: [{}]", queryTrimmed);
+            return java.util.Collections.emptyList();
+        }
+
+        // Log de productos encontrados
+        productos.forEach(p -> log.debug("  - Producto: {} | Código Barras: [{}] | Código Interno: [{}]",
+                p.getNombreComercial(), p.getCodigoBarras(), p.getCodigoInterno()));
 
         // 4. Mapeo a StockDTO (Reutilizando lógica de InventarioService si es posible,
         // o manual)
