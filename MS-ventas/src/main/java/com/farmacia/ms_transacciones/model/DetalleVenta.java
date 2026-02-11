@@ -3,12 +3,10 @@ package com.farmacia.ms_transacciones.model;
 import com.farmacia.ms_transacciones.enums.TipoVenta;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.Data;
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "detalle_ventas")
-@Data // <--- Genera getProductoId() automáticamente
 public class DetalleVenta {
 
     @Id
@@ -36,4 +34,76 @@ public class DetalleVenta {
     @JoinColumn(name = "venta_id")
     @JsonIgnore // Rompe el bucle infinito JSON
     private Venta venta;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Integer getProductoId() {
+        return productoId;
+    }
+
+    public void setProductoId(Integer productoId) {
+        this.productoId = productoId;
+    }
+
+    public String getProductoNombre() {
+        return productoNombre;
+    }
+
+    public void setProductoNombre(String productoNombre) {
+        this.productoNombre = productoNombre;
+    }
+
+    public Integer getCantidad() {
+        return cantidad;
+    }
+
+    public void setCantidad(Integer cantidad) {
+        this.cantidad = cantidad;
+    }
+
+    public BigDecimal getPrecioUnitario() {
+        return precioUnitario;
+    }
+
+    public void setPrecioUnitario(BigDecimal precioUnitario) {
+        this.precioUnitario = precioUnitario;
+    }
+
+    public BigDecimal getSubtotal() {
+        return subtotal;
+    }
+
+    public void setSubtotal(BigDecimal subtotal) {
+        this.subtotal = subtotal;
+    }
+
+    public TipoVenta getTipoVenta() {
+        return tipoVenta;
+    }
+
+    public void setTipoVenta(TipoVenta tipoVenta) {
+        this.tipoVenta = tipoVenta;
+    }
+
+    public Boolean getEsVentaPorCaja() {
+        return esVentaPorCaja;
+    }
+
+    public void setEsVentaPorCaja(Boolean esVentaPorCaja) {
+        this.esVentaPorCaja = esVentaPorCaja;
+    }
+
+    public Venta getVenta() {
+        return venta;
+    }
+
+    public void setVenta(Venta venta) {
+        this.venta = venta;
+    }
 }
