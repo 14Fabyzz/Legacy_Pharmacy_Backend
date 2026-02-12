@@ -1,10 +1,8 @@
 package com.farmacia.ms_transacciones.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.Data;
 import java.math.BigDecimal;
 
-@Data
 public class ProductoInventarioDTO {
     @JsonProperty("productoId")
     private Integer id;
@@ -38,4 +36,92 @@ public class ProductoInventarioDTO {
 
     @JsonProperty("cantidadDisponible")
     private Integer stockActual;
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public String getNombreComercial() {
+        return nombreComercial;
+    }
+
+    public void setNombreComercial(String nombreComercial) {
+        this.nombreComercial = nombreComercial;
+    }
+
+    public String getTipo() {
+        return tipo;
+    }
+
+    public void setTipo(String tipo) {
+        this.tipo = tipo;
+    }
+
+    public BigDecimal getPrecioVentaBase() {
+        return precioVentaBase;
+    }
+
+    public void setPrecioVentaBase(BigDecimal precioVentaBase) {
+        this.precioVentaBase = precioVentaBase;
+    }
+
+    public BigDecimal getPrecioVentaUnidad() {
+        return precioVentaUnidad;
+    }
+
+    public void setPrecioVentaUnidad(BigDecimal precioVentaUnidad) {
+        this.precioVentaUnidad = precioVentaUnidad;
+    }
+
+    public BigDecimal getPrecioVentaBlister() {
+        return precioVentaBlister;
+    }
+
+    public void setPrecioVentaBlister(BigDecimal precioVentaBlister) {
+        this.precioVentaBlister = precioVentaBlister;
+    }
+
+    public Boolean getEsFraccionable() {
+        return esFraccionable;
+    }
+
+    public void setEsFraccionable(Boolean esFraccionable) {
+        this.esFraccionable = esFraccionable;
+    }
+
+    public Integer getUnidadesPorCaja() {
+        return unidadesPorCaja;
+    }
+
+    public void setUnidadesPorCaja(Integer unidadesPorCaja) {
+        this.unidadesPorCaja = unidadesPorCaja;
+    }
+
+    public Integer getUnidadesPorBlister() {
+        return unidadesPorBlister;
+    }
+
+    public void setUnidadesPorBlister(Integer unidadesPorBlister) {
+        this.unidadesPorBlister = unidadesPorBlister;
+    }
+
+    public Boolean getEsControlado() {
+        return esControlado;
+    }
+
+    public void setEsControlado(Boolean esControlado) {
+        this.esControlado = esControlado;
+    }
+
+    public Integer getStockActual() {
+        return stockActual;
+    }
+
+    public void setStockActual(Integer stockActual) {
+        this.stockActual = stockActual;
+    }
 }

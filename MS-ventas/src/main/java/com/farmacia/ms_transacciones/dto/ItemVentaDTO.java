@@ -1,10 +1,8 @@
 package com.farmacia.ms_transacciones.dto;
 
 import com.farmacia.ms_transacciones.enums.TipoVenta;
-import lombok.Data;
 import java.math.BigDecimal;
 
-@Data
 public class ItemVentaDTO {
     private Integer productoId;
     private Integer cantidad;
@@ -18,4 +16,52 @@ public class ItemVentaDTO {
 
     private BigDecimal precioUnitario; // Opcional, para respuesta
     private BigDecimal subtotal; // Opcional, para respuesta
+
+    public Integer getProductoId() {
+        return productoId;
+    }
+
+    public void setProductoId(Integer productoId) {
+        this.productoId = productoId;
+    }
+
+    public Integer getCantidad() {
+        return cantidad;
+    }
+
+    public void setCantidad(Integer cantidad) {
+        this.cantidad = cantidad;
+    }
+
+    public TipoVenta getTipoVenta() {
+        return tipoVenta;
+    }
+
+    public void setTipoVenta(TipoVenta tipoVenta) {
+        this.tipoVenta = tipoVenta;
+    }
+
+    public Boolean getEsVentaPorCaja() {
+        return esVentaPorCaja;
+    }
+
+    public void setEsVentaPorCaja(Boolean esVentaPorCaja) {
+        this.esVentaPorCaja = esVentaPorCaja;
+    }
+
+    public BigDecimal getPrecioUnitario() {
+        return precioUnitario;
+    }
+
+    public void setPrecioUnitario(BigDecimal precioUnitario) {
+        this.precioUnitario = precioUnitario;
+    }
+
+    public BigDecimal getSubtotal() {
+        return subtotal;
+    }
+
+    public void setSubtotal(BigDecimal subtotal) {
+        this.subtotal = subtotal;
+    }
 }

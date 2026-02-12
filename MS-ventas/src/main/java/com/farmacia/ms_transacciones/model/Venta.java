@@ -2,7 +2,6 @@ package com.farmacia.ms_transacciones.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
-import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -10,7 +9,6 @@ import java.util.List;
 
 @Entity
 @Table(name = "ventas")
-@Data
 public class Venta {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -20,9 +18,9 @@ public class Venta {
     private LocalDateTime fechaVenta;
 
     // --- DATOS DEL VENDEDOR Y SUCURSAL (Para el Voucher) ---
-    private String vendedorId;      // ID del usuario (Token)
-    private String vendedorNombre;  // Nombre (Token) -> NUEVO
-    private Integer sucursalId;     // Sucursal del turno -> NUEVO
+    private String vendedorId; // ID del usuario (Token)
+    private String vendedorNombre; // Nombre (Token) -> NUEVO
+    private Integer sucursalId; // Sucursal del turno -> NUEVO
     // -------------------------------------------------------
 
     private BigDecimal total;
@@ -31,8 +29,8 @@ public class Venta {
     private BigDecimal cambio;
 
     // --- DATOS DE PAGO ---
-    private String metodoPago;      // 'EFECTIVO', 'TRANSFERENCIA'
-    private String referenciaPago;  // Ej: "Bancolombia a la cuenta 987..." -> NUEVO
+    private String metodoPago; // 'EFECTIVO', 'TRANSFERENCIA'
+    private String referenciaPago; // Ej: "Bancolombia a la cuenta 987..." -> NUEVO
     // ---------------------
 
     private String estado;
@@ -49,4 +47,124 @@ public class Venta {
     @OneToMany(mappedBy = "venta", cascade = CascadeType.ALL)
     @JsonIgnoreProperties("venta")
     private List<DetalleVenta> detalles = new ArrayList<>();
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getNumeroFactura() {
+        return numeroFactura;
+    }
+
+    public void setNumeroFactura(String numeroFactura) {
+        this.numeroFactura = numeroFactura;
+    }
+
+    public LocalDateTime getFechaVenta() {
+        return fechaVenta;
+    }
+
+    public void setFechaVenta(LocalDateTime fechaVenta) {
+        this.fechaVenta = fechaVenta;
+    }
+
+    public String getVendedorId() {
+        return vendedorId;
+    }
+
+    public void setVendedorId(String vendedorId) {
+        this.vendedorId = vendedorId;
+    }
+
+    public String getVendedorNombre() {
+        return vendedorNombre;
+    }
+
+    public void setVendedorNombre(String vendedorNombre) {
+        this.vendedorNombre = vendedorNombre;
+    }
+
+    public Integer getSucursalId() {
+        return sucursalId;
+    }
+
+    public void setSucursalId(Integer sucursalId) {
+        this.sucursalId = sucursalId;
+    }
+
+    public BigDecimal getTotal() {
+        return total;
+    }
+
+    public void setTotal(BigDecimal total) {
+        this.total = total;
+    }
+
+    public BigDecimal getMontoRecibido() {
+        return montoRecibido;
+    }
+
+    public void setMontoRecibido(BigDecimal montoRecibido) {
+        this.montoRecibido = montoRecibido;
+    }
+
+    public BigDecimal getCambio() {
+        return cambio;
+    }
+
+    public void setCambio(BigDecimal cambio) {
+        this.cambio = cambio;
+    }
+
+    public String getMetodoPago() {
+        return metodoPago;
+    }
+
+    public void setMetodoPago(String metodoPago) {
+        this.metodoPago = metodoPago;
+    }
+
+    public String getReferenciaPago() {
+        return referenciaPago;
+    }
+
+    public void setReferenciaPago(String referenciaPago) {
+        this.referenciaPago = referenciaPago;
+    }
+
+    public String getEstado() {
+        return estado;
+    }
+
+    public void setEstado(String estado) {
+        this.estado = estado;
+    }
+
+    public Cliente getCliente() {
+        return cliente;
+    }
+
+    public void setCliente(Cliente cliente) {
+        this.cliente = cliente;
+    }
+
+    public TurnoCaja getTurno() {
+        return turno;
+    }
+
+    public void setTurno(TurnoCaja turno) {
+        this.turno = turno;
+    }
+
+    public List<DetalleVenta> getDetalles() {
+        return detalles;
+    }
+
+    public void setDetalles(List<DetalleVenta> detalles) {
+        this.detalles = detalles;
+    }
 }
