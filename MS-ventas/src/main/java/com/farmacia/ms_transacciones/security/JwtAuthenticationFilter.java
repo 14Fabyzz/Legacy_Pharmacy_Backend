@@ -26,6 +26,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String authHeader = request.getHeader("Authorization");
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
@@ -41,7 +46,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // ... lógica de autenticación ...
 
                 // 2. Configurar Spring Security CON EL ROL
-// Spring Security suele esperar el prefijo "ROLE_" o usa hasAuthority en el config
+                // Spring Security suele esperar el prefijo "ROLE_" o usa hasAuthority en el
+                // config
 
                 SimpleGrantedAuthority authority = new SimpleGrantedAuthority(role);
 

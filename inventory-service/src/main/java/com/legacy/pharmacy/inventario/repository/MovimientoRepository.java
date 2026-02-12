@@ -4,6 +4,7 @@ import com.legacy.pharmacy.inventario.dto.AuditoriaDTO;
 import com.legacy.pharmacy.inventario.entity.Movimiento;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -28,5 +29,10 @@ public interface MovimientoRepository extends JpaRepository<Movimiento, Long> {
             """, nativeQuery = true)
     List<AuditoriaDTO> obtenerAuditoriaCompleta();
 
-    List<Movimiento> findByLote_Producto_IdOrderByFechaMovimientoAsc(Integer productoId);
+    @Query("SELECT m FROM Movimiento m JOIN FETCH m.lote l WHERE l.producto.id = :productoId ORDER BY m.fechaMovimiento ASC")
+    List<Movimiento> findByLote_Producto_IdOrderByFechaMovimientoAsc(@Param("productoId") Integer productoId);
+
+    // Consulta para la bitácora global (Limitada por Pageable)
+    @Query("SELECT m FROM Movimiento m ORDER BY m.fechaMovimiento DESC")
+    List<Movimiento> findRecent(org.springframework.data.domain.Pageable pageable);
 }

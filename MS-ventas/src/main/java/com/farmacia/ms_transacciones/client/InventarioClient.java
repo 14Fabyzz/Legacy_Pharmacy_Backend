@@ -40,16 +40,20 @@ public class InventarioClient {
         }
     }
 
-    // --- MÉTODO ACTUALIZADO: Recibe sucursalId ---
-    public void registrarSalida(Integer productoId, Integer cantidad, Integer sucursalId) {
+    // --- MÉTODO ACTUALIZADO: Recibe sucursalId y TipoVenta ---
+    public void registrarSalida(Integer productoId, Integer cantidad, Integer sucursalId,
+            com.farmacia.ms_transacciones.enums.TipoVenta tipoVenta) {
         try {
 
             String url = inventarioBaseUrl + "/productos/" + productoId + "/descontar";
 
-            // Enviamos la sucursal en el JSON
+            // Convertir TipoVenta a JSON
+            String tipoVentaJson = (tipoVenta != null) ? "\"" + tipoVenta.name() + "\"" : "null";
+
+            // Enviamos el TipoVenta en el JSON (inventory-service usa enum)
             String jsonBody = String.format(
-                    "{\"cantidad\": %d, \"motivo\": \"VENTA_SUCURSAL_%d\", \"sucursalId\": %d}",
-                    cantidad, sucursalId, sucursalId);
+                    "{\"cantidad\": %d, \"motivo\": \"VENTA_SUCURSAL_%d\", \"sucursalId\": %d, \"tipoVenta\": %s}",
+                    cantidad, sucursalId, sucursalId, tipoVentaJson);
 
             HttpEntity<String> entity = new HttpEntity<>(jsonBody, getHeaders());
             ResponseEntity<Void> res = restTemplate.exchange(url, HttpMethod.POST, entity, Void.class);

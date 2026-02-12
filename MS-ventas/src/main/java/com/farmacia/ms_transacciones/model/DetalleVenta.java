@@ -1,5 +1,6 @@
 package com.farmacia.ms_transacciones.model;
 
+import com.farmacia.ms_transacciones.enums.TipoVenta;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -20,6 +21,16 @@ public class DetalleVenta {
     private Integer cantidad;
     private BigDecimal precioUnitario;
     private BigDecimal subtotal;
+
+    // New field: TipoVenta enum (mapped to DB column)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo_venta")
+    private TipoVenta tipoVenta;
+
+    // Old field: Boolean (deprecated, for backward compatibility)
+    @Deprecated
+    @Column(name = "es_venta_por_caja")
+    private Boolean esVentaPorCaja; // true = Caja, false = Unidad
 
     @ManyToOne
     @JoinColumn(name = "venta_id")

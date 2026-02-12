@@ -9,7 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/caja")
+@RequestMapping("/api/v1/ventas/caja")
 public class TurnoCajaController {
 
     @Autowired
