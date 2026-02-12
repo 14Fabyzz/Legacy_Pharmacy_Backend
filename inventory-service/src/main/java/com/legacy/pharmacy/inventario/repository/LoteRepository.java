@@ -19,9 +19,8 @@ public interface LoteRepository extends JpaRepository<Lote, Integer> {
                         Integer cantidadMinima);
 
         // --- EL MÉTODO DE ENTRADA CORREGIDO ---
-        // Usamos CALL nativo para manejar el resultado del SP
-        @Query(value = "CALL registrar_entrada_mercancia(:p_producto_id, :p_numero_lote, :p_cantidad, :p_costo_compra, :p_fecha_vencimiento, :p_usuario, :p_sucursal_id, :p_observaciones)", nativeQuery = true)
-        Map<String, Object> registrarEntrada(
+        @org.springframework.data.jpa.repository.query.Procedure(procedureName = "registrar_entrada_mercancia")
+        void registrarEntrada(
                         @Param("p_producto_id") Integer productoId,
                         @Param("p_numero_lote") String numeroLote,
                         @Param("p_cantidad") Integer cantidad,

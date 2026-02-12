@@ -7,6 +7,7 @@ import com.legacy.pharmacy.inventario.entity.Producto;
 import com.legacy.pharmacy.inventario.service.InventarioService;
 import com.legacy.pharmacy.inventario.service.ProductoService;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("")
 public class ProductoController {
@@ -53,6 +55,26 @@ public class ProductoController {
     @GetMapping("/productos/buscar")
     public ResponseEntity<List<Producto>> buscarPorNombre(@RequestParam String nombre) {
         return ResponseEntity.ok(productoService.buscarPorNombre(nombre));
+    }
+
+    /**
+     * Búsqueda Universal para Kiosco de Precios
+     * Query: Puede ser EAN (Barras), Código Interno, o Nombre
+     */
+    @GetMapping("/productos/busqueda-publica")
+    public ResponseEntity<List<StockDTO>> busquedaPublica(@RequestParam String query) {
+        // DEBUG: Log para diagnosticar problemas de búsqueda
+        log.info("========== BÚSQUEDA PÚBLICA ==========");
+        log.info("Query recibida (raw): [{}]", query);
+        log.info("Query length: {}", query.length());
+        log.info("Query trimmed: [{}]", query.trim());
+        log.info("Query bytes: {}", java.util.Arrays.toString(query.getBytes()));
+        log.info("=====================================");
+
+        List<StockDTO> resultados = productoService.buscarProductosUniversal(query);
+        log.info("Resultados encontrados: {}", resultados.size());
+
+        return ResponseEntity.ok(resultados);
     }
 
     @PostMapping("/productos")
@@ -108,10 +130,16 @@ public class ProductoController {
 
     /**
      * Consultar stock disponible de un producto
+     * 
+     * @param productoId ID del producto
+     * @param sucursalId ID de la sucursal (opcional, para filtrar stock por
+     *                   sucursal)
      */
     @GetMapping("/productos/{productoId}/stock")
-    public ResponseEntity<StockDTO> consultarStock(@PathVariable Integer productoId) {
-        return ResponseEntity.ok(inventarioService.consultarStock(productoId));
+    public ResponseEntity<StockDTO> consultarStock(
+            @PathVariable Integer productoId,
+            @RequestParam(required = false) Integer sucursalId) {
+        return ResponseEntity.ok(inventarioService.consultarStock(productoId, sucursalId));
     }
 
     /**

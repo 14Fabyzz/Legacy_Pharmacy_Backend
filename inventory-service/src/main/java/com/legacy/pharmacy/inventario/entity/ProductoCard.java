@@ -34,21 +34,37 @@ public class ProductoCard {
     @Column(name = "precio_venta_base")
     private Double precioVentaBase;
 
+    @Column(name = "precio_venta_total")
+    private Double precioVentaTotal; // NUEVO: PVP final con IVA
+
+    @Column(name = "precio_venta_unidad")
+    private Double precioVentaUnidad;
+
+    @Column(name = "precio_venta_blister")
+    private Double precioVentaBlister; // NUEVO: Precio por blister
+
+    @Column(name = "iva_porcentaje")
+    private Integer ivaPorcentaje; // NUEVO: Porcentaje de IVA
+
     @Column(name = "stock_total")
     private Integer stockTotal;
 
     @Column(name = "stock_minimo")
     private Integer stockMinimo;
 
-    // ✅ NUEVOS CAMPOS FRACCIONAMIENTO
+    // ✅ CAMPOS FRACCIONAMIENTO
     @Column(name = "es_fraccionable")
     private Boolean esFraccionable;
 
     @Column(name = "unidades_por_caja")
     private Integer unidadesPorCaja;
 
-    @Column(name = "precio_venta_unidad")
-    private Double precioVentaUnidad;
+    // ✅ CAMPOS DE SEGURIDAD FARMACÉUTICA
+    @Column(name = "refrigerado")
+    private Boolean refrigerado; // NUEVO: Requiere cadena de frío
+
+    @Column(name = "es_controlado")
+    private Boolean esControlado; // NUEVO: Requiere receta controlada
 
     // ✅ EL NUEVO CAMPO:
     @Column(name = "proximo_vencimiento")

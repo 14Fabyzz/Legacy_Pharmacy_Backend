@@ -11,6 +11,7 @@ import com.farmacia.ms_transacciones.service.TurnoCajaService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.farmacia.ms_transacciones.exception.BusinessException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -79,7 +80,8 @@ public class TurnoCajaServiceImpl implements TurnoCajaService {
         if (diferencia.compareTo(BigDecimal.ZERO) != 0) {
             // Y las observaciones están vacías o nulas
             if (datos.getObservaciones() == null || datos.getObservaciones().trim().isEmpty()) {
-                throw new RuntimeException("ERROR AL CERRAR: Existe un descuadre de " + diferencia + ". Debe ingresar una observación justificando el faltante o sobrante.");
+                throw new BusinessException("ERROR AL CERRAR: Existe un descuadre de " + diferencia
+                        + ". Debe ingresar una observación justificando el faltante o sobrante.");
             }
         }
         // -----------------------------------

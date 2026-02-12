@@ -6,6 +6,7 @@ import com.farmacia.ms_transacciones.dto.CrearVentaDTO;
 import com.farmacia.ms_transacciones.dto.ItemVentaDTO;
 import com.farmacia.ms_transacciones.dto.ProductoInventarioDTO;
 import com.farmacia.ms_transacciones.dto.VentaResponseDTO;
+import com.farmacia.ms_transacciones.enums.TipoVenta;
 import com.farmacia.ms_transacciones.model.Cliente;
 import com.farmacia.ms_transacciones.model.DetalleVenta;
 import com.farmacia.ms_transacciones.model.TurnoCaja;
@@ -27,11 +28,21 @@ import java.util.stream.Collectors;
 @Service
 public class VentaServiceImpl implements VentaService {
 
-    @Autowired private VentaRepository ventaRepository;
-    @Autowired private DetalleVentaRepository detalleVentaRepository;
-    @Autowired private ClienteRepository clienteRepository;
-    @Autowired private TurnoCajaRepository turnoCajaRepository;
-    @Autowired private InventarioClient inventarioClient;
+    @Autowired
+    private VentaRepository ventaRepository;
+    @Autowired
+    private DetalleVentaRepository detalleVentaRepository;
+    @Autowired
+    private ClienteRepository clienteRepository;
+    @Autowired
+    private TurnoCajaRepository turnoCajaRepository;
+    @Autowired
+    private InventarioClient inventarioClient;
+
+    // ID del Cliente Genérico (Mostrador) - NO permitido para medicamentos
+    // controlados
+    @org.springframework.beans.factory.annotation.Value("${ventas.cliente-generico-id:1}")
+    private Integer clienteGenericoId;
 
     @Override
     @Transactional
@@ -55,7 +66,7 @@ public class VentaServiceImpl implements VentaService {
         venta.setFechaVenta(LocalDateTime.now());
         venta.setEstado("COMPLETADA");
         venta.setMetodoPago(datosVenta.getMetodoPago());
-        venta.setReferenciaPago(datosVenta.getReferenciaPago()); 
+        venta.setReferenciaPago(datosVenta.getReferenciaPago());
         venta.setTurno(turnoActual);
         venta.setSucursalId(turnoActual.getSucursalId());
 
@@ -70,46 +81,128 @@ public class VentaServiceImpl implements VentaService {
 
         // Cliente
         if (datosVenta.getClienteId() != null) {
-             Cliente cliente = clienteRepository.findById(datosVenta.getClienteId())
-                .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
+            Cliente cliente = clienteRepository.findById(datosVenta.getClienteId())
+                    .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
             venta.setCliente(cliente);
         }
 
         venta = ventaRepository.save(venta);
 
-        // --- LÓGICA DE DETALLES ---
+        // --- LÓGICA DE DETALLES CON PRECIO DUAL ---
         BigDecimal total = BigDecimal.ZERO;
-        
+
         for (ItemVentaDTO item : datosVenta.getItems()) {
             // A. Consultar Inventario
             ProductoInventarioDTO prod = inventarioClient.obtenerProducto(item.getProductoId());
 
-            // VALIDACIÓN AGREGADA: BLOQUEAR SI NO HAY STOCK
-            if (prod.getStockActual() < item.getCantidad()) {
-                throw new RuntimeException("Stock insuficiente para: " + prod.getNombreComercial() + 
-                                           ". Disponible: " + prod.getStockActual() + ", Solicitado: " + item.getCantidad());
+            // --- 🛡️ VALIDACIÓN LEGAL: MEDICAMENTOS CONTROLADOS ---
+            if (Boolean.TRUE.equals(prod.getEsControlado())) {
+                Long clienteVenta = datosVenta.getClienteId();
+
+                // Si no hay cliente (null) o es el Cliente Genérico (ID 1), BLOQUEAR.
+                // Esto obliga al cajero a cambiar el cliente por una persona real con cédula.
+                if (clienteVenta == null || clienteVenta.equals(clienteGenericoId.longValue())) {
+                    throw new com.farmacia.ms_transacciones.exception.BusinessException(
+                            String.format("⛔ BLOQUEO LEGAL: El producto '%s' es CONTROLADO. " +
+                                    "La ley prohíbe su venta a 'Cliente Mostrador'. " +
+                                    "Acción: Asocie un cliente real con Cédula y Nombre a esta venta.",
+                                    prod.getNombreComercial()));
+                }
+            }
+            // -----------------------------------------------------
+
+            // B. Verificar si es producto TANGIBLE o SERVICIO
+            boolean esServicio = "SERVICIO".equalsIgnoreCase(prod.getTipo());
+
+            // C. Determinar TipoVenta (Prioridad: Enum > Boolean legacy)
+            TipoVenta tipoVenta = item.getTipoVenta();
+            if (tipoVenta == null) {
+                // Backward compatibility: convertir esVentaPorCaja a TipoVenta
+                @SuppressWarnings("deprecation")
+                Boolean esVentaPorCaja = item.getEsVentaPorCaja();
+                tipoVenta = Boolean.TRUE.equals(esVentaPorCaja) ? TipoVenta.CAJA : TipoVenta.UNIDAD;
             }
 
-            // B. Crear Detalle
+            // D. Calcular precio según TipoVenta
+            BigDecimal precioAUsar;
+            switch (tipoVenta) {
+                case CAJA:
+                    precioAUsar = prod.getPrecioVentaBase();
+                    break;
+
+                case BLISTER:
+                    // Validar que el producto tiene configuración de blister
+                    if (!Boolean.TRUE.equals(prod.getEsFraccionable())) {
+                        throw new RuntimeException(
+                                String.format("El producto '%s' no permite venta fraccionada por blister",
+                                        prod.getNombreComercial()));
+                    }
+                    if (prod.getUnidadesPorBlister() == null || prod.getUnidadesPorBlister() == 0) {
+                        throw new RuntimeException(
+                                String.format("El producto '%s' no tiene configurado unidades por blister",
+                                        prod.getNombreComercial()));
+                    }
+                    // Usar precio blister si existe, sino calcular
+                    if (prod.getPrecioVentaBlister() != null
+                            && prod.getPrecioVentaBlister().compareTo(BigDecimal.ZERO) > 0) {
+                        precioAUsar = prod.getPrecioVentaBlister();
+                    } else {
+                        precioAUsar = prod.getPrecioVentaUnidad()
+                                .multiply(new BigDecimal(prod.getUnidadesPorBlister()));
+                    }
+                    break;
+
+                case UNIDAD:
+                    if (Boolean.TRUE.equals(prod.getEsFraccionable())) {
+                        precioAUsar = prod.getPrecioVentaUnidad();
+                    } else {
+                        // Producto no fraccionable, forzar venta por caja
+                        precioAUsar = prod.getPrecioVentaBase();
+                        tipoVenta = TipoVenta.CAJA; // Override para consistencia
+                    }
+                    break;
+
+                default:
+                    throw new RuntimeException("TipoVenta no soportado: " + tipoVenta);
+            }
+
+            // E. Validar stock SOLO si es producto TANGIBLE
+            if (!esServicio) {
+                if (prod.getStockActual() < item.getCantidad()) {
+                    throw new RuntimeException("Stock insuficiente para: " + prod.getNombreComercial() +
+                            ". Disponible: " + prod.getStockActual() + ", Solicitado: " + item.getCantidad());
+                }
+            }
+
+            // F. Crear Detalle con precio dinámico
             DetalleVenta det = new DetalleVenta();
             det.setVenta(venta);
             det.setProductoId(item.getProductoId());
             det.setProductoNombre(prod.getNombreComercial());
-            det.setPrecioUnitario(prod.getPrecioVentaBase());
             det.setCantidad(item.getCantidad());
+            det.setPrecioUnitario(precioAUsar); // ← PRECIO DINÁMICO
+            det.setTipoVenta(tipoVenta); // ← NUEVO: Registro de TipoVenta
 
-            BigDecimal sub = prod.getPrecioVentaBase().multiply(new BigDecimal(item.getCantidad()));
+            // Backward compatibility: mapear también al campo deprecated
+            @SuppressWarnings("deprecation")
+            Boolean esVentaPorCajaDeprecated = (tipoVenta == TipoVenta.CAJA);
+            det.setEsVentaPorCaja(esVentaPorCajaDeprecated);
+
+            BigDecimal sub = precioAUsar.multiply(new BigDecimal(item.getCantidad()));
             det.setSubtotal(sub);
 
             detalleVentaRepository.save(det);
             total = total.add(sub);
 
-            // C. Descontar Inventario
-            inventarioClient.registrarSalida(
-                    item.getProductoId(),
-                    item.getCantidad(),
-                    turnoActual.getSucursalId()
-            );
+            // G. Descontar Inventario SOLO si es producto TANGIBLE
+            if (!esServicio) {
+                inventarioClient.registrarSalida(
+                        item.getProductoId(),
+                        item.getCantidad(),
+                        turnoActual.getSucursalId(),
+                        tipoVenta // ← NUEVO: Enviar TipoVenta en lugar de Boolean
+                );
+            }
         }
 
         venta.setTotal(total);
@@ -120,7 +213,8 @@ public class VentaServiceImpl implements VentaService {
                 throw new RuntimeException("En pagos en efectivo debe indicar el monto recibido.");
             }
             if (datosVenta.getMontoRecibido().compareTo(total) < 0) {
-                throw new RuntimeException("Dinero insuficiente. Faltan: " + total.subtract(datosVenta.getMontoRecibido()));
+                throw new RuntimeException(
+                        "Dinero insuficiente. Faltan: " + total.subtract(datosVenta.getMontoRecibido()));
             }
             venta.setMontoRecibido(datosVenta.getMontoRecibido());
             venta.setCambio(datosVenta.getMontoRecibido().subtract(total));
@@ -146,23 +240,25 @@ public class VentaServiceImpl implements VentaService {
         dto.setVendedorNombre(v.getVendedorNombre());
         dto.setSucursalId(v.getSucursalId());
 
-        if(v.getCliente() != null) dto.setClienteId(v.getCliente().getId());
-        
+        if (v.getCliente() != null)
+            dto.setClienteId(v.getCliente().getId());
+
         // Mapeo de items
-        if(v.getDetalles() != null) {
+        if (v.getDetalles() != null) {
             dto.setItems(v.getDetalles().stream().map(d -> {
                 ItemVentaDTO i = new ItemVentaDTO();
                 i.setProductoId(d.getProductoId());
                 i.setCantidad(d.getCantidad());
                 i.setPrecioUnitario(d.getPrecioUnitario());
                 i.setSubtotal(d.getSubtotal());
+                i.setEsVentaPorCaja(d.getEsVentaPorCaja()); // ← NUEVO CAMPO EN RESPUESTA
                 return i;
             }).collect(Collectors.toList()));
         }
-        
+
         dto.setMontoRecibido(v.getMontoRecibido());
         dto.setCambio(v.getCambio());
-        
+
         return dto;
     }
 }
