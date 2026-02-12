@@ -58,6 +58,8 @@ public class MovimientoService {
                     .saldoResultante(saldoAcumulado)
                     .documentoRef(m.getObservacion()) // Usamos observación como referencia por ahora
                     .usuario(m.getUsuarioResponsable())
+                    .nombreProducto(m.getLote().getProducto().getNombreComercial())
+                    .codigoBarras(m.getLote().getProducto().getCodigoBarras())
                     .detalle(m.getObservacion())
                     .lote(m.getLote().getNumeroLote())
                     .costoUnitario(m.getLote().getCostoCompra())

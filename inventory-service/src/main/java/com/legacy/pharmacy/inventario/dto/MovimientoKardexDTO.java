@@ -21,6 +21,12 @@ public class MovimientoKardexDTO {
     @JsonProperty("documento_ref")
     private String documentoRef;
 
+    @JsonProperty("nombre_producto")
+    private String nombreProducto;
+
+    @JsonProperty("codigo_barras")
+    private String codigoBarras;
+
     private String usuario;
     private String detalle;
     private String lote;
