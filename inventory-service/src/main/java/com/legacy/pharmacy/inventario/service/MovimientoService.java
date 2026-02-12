@@ -70,4 +70,26 @@ public class MovimientoService {
 
         return kardex;
     }
+
+    @Transactional(readOnly = true)
+    public List<com.legacy.pharmacy.inventario.dto.MovimientoBitacoraDTO> obtenerBitacoraReciente() {
+        // 1. Obtener los últimos 50 movimientos
+        // Usamos PageRequest para el LIMIT 50
+        List<Movimiento> movimientos = movimientoRepository
+                .findRecent(org.springframework.data.domain.PageRequest.of(0, 50));
+
+        // 2. Mapear a DTO (Esto disparará N+1 queries por los Lazy Loads, pero es
+        // seguro en Transactional)
+        return movimientos.stream().map(m -> com.legacy.pharmacy.inventario.dto.MovimientoBitacoraDTO.builder()
+                .id(m.getId())
+                .fecha(m.getFechaMovimiento())
+                .nombreProducto(m.getLote().getProducto() != null ? m.getLote().getProducto().getNombreComercial()
+                        : "PRODUCTO ELIMINADO (Lote ID: " + m.getLote().getId() + ")")
+                .usuarioResponsable(m.getUsuarioResponsable())
+                .tipo(m.getTipoMovimiento().name())
+                .cantidad(m.getCantidad())
+                .documentoRef(m.getObservacion())
+                .build())
+                .collect(java.util.stream.Collectors.toList());
+    }
 }

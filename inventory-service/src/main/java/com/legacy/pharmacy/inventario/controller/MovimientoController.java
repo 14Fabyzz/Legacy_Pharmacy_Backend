@@ -26,4 +26,23 @@ public class MovimientoController {
 
         return ResponseEntity.ok(historial);
     }
+
+    // GET /api/inventario/movimientos/producto/{id}
+    @GetMapping("/producto/{id}")
+    public ResponseEntity<List<com.legacy.pharmacy.inventario.dto.MovimientoKardexDTO>> obtenerKardexProducto(
+            @PathVariable Integer id) {
+        return ResponseEntity.ok(movimientoService.obtenerKardexProducto(id));
+    }
+
+    // GET /api/inventario/movimientos/recientes
+    @GetMapping("/recientes")
+    public ResponseEntity<List<com.legacy.pharmacy.inventario.dto.MovimientoBitacoraDTO>> obtenerBitacoraReciente() {
+        return ResponseEntity.ok(movimientoService.obtenerBitacoraReciente());
+    }
+
+    // GET /api/inventario/movimientos (Default to Recientes)
+    @GetMapping("")
+    public ResponseEntity<List<com.legacy.pharmacy.inventario.dto.MovimientoBitacoraDTO>> listarMovimientos() {
+        return ResponseEntity.ok(movimientoService.obtenerBitacoraReciente());
+    }
 }
