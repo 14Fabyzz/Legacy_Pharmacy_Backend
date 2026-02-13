@@ -19,6 +19,7 @@ public class UsuarioDTO {
     private String login;
     private Long rolId;
     private String rolNombre;
+    private Long sucursalId;
     private EstadoUsuario estado;
     private Integer intentosFallidos;
     private LocalDateTime fechaBloqueo;

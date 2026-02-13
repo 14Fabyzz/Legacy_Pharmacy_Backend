@@ -16,5 +16,7 @@ public class UsuarioUpdateDTO {
 
     private Long rolId;
 
+    private Long sucursalId;
+
     private EstadoUsuario estado;
 }
