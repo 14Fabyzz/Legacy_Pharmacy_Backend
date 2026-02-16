@@ -18,4 +18,5 @@ public class DetalleProductoDTO {
     private BigDecimal precioVentaUnidad; // Si aplica
     private BigDecimal precioVentaBlister; // Si aplica
     private Integer stockTotal; // Suma de los lotes
+    private String imagenUrl;
 }

@@ -36,13 +36,13 @@ public class MovimientoController {
 
     // GET /api/inventario/movimientos/recientes
     @GetMapping("/recientes")
-    public ResponseEntity<List<com.legacy.pharmacy.inventario.dto.MovimientoBitacoraDTO>> obtenerBitacoraReciente() {
+    public ResponseEntity<List<com.legacy.pharmacy.inventario.dto.MovimientoKardexDTO>> obtenerBitacoraReciente() {
         return ResponseEntity.ok(movimientoService.obtenerBitacoraReciente());
     }
 
     // GET /api/inventario/movimientos (Default to Recientes)
     @GetMapping("")
-    public ResponseEntity<List<com.legacy.pharmacy.inventario.dto.MovimientoBitacoraDTO>> listarMovimientos() {
+    public ResponseEntity<List<com.legacy.pharmacy.inventario.dto.MovimientoKardexDTO>> listarMovimientos() {
         return ResponseEntity.ok(movimientoService.obtenerBitacoraReciente());
     }
 }

@@ -29,6 +29,32 @@ public class ProductoController {
     @Autowired
     private com.legacy.pharmacy.inventario.service.MovimientoService movimientoService;
 
+    @Autowired
+    private com.legacy.pharmacy.inventario.service.CloudinaryService cloudinaryService;
+
+    @PostMapping("/productos/{id}/imagen")
+    public ResponseEntity<?> subirImagen(@RequestParam("file") org.springframework.web.multipart.MultipartFile file,
+            @PathVariable Integer id) {
+        Producto producto = productoService.buscarPorId(id);
+
+        // 1. Si ya tiene imagen, borrar la anterior de Cloudinary
+        if (producto.getImagenId() != null && !producto.getImagenId().isEmpty()) {
+            cloudinaryService.delete(producto.getImagenId());
+        }
+
+        // 2. Subir la nueva imagen
+        Map result = cloudinaryService.upload(file);
+
+        // 3. Actualizar producto
+        producto.setImagenUrl((String) result.get("url"));
+        producto.setImagenId((String) result.get("public_id"));
+
+        // 4. Guardar
+        Producto productoActualizado = productoService.guardar(producto);
+
+        return ResponseEntity.ok(Map.of("imagenUrl", productoActualizado.getImagenUrl()));
+    }
+
     // --- RUTAS DE PRODUCTOS ---
 
     // GET /productos (Opcional ?estado=ACTIVO)

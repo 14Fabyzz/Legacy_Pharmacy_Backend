@@ -102,6 +102,10 @@ public class ProductoService {
         return productoRepository.save(p);
     }
 
+    public Producto guardar(Producto producto) {
+        return productoRepository.save(producto);
+    }
+
     public Producto actualizarProducto(Integer id, ProductoDTO dto) {
         Producto p = buscarPorId(id);
 
@@ -244,6 +248,7 @@ public class ProductoService {
                 .precioVentaUnidad(producto.getPrecioVentaUnidad())
                 .precioVentaBlister(producto.getPrecioVentaBlister())
                 .stockTotal(stockTotal)
+                .imagenUrl(producto.getImagenUrl()) // ✅ Mapeo de Imagen
                 .build();
 
         // 6. Construir y retornar el DTO completo
@@ -307,6 +312,7 @@ public class ProductoService {
             dto.setCantidadMinima(p.getStockMinimo());
             dto.setEstado(estadoStock);
             dto.setDisponibleParaVenta(disponible != null && disponible > 0 && "ACTIVO".equals(p.getEstado()));
+            dto.setImagenUrl(p.getImagenUrl()); // ✅ Mapeo de Imagen
 
             return dto;
         }).collect(java.util.stream.Collectors.toList());

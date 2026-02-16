@@ -344,6 +344,7 @@ SELECT
     p.unidades_por_caja,
     p.refrigerado,             -- NUEVO: Requiere cadena de frío
     p.es_controlado,           -- NUEVO: Requiere receta controlada
+    p.imagen_url,              -- ✅ NUEVO: Url de imagen (Cloudinary)
     l.nombre AS laboratorio_nombre,
     c.nombre AS categoria_nombre,
     pa.nombre AS principio_activo_nombre,
@@ -364,5 +365,5 @@ GROUP BY
     p.concentracion, p.presentacion, p.precio_venta_base, p.precio_venta_total,
     p.precio_venta_unidad, p.precio_venta_blister, p.iva_porcentaje,
     p.stock_minimo, p.es_fraccionable, p.unidades_por_caja,
-    p.refrigerado, p.es_controlado,
+    p.refrigerado, p.es_controlado, p.imagen_url,
     l.nombre, c.nombre, pa.nombre;

@@ -71,4 +71,8 @@ public class ProductoDTO {
 
     @com.fasterxml.jackson.annotation.JsonProperty(value = "precioVentaBlister", access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
     private BigDecimal precioVentaBlister;
+
+    // === IMÁGENES ===
+    private String imagenUrl;
+    private String imagenId;
 }
