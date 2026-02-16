@@ -306,6 +306,10 @@ VALUES
 -- Se crean lotes para cada producto con fechas variadas:
 -- VENCIDO (2024), POR VENCER (2026), VIGENTE (2027)
 
+-- CRITICAL: Delete existing lotes to ensure fresh data on each initialization
+-- This is necessary because INSERT IGNORE does not overwrite existing records
+DELETE FROM `lotes`;
+
 -- Lote 1: Vencido (Hace 1 año)
 INSERT IGNORE INTO `lotes` (`producto_id`, `numero_lote`, `fecha_vencimiento`, `cantidad_actual`, `costo_compra`) 
 SELECT id, CONCAT('L-EXP-', id), DATE_SUB(CURDATE(), INTERVAL 1 YEAR), 5, precio_compra_referencia FROM productos WHERE estado = 'Activo' LIMIT 10;
