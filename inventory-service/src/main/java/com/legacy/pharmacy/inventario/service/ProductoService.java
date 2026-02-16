@@ -26,6 +26,8 @@ public class ProductoService {
     private PrincipioActivoRepository principioActivoRepository;
     @Autowired
     private LoteRepository loteRepository;
+    @Autowired
+    private CloudinaryService cloudinaryService;
 
     // --- PRODUCTOS ---
 
@@ -104,6 +106,18 @@ public class ProductoService {
 
     public Producto guardar(Producto producto) {
         return productoRepository.save(producto);
+    }
+
+    public void deleteImage(Integer id) {
+        Producto producto = buscarPorId(id);
+        if (producto.getImagenId() != null && !producto.getImagenId().isEmpty()) {
+            // Usamos el servicio inyectado
+            cloudinaryService.delete(producto.getImagenId());
+
+            producto.setImagenUrl(null);
+            producto.setImagenId(null);
+            productoRepository.save(producto);
+        }
     }
 
     public Producto actualizarProducto(Integer id, ProductoDTO dto) {

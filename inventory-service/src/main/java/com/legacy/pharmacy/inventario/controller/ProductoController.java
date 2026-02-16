@@ -55,6 +55,12 @@ public class ProductoController {
         return ResponseEntity.ok(Map.of("imagenUrl", productoActualizado.getImagenUrl()));
     }
 
+    @DeleteMapping("/productos/{id}/imagen")
+    public ResponseEntity<?> eliminarImagen(@PathVariable Integer id) {
+        productoService.deleteImage(id);
+        return ResponseEntity.noContent().build();
+    }
+
     // --- RUTAS DE PRODUCTOS ---
 
     // GET /productos (Opcional ?estado=ACTIVO)
