@@ -26,6 +26,8 @@ public class ProductoService {
     private PrincipioActivoRepository principioActivoRepository;
     @Autowired
     private LoteRepository loteRepository;
+    @Autowired
+    private CloudinaryService cloudinaryService;
 
     // --- PRODUCTOS ---
 
@@ -100,6 +102,22 @@ public class ProductoService {
         p.recalcularPrecios();
 
         return productoRepository.save(p);
+    }
+
+    public Producto guardar(Producto producto) {
+        return productoRepository.save(producto);
+    }
+
+    public void deleteImage(Integer id) {
+        Producto producto = buscarPorId(id);
+        if (producto.getImagenId() != null && !producto.getImagenId().isEmpty()) {
+            // Usamos el servicio inyectado
+            cloudinaryService.delete(producto.getImagenId());
+
+            producto.setImagenUrl(null);
+            producto.setImagenId(null);
+            productoRepository.save(producto);
+        }
     }
 
     public Producto actualizarProducto(Integer id, ProductoDTO dto) {
@@ -244,6 +262,7 @@ public class ProductoService {
                 .precioVentaUnidad(producto.getPrecioVentaUnidad())
                 .precioVentaBlister(producto.getPrecioVentaBlister())
                 .stockTotal(stockTotal)
+                .imagenUrl(producto.getImagenUrl()) // ✅ Mapeo de Imagen
                 .build();
 
         // 6. Construir y retornar el DTO completo
@@ -307,6 +326,7 @@ public class ProductoService {
             dto.setCantidadMinima(p.getStockMinimo());
             dto.setEstado(estadoStock);
             dto.setDisponibleParaVenta(disponible != null && disponible > 0 && "ACTIVO".equals(p.getEstado()));
+            dto.setImagenUrl(p.getImagenUrl()); // ✅ Mapeo de Imagen
 
             return dto;
         }).collect(java.util.stream.Collectors.toList());

@@ -24,4 +24,5 @@ public class StockDTO {
     private Integer cantidadMinima;
     private String estado; // STOCK_OK, BAJO, SIN_STOCK
     private Boolean disponibleParaVenta;
+    private String imagenUrl;
 }

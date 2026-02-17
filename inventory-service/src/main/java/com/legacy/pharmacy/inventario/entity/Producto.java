@@ -125,6 +125,14 @@ public class Producto {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    // --- IMÁGENES (Cloudinary) ---
+
+    @Column(name = "imagen_url")
+    private String imagenUrl;
+
+    @Column(name = "imagen_id")
+    private String imagenId;
+
     // =====================================================
     // MÉTODO DE NEGOCIO: CÁLCULO DETERMINISTA DE PRECIOS
     // =====================================================
