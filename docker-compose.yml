@@ -32,6 +32,10 @@ services:
       - SPRING_DATASOURCE_USERNAME=${AIVEN_USER}
       - SPRING_DATASOURCE_PASSWORD=${AIVEN_PASSWORD}
       - JWT_SECRET=${JWT_SECRET}
+      # Cloudinary
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
     networks:
       - pharmacy-network
 
@@ -60,6 +64,8 @@ services:
       - SPRING_DATASOURCE_USERNAME=${AIVEN_USER}
       - SPRING_DATASOURCE_PASSWORD=${AIVEN_PG_PASSWORD}
       - JWT_SECRET=${JWT_SECRET}
+      # URL para conectarse al servicio de inventario
+      - URI_INVENTARIO=http://ms-inventario:8081/api/v1/inventario
     networks:
       - pharmacy-network
 

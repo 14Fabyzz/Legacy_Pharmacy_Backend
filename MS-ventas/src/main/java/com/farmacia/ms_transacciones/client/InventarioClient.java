@@ -8,6 +8,9 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Component
 public class InventarioClient {
 
@@ -36,20 +39,27 @@ public class InventarioClient {
                     ProductoInventarioDTO.class);
             return res.getBody();
         } catch (Exception e) {
+            log.error("Error en obtenerProducto: ", e);
             throw new RuntimeException("Error conectando a Inventario para producto ID: " + id);
         }
     }
 
-    // --- MÉTODO ACTUALIZADO: Recibe sucursalId ---
-    public void registrarSalida(Integer productoId, Integer cantidad, Integer sucursalId) {
+    // --- MÉTODO ACTUALIZADO: Recibe sucursalId y TipoVenta ---
+    public void registrarSalida(Integer productoId, Integer cantidad, Integer sucursalId,
+            com.farmacia.ms_transacciones.enums.TipoVenta tipoVenta) {
         try {
 
             String url = inventarioBaseUrl + "/productos/" + productoId + "/descontar";
 
-            // Enviamos la sucursal en el JSON
+            // Convertir TipoVenta a JSON
+            String tipoVentaJson = (tipoVenta != null) ? "\"" + tipoVenta.name() + "\"" : "null";
+
+            // Enviamos el TipoVenta en el JSON (inventory-service usa enum)
             String jsonBody = String.format(
-                    "{\"cantidad\": %d, \"motivo\": \"VENTA_SUCURSAL_%d\", \"sucursalId\": %d}",
-                    cantidad, sucursalId, sucursalId);
+                    "{\"cantidad\": %d, \"motivo\": \"VENTA_SUCURSAL_%d\", \"sucursalId\": %d, \"tipoVenta\": %s}",
+                    cantidad, sucursalId, sucursalId, tipoVentaJson);
+
+            log.info("VENTA-CLIENTE: Enviando POST a Inventario: URL={}, Body={}", url, jsonBody);
 
             HttpEntity<String> entity = new HttpEntity<>(jsonBody, getHeaders());
             ResponseEntity<Void> res = restTemplate.exchange(url, HttpMethod.POST, entity, Void.class);

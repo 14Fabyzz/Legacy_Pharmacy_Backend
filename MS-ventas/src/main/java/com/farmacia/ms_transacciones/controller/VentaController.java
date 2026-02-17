@@ -8,13 +8,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/ventas")
+@RequestMapping("/api/v1/ventas")
 public class VentaController {
 
-    @Autowired private VentaService ventaService;
+    @Autowired
+    private VentaService ventaService;
 
-    @PostMapping
+    @PostMapping("/realizar")
     public ResponseEntity<VentaResponseDTO> crearVenta(@RequestBody CrearVentaDTO dto) {
+        System.out.println("CONTROLLER-VENTAS: Recibida peticion POST /realizar");
         return ResponseEntity.ok(ventaService.crearVenta(dto));
     }
 }

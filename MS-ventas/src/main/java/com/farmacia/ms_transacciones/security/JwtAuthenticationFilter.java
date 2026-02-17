@@ -26,6 +26,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String authHeader = request.getHeader("Authorization");
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
@@ -41,7 +46,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // ... lógica de autenticación ...
 
                 // 2. Configurar Spring Security CON EL ROL
-// Spring Security suele esperar el prefijo "ROLE_" o usa hasAuthority en el config
+                // Spring Security suele esperar el prefijo "ROLE_" o usa hasAuthority en el
+                // config
 
                 SimpleGrantedAuthority authority = new SimpleGrantedAuthority(role);
 
@@ -59,6 +65,35 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 UserContext.setUserRole(role);
             } else {
                 System.out.println("❌ TOKEN INVALIDO O FIRMA NO COINCIDE EN DOCKER");
+            }
+        } else {
+            // -----------------------------------------------------------------------------
+            // FALLBACK: Confiar en Headers del Gateway (Solo para redes internas seguras)
+            // -----------------------------------------------------------------------------
+            String userIdHeader = request.getHeader("X-User-Id");
+            String usernameHeader = request.getHeader("X-Username");
+            String roleHeader = request.getHeader("X-User-Role");
+
+            if (userIdHeader != null) {
+                System.out.println("⚠️ AUTENTICACION VIA HEADERS (GATEWAY TRUST): " + usernameHeader);
+
+                String role = (roleHeader != null) ? roleHeader : "USER";
+                SimpleGrantedAuthority authority = new SimpleGrantedAuthority(role);
+
+                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                        usernameHeader,
+                        null,
+                        List.of(authority));
+
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+
+                try {
+                    UserContext.setUserId(Long.parseLong(userIdHeader));
+                } catch (NumberFormatException e) {
+                    UserContext.setUserId(null); // O manejar error
+                }
+                UserContext.setUsername(usernameHeader);
+                UserContext.setUserRole(role);
             }
         }
 

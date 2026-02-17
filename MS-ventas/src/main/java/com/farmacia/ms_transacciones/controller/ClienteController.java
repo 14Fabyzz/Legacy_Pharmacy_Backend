@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/clientes") // Ruta base actualizada
+@RequestMapping("/api/v1/ventas/clientes")
 public class ClienteController {
 
     @Autowired

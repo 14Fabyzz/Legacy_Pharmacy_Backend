@@ -14,9 +14,17 @@ import org.springframework.jdbc.core.JdbcTemplate; // ← NUEVO
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.ParameterMode;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.StoredProcedureQuery;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import org.springframework.jdbc.support.KeyHolder;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
 
 @Slf4j // ← NUEVO
 @Service
@@ -31,20 +39,100 @@ public class InventarioService {
         @Autowired
         private JdbcTemplate jdbcTemplate; // ← NUEVO
 
+        @PersistenceContext
+        private EntityManager entityManager;
+
         @Transactional
         public Map<String, Object> registrarEntrada(EntradaMercanciaDTO entrada) {
-                // La lógica de conversión ahora reside en el Procedimiento Almacenado
-                // Enviamos la cantidad tal cual (CAJAS o UNIDADES)
+                // 1. Validar producto y obtener datos de conversión
+                Producto producto = productoRepository.findById(entrada.getProductoId())
+                                .orElseThrow(() -> new RuntimeException(
+                                                "Producto no encontrado: " + entrada.getProductoId()));
 
-                return loteRepository.registrarEntrada(
-                                entrada.getProductoId(),
-                                entrada.getNumeroLote(),
-                                entrada.getCantidad(), // Enviamos cantidad cruda
-                                entrada.getCostoCompra(),
-                                entrada.getFechaVencimiento(),
+                log.info("DEBUG_STOCK: ProductoId={}, UnidadesPorCaja={}, EsFraccionable={}, CantidadEntrada={}",
+                                producto.getId(), producto.getUnidadesPorCaja(), producto.getEsFraccionable(),
+                                entrada.getCantidad());
+
+                // 3. Persistir en Base de Datos
+
+                // Conversión: Cajas -> Unidades (Si aplica)
+                int cantidadReal = entrada.getCantidad();
+                if (Boolean.TRUE.equals(producto.getEsFraccionable()) && producto.getUnidadesPorCaja() != null
+                                && producto.getUnidadesPorCaja() > 1) {
+                        cantidadReal = entrada.getCantidad() * producto.getUnidadesPorCaja();
+                }
+
+                // 3. Persistir usando JDBC Template DIRECTO (Reemplaza al SP para estabilidad)
+
+                // Calculo Costo Unitario
+                BigDecimal costoUnitario = BigDecimal.ZERO;
+                if (cantidadReal > 0 && entrada.getCostoCompra() != null) {
+                        costoUnitario = entrada.getCostoCompra().divide(BigDecimal.valueOf(cantidadReal), 4,
+                                        RoundingMode.HALF_UP);
+                }
+
+                // === ACTUALIZAR PRECIO DE REFERENCIA Y RECALCULAR PRECIOS ===
+                // Si el costo cambió, actualizar el precio de compra de referencia
+                // y recalcular automáticamente todos los precios de venta
+                if (costoUnitario.compareTo(BigDecimal.ZERO) > 0) {
+                        BigDecimal costoAnterior = producto.getPrecioCompraReferencia();
+                        if (costoAnterior == null || costoAnterior.compareTo(costoUnitario) != 0) {
+                                log.info("PRECIO: Actualizando costo de referencia. Anterior={}, Nuevo={}",
+                                                costoAnterior, costoUnitario);
+                                producto.setPrecioCompraReferencia(costoUnitario);
+                                producto.recalcularPrecios();
+                                productoRepository.save(producto);
+                                log.info("PRECIO: Precios recalculados. Base={}, Total={}, Unidad={}",
+                                                producto.getPrecioVentaBase(),
+                                                producto.getPrecioVentaTotal(),
+                                                producto.getPrecioVentaUnidad());
+                        }
+                }
+
+                String sqlInsertLote = "INSERT INTO lotes (producto_id, numero_lote, fecha_vencimiento, cantidad_actual, costo_compra, sucursal_id) VALUES (?, ?, ?, ?, ?, ?)";
+
+                KeyHolder keyHolder = new GeneratedKeyHolder();
+
+                int finalCantidadReal = cantidadReal; // Para lambda
+                BigDecimal finalCostoUnitario = costoUnitario; // Para lambda
+
+                log.info("NUCLEAR OPTION: Insertando Lote. Cantidad={}, Costo={}", finalCantidadReal,
+                                finalCostoUnitario);
+
+                jdbcTemplate.update(connection -> {
+                        java.sql.PreparedStatement ps = connection.prepareStatement(sqlInsertLote,
+                                        java.sql.Statement.RETURN_GENERATED_KEYS);
+                        ps.setInt(1, entrada.getProductoId());
+                        ps.setString(2, entrada.getNumeroLote());
+                        ps.setObject(3, entrada.getFechaVencimiento());
+                        ps.setInt(4, 0); // ← Se inicia en 0, el trigger lo actualizará al insertar movimiento
+                        ps.setInt(6, entrada.getSucursalId());
+                        return ps;
+                }, keyHolder);
+
+                Number loteId = keyHolder.getKey();
+
+                // Insertar Movimiento
+                // TAREA 3: Snapshot Saldo Historico (Entrada)
+                // En una entrada nueva (o sobre lote existente), el saldo DESPUES del
+                // movimiento es cantidadReal (si es nuevo)
+                // o cantidadActual + cantidadReal.
+                // Dado que acabamos de insertar el LOTE con cantidad 0 y el trigger
+                // actualizará,
+                // la "foto" lógica es que este lote nace con 'cantidadReal'.
+                int saldoFoto = cantidadReal;
+
+                String sqlMov = "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                jdbcTemplate.update(sqlMov,
+                                loteId,
+                                "ENTRADA",
+                                cantidadReal,
+                                saldoFoto, // saldo_historico
                                 entrada.getUsuarioResponsable() != null ? entrada.getUsuarioResponsable() : "SISTEMA",
                                 entrada.getSucursalId(),
                                 entrada.getObservaciones());
+
+                return java.util.Map.of("estado", "OK", "mensaje", "Entrada registrada (Direct JDBC)");
         }
 
         // AGREGA ESTO A InventarioService.java
@@ -68,17 +156,121 @@ public class InventarioService {
         // --- MÉTODO DE SALIDA ---
         @Transactional
         public List<Map<String, Object>> registrarSalida(com.legacy.pharmacy.inventario.dto.SalidaMercanciaDTO salida) {
-                // Llamamos al SP. Asumimos venta por UNIDAD (false) si no se especifica otra
-                // cosa en este DTO legacy.
-                return loteRepository.registrarSalida(
-                                salida.getProductoId(),
-                                salida.getCantidad(),
-                                "VENDEDOR_APP",
-                                salida.getSucursalId(),
-                                salida.getVentaId(),
-                                salida.getObservaciones(),
-                                false // <-- Default: Unidad
-                );
+                // 1. Obtener producto para factores de conversión
+                Producto producto = productoRepository.findById(salida.getProductoId())
+                                .orElseThrow(() -> new RuntimeException(
+                                                "Producto no encontrado: " + salida.getProductoId()));
+
+                // 2. Determinar Tipo de Venta (Prioridad: Enum > Boolean > Default)
+                com.legacy.pharmacy.inventario.enums.TipoVenta tipo = salida.getTipoVenta();
+                if (tipo == null) {
+                        @SuppressWarnings("deprecation") // Backwards compatibility until MS-ventas migration
+                        Boolean esVentaPorCaja = salida.getEsVentaPorCaja();
+                        if (Boolean.TRUE.equals(esVentaPorCaja)) {
+                                tipo = com.legacy.pharmacy.inventario.enums.TipoVenta.CAJA;
+                        } else {
+                                tipo = com.legacy.pharmacy.inventario.enums.TipoVenta.UNIDAD;
+                        }
+                }
+
+                // 3. Calcular cantidad total en UNIDADES (Pastillas)
+                int cantidadTotalUnidades = salida.getCantidad();
+
+                switch (tipo) {
+                        case CAJA:
+                                if (producto.getUnidadesPorCaja() != null && producto.getUnidadesPorCaja() > 0) {
+                                        cantidadTotalUnidades = salida.getCantidad() * producto.getUnidadesPorCaja();
+                                }
+                                break;
+                        case BLISTER:
+                                if (producto.getUnidadesPorBlister() != null && producto.getUnidadesPorBlister() > 0) {
+                                        cantidadTotalUnidades = salida.getCantidad() * producto.getUnidadesPorBlister();
+                                } else {
+                                        throw new RuntimeException(
+                                                        "El producto no tiene configuradas unidades por blister.");
+                                }
+                                break;
+                        case UNIDAD:
+                        default:
+                                // Ya está en unidades
+                                break;
+                }
+
+                // 4. LÓGICA FEFO EN JAVA (Reemplaza al SP)
+                com.legacy.pharmacy.inventario.entity.TipoMovimiento tipoMov = com.legacy.pharmacy.inventario.entity.TipoMovimiento.SALIDA; // O
+                                                                                                                                            // VENTA
+                                                                                                                                            // según
+                                                                                                                                            // tu
+                                                                                                                                            // enum
+
+                // Buscamos lotes ordenados por vencimiento (FEFO)
+                List<Lote> lotes = loteRepository
+                                .findByProductoIdAndCantidadActualGreaterThanOrderByFechaVencimientoAsc(
+                                                salida.getProductoId(), 0);
+
+                int cantidadPendiente = cantidadTotalUnidades;
+                List<Map<String, Object>> lotesAfectados = new java.util.ArrayList<>();
+
+                for (Lote lote : lotes) {
+                        if (cantidadPendiente <= 0)
+                                break;
+
+                        int cantidadADescontar = Math.min(lote.getCantidadActual(), cantidadPendiente);
+
+                        // --- ACTUALIZACIÓN ATÓMICA (Concurrency Safe) ---
+                        // "UPDATE lotes SET cantidad_actual = cantidad_actual - ? WHERE id = ? AND
+                        // cantidad_actual >= ?"
+                        String sqlUpdate = "UPDATE lotes SET cantidad_actual = cantidad_actual - ? WHERE id = ? AND cantidad_actual >= ?";
+                        int filasAfectadas = jdbcTemplate.update(sqlUpdate, cantidadADescontar, lote.getId(),
+                                        cantidadADescontar);
+
+                        if (filasAfectadas > 0) {
+                                // Éxito: Registro Movimiento
+                                String sqlMov = "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones) VALUES (?, ?, ?, ?, ?, ?, ?)";
+
+                                // TAREA 3: Snapshot Saldo Historico (Salida)
+                                // La cantidad actual del lote (antes del update) era
+                                // 'lote.getCantidadActual()'.
+                                // Hemos restado 'cantidadADescontar'.
+                                // El saldo que queda es:
+                                int saldoFoto = lote.getCantidadActual() - cantidadADescontar;
+
+                                // Cantidad negativa para salidas en historial, o positiva si usas tipo 'SALIDA'
+                                // Usaremos negativo para consistencia matemática si así lo prefieres,
+                                // pero tu enum tiene TIPO. Usaré positivo con tipo SALIDA.
+                                jdbcTemplate.update(sqlMov,
+                                                lote.getId(),
+                                                "SALIDA",
+                                                cantidadADescontar, // Cantidad positiva en BD según tu código previo
+                                                                    // (aunque el comentario decía negativo, el código
+                                                                    // usaba positivo)
+                                                saldoFoto, // saldo_historico
+                                                salida.getUsuarioResponsable() != null ? salida.getUsuarioResponsable()
+                                                                : "VENDEDOR",
+                                                salida.getSucursalId(),
+                                                salida.getObservaciones());
+
+                                cantidadPendiente -= cantidadADescontar;
+
+                                // Agregar a respuesta
+                                lotesAfectados.add(java.util.Map.of(
+                                                "lote_id", lote.getId(),
+                                                "cantidad_descontada", cantidadADescontar,
+                                                "nuevo_saldo", lote.getCantidadActual() - cantidadADescontar // Estimado
+                                ));
+                        } else {
+                                // Falló la concurrencia (alguien ganó el stock), reintentamos loop (next lote)
+                                log.warn("Concurrencia detectada en Lote ID {}. Reintentando con siguiente lote.",
+                                                lote.getId());
+                        }
+                }
+
+                if (cantidadPendiente > 0) {
+                        throw new RuntimeException(
+                                        "Stock insuficiente para completar la venta. Faltaron: " + cantidadPendiente);
+                }
+
+                return lotesAfectados;
         }
 
         // =========================================================================
@@ -90,24 +282,46 @@ public class InventarioService {
         /**
          * Consultar stock disponible de un producto
          * Este método será llamado por MS-Ventas antes de crear una venta
+         * 
+         * @param productoId ID del producto
+         * @param sucursalId ID de la sucursal (opcional, para filtrar stock por
+         *                   sucursal)
          */
-        public StockDTO consultarStock(Integer productoId) {
-                log.info("Consultando stock del producto {} - Usuario: {}",
-                                productoId, UserContext.getUsername());
+        public StockDTO consultarStock(Integer productoId, Integer sucursalId) {
+                log.info("Consultando stock del producto {} en sucursal {} - Usuario: {}",
+                                productoId, sucursalId != null ? sucursalId : "TODAS", UserContext.getUsername());
 
                 // 1. Buscas el producto
                 Producto producto = productoRepository.findById(productoId)
                                 .orElseThrow(() -> new RuntimeException("Producto no encontrado: " + productoId));
 
-                // 2. Calculas el disponible
-                Integer disponible = jdbcTemplate.queryForObject(
-                                "SELECT COALESCE(SUM(cantidad_actual), 0) " +
-                                                "FROM lotes " +
-                                                "WHERE producto_id = ? " +
-                                                "AND cantidad_actual > 0 " +
-                                                "AND fecha_vencimiento > CURDATE()",
-                                Integer.class,
-                                productoId);
+                // 2. Calculas el disponible desde lotes
+                String sql = "SELECT COALESCE(SUM(cantidad_actual), 0) " +
+                                "FROM lotes " +
+                                "WHERE producto_id = ? " +
+                                "AND cantidad_actual > 0 " +
+                                "AND fecha_vencimiento > CURDATE()";
+
+                // DIAGNOSTICO: Imprimir todos los lotes
+                List<Lote> allLotes = loteRepository
+                                .findByProductoIdAndCantidadActualGreaterThanOrderByFechaVencimientoAsc(productoId, -1);
+                for (Lote l : allLotes) {
+                        log.info("LOTE_DUMP: ID={}, Cant={}, Venc={}, ProdId={}", l.getId(), l.getCantidadActual(),
+                                        l.getFechaVencimiento(), l.getProducto().getId());
+                }
+
+                Integer disponible;
+
+                // ✅ CAMBIO TAREA 355: STOCK GLOBAL
+                // Ignoramos el sucursalId para que la venta encuentre stock de CUALQUIER
+                // sucursal.
+                // El log lo mantenemos para saber quién preguntó.
+                if (sucursalId != null) {
+                        log.info("Ignorando filtro sucursalId={} para usar Stock Global.", sucursalId);
+                }
+
+                disponible = jdbcTemplate.queryForObject(sql, Integer.class, productoId);
+                log.debug("Query Stock Global ejecutada. Resultado: {}", disponible);
 
                 // 3. Determinar estado del stock (Esta parte faltaba en tu resumen)
                 String estado;
@@ -123,12 +337,21 @@ public class InventarioService {
                 StockDTO stock = new StockDTO();
                 stock.setProductoId(producto.getId());
                 stock.setNombreProducto(producto.getNombreComercial());
+                stock.setTipo(producto.getTipo() != null ? producto.getTipo().name() : "TANGIBLE");
 
-                // --- NUEVO: Agregamos el precio para ventas ---
-                // El Frontend debería decidir qué precio mostrar (Caja o Unidad).
-                // Aquí enviamos el base (Caja) y el de Unidad.
-                stock.setPrecioVenta(producto.getPrecioVentaBase());
-                // ---------------------------------------------
+                // --- CONFIGURACIÓN DE PRECIOS Y FRACCIONAMIENTO ---
+                // Estos datos permiten al MS-Ventas calcular correctamente el precio según
+                // si la venta es por Caja o por Unidad
+                stock.setPrecioVentaBase(producto.getPrecioVentaBase()); // Base sin impuestos
+                stock.setPrecioVentaTotal(producto.getPrecioVentaTotal()); // Total con impuestos
+                stock.setIvaPorcentaje(producto.getIvaPorcentaje());
+                stock.setPrecioVentaUnidad(producto.getPrecioVentaUnidad());
+                stock.setPrecioVentaBlister(producto.getPrecioVentaBlister());
+                stock.setEsFraccionable(producto.getEsFraccionable());
+                stock.setUnidadesPorCaja(producto.getUnidadesPorCaja());
+                stock.setUnidadesPorBlister(producto.getUnidadesPorBlister()); // Informativo para UX
+                stock.setEsControlado(producto.getEsControlado()); // Control legal
+                // ----------------------------------------------
 
                 stock.setCantidadDisponible(disponible != null ? disponible : 0);
                 stock.setCantidadMinima(producto.getStockMinimo());
@@ -151,10 +374,15 @@ public class InventarioService {
          * Descontar inventario después de una venta
          * Ahora soporta venta por Caja o Unidad
          */
+        /**
+         * Descontar inventario después de una venta
+         * Ahora soporta TipoVenta (CAJA, BLISTER, UNIDAD)
+         */
         @Transactional
-        public void descontarInventario(Integer productoId, Integer cantidad, String motivo, Boolean esVentaPorCaja) {
-                log.info("Descontando {} del producto {} (Por Caja: {}) - Motivo: {}",
-                                cantidad, productoId, esVentaPorCaja, motivo);
+        public void descontarInventario(Integer productoId, Integer cantidad, String motivo,
+                        com.legacy.pharmacy.inventario.enums.TipoVenta tipoVenta) {
+                log.info("DIAGNOSTICO: Iniciando descuento. ProductoId={}, Cantidad={}, TipoVenta={}, Motivo={}",
+                                productoId, cantidad, tipoVenta, motivo);
 
                 Long userId = UserContext.getUserId();
                 String username = UserContext.getUsername();
@@ -164,40 +392,106 @@ public class InventarioService {
                 }
 
                 // Verificar que el producto existe
-                productoRepository.findById(productoId)
+                Producto p = productoRepository.findById(productoId)
                                 .orElseThrow(() -> new RuntimeException("Producto no encontrado: " + productoId));
 
-                // LÓGICA DELEGADA A LA BASE DE DATOS (Smart SP)
-                // El SP se encargará de validar si es Fraccionable y de multiplicar si es Caja.
-                // Nosotros solo pasamos la intención del usuario.
+                // LÓGICA DELEGADA A JAVA PARA ELIMINAR PROCS (FEFO + ATOMICIDAD)
+                // ---------------------------------------------------------------
 
-                try {
-                        loteRepository.registrarSalida(
-                                        productoId,
-                                        cantidad, // Cantidad original (Cajas o Unidades)
-                                        username != null ? username : "SISTEMA",
-                                        1, // sucursal_id - ajusta según necesites
-                                        null, // venta_id - NULL porque MS-Ventas tiene su propio ID
-                                        motivo,
-                                        Boolean.TRUE.equals(esVentaPorCaja) // <-- Pasamos el flag al SP
-                        );
+                // 1. Calcular Total Unidades reales
+                int cantidadReal = cantidad;
 
-                        log.info("Solicitud de descuento enviada a DB: producto={}, cantidad={}, esVentaPorCaja={}",
-                                        productoId, cantidad, esVentaPorCaja);
-
-                } catch (Exception e) {
-                        log.error("Error al descontar inventario: {}", e.getMessage());
-                        throw new RuntimeException("Error al descontar inventario: " + e.getMessage(), e);
+                // Conversión según TipoVenta
+                if (tipoVenta != null) {
+                        switch (tipoVenta) {
+                                case CAJA:
+                                        if (p.getUnidadesPorCaja() != null && p.getUnidadesPorCaja() > 0) {
+                                                cantidadReal = cantidad * p.getUnidadesPorCaja();
+                                        }
+                                        break;
+                                case BLISTER:
+                                        if (p.getUnidadesPorBlister() != null && p.getUnidadesPorBlister() > 0) {
+                                                cantidadReal = cantidad * p.getUnidadesPorBlister();
+                                        } else {
+                                                throw new RuntimeException(
+                                                                "El producto no tiene configuración para venta por Blister.");
+                                        }
+                                        break;
+                                case UNIDAD:
+                                default:
+                                        // Ya es unidad
+                                        break;
+                        }
                 }
+
+                log.info("Conversión de Stock: {} {} -> {} Unidades Totales", cantidad, tipoVenta, cantidadReal);
+
+                // 2. Ejecutar descuento FEFO
+                List<Lote> lotes = loteRepository
+                                .findByProductoIdAndCantidadActualGreaterThanOrderByFechaVencimientoAsc(productoId, 0);
+
+                int pendiente = cantidadReal;
+                log.info("DIAGNOSTICO: Lotes encontrados par el producto {}: {}", productoId, lotes.size());
+                if (lotes.isEmpty()) {
+                        log.error("DIAGNOSTICO CRITICO: No se encontraron lotes con stock para el producto {}. El inventario no se descontará.",
+                                        productoId);
+                }
+
+                for (Lote lote : lotes) {
+                        if (pendiente <= 0)
+                                break;
+
+                        // Desacoplar para evitar conflictos con Hibernate (CRÍTICO)
+                        entityManager.detach(lote);
+
+                        int aDescontar = Math.min(lote.getCantidadActual(), pendiente);
+
+                        log.info("Insertando movimiento de SALIDA para Lote ID {}. Cantidad enviada a BD: {}",
+                                        lote.getId(), -aDescontar);
+
+                        try {
+                                // 1. NO HACEMOS UPDATE MANUAL: Eliminamos el jdbcUpdate a la tabla 'lotes'.
+                                // 2. DELEGAMOS AL TRIGGER: Insertamos en 'movimientos' con número NEGATIVO
+                                // (-aDescontar).
+                                // 3. El trigger 'trg_validar_cantidad_disponible' validará la operación.
+                                // 4. El trigger 'trg_actualizar_cantidad_lote' hará la resta matemática
+                                // automáticamente.
+
+                                // TAREA 3: Snapshot Saldo Historico (Salida FEFO Delegada)
+                                int saldoFoto = lote.getCantidadActual() - aDescontar;
+
+                                jdbcTemplate.update(
+                                                "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                                                lote.getId(), "SALIDA", -aDescontar, saldoFoto, username, 1, motivo);
+
+                                pendiente -= aDescontar;
+
+                        } catch (Exception e) {
+                                // Si el trigger aborta la operación por falta de stock, caerá aquí.
+                                log.warn("Concurrencia o rechazo de BD en Lote ID {}: {}", lote.getId(),
+                                                e.getMessage());
+                        }
+                }
+
+                if (pendiente > 0) {
+                        throw new RuntimeException("Stock insuficiente (Concurrencia o falta de inventario). Faltaron: "
+                                        + pendiente);
+                }
+
+                // CRITICAL FIX: Limpiar el contexto de persistencia para evitar que Hibernate
+                // sobrescriba nuestros cambios JDBC con la entidad 'vieja' (que tiene cant=30)
+                // al momento del commit/flush.
+                entityManager.clear();
+
+                log.info("Descuento inventario completado. Total Unidades: {}", cantidadReal);
         }
 
-        // Sobrecarga para mantener compatibilidad si alguien llama sin el flag (asume
-        // unidad o caja según lógica por defecto)
+        // Sobrecarga para mantener compatibilidad si alguien llama sin el tipo (asume
+        // UNIDAD)
         @Transactional
         public void descontarInventario(Integer productoId, Integer cantidad, String motivo) {
-                // Por defecto asumimos venta por UNIDAD (o lo que sea el estándar)
-                // O mejor, asumimos FALSE para no multiplicar mágicamente
-                descontarInventario(productoId, cantidad, motivo, false);
+                descontarInventario(productoId, cantidad, motivo,
+                                com.legacy.pharmacy.inventario.enums.TipoVenta.UNIDAD);
         }
 
         /**
@@ -240,13 +534,19 @@ public class InventarioService {
                                 throw new RuntimeException("No existe un lote para devolver inventario");
                         }
 
+                        // Obtener cantidad actual para la foto (antes de la devolución)
+                        Integer cantidadActual = jdbcTemplate.queryForObject(
+                                        "SELECT cantidad_actual FROM lotes WHERE id = ?", Integer.class, loteId);
+                        int saldoFoto = (cantidadActual != null ? cantidadActual : 0) + cantidad;
+
                         // Insertar movimiento de DEVOLUCION (cantidad positiva)
                         jdbcTemplate.update(
-                                        "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, usuario_responsable, sucursal_id, observaciones) "
+                                        "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones) "
                                                         +
-                                                        "VALUES (?, 'DEVOLUCION', ?, ?, 1, ?)",
+                                                        "VALUES (?, 'DEVOLUCION', ?, ?, ?, 1, ?)",
                                         loteId,
                                         cantidad, // Cantidad positiva
+                                        saldoFoto,
                                         username != null ? username : "SISTEMA",
                                         motivo);
 
@@ -282,17 +582,12 @@ public class InventarioService {
                         throw new RuntimeException("Stock insuficiente. Disponible: " + stock);
                 }
 
-                // Llamamos a tu SP existente o lógica de descuento
-                // Asumiendo que usas el repositorio de Lotes que ya tenías:
-                loteRepository.registrarSalida(
-                                productoId,
-                                cantidad,
-                                "MS-VENTAS", // Usuario responsable
-                                1, // Sucursal Default
-                                null,
-                                "VENTA_EXTERNA",
-                                false // Default: Unidad
-                );
+                // Reutilizamos el método robusto que acabamos de crear
+                // "VENTA_EXTERNA" será el motivo
+                // Reutilizamos el método robusto que acabamos de crear
+                // "VENTA_EXTERNA" será el motivo
+                descontarInventario(productoId, cantidad, "VENTA_EXTERNA",
+                                com.legacy.pharmacy.inventario.enums.TipoVenta.UNIDAD);
         }
 
         // 3. Reponer Inventario (Devolución)
@@ -304,12 +599,17 @@ public class InventarioService {
                 try {
                         Integer loteId = jdbcTemplate.queryForObject(sqlLote, Integer.class, productoId);
 
-                        // Insertamos el movimiento de retorno
-                        String sqlInsert = "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, usuario_responsable, sucursal_id, observaciones) "
-                                        +
-                                        "VALUES (?, 'DEVOLUCION', ?, 'MS-VENTAS', 1, 'Devolución de cliente')";
+                        // Calculamos saldo foto (aproximado, ya que es query simple)
+                        Integer cantidadActual = jdbcTemplate.queryForObject(
+                                        "SELECT cantidad_actual FROM lotes WHERE id = ?", Integer.class, loteId);
+                        int saldoFoto = (cantidadActual != null ? cantidadActual : 0) + cantidad;
 
-                        jdbcTemplate.update(sqlInsert, loteId, cantidad);
+                        // Insertamos el movimiento de retorno
+                        String sqlInsert = "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones) "
+                                        +
+                                        "VALUES (?, 'DEVOLUCION', ?, ?, 'MS-VENTAS', 1, 'Devolución de cliente')";
+
+                        jdbcTemplate.update(sqlInsert, loteId, cantidad, saldoFoto);
 
                         // NOTA: Asegúrate de que tu base de datos tenga un Trigger que actualice
                         // la tabla 'lotes' cuando se inserta en 'movimientos'.
@@ -331,30 +631,36 @@ public class InventarioService {
                                 0);
 
                 List<Map<String, Object>> listaVencidos = lotesVencidos.stream()
-                                .map(l -> Map.<String, Object>of(
-                                                "id", l.getId(),
-                                                "producto", l.getProducto().getNombreComercial(), // Requiere
-                                                                                                  // transacción activa
-                                                "lote", l.getNumeroLote(),
-                                                "fecha", l.getFechaVencimiento(),
-                                                "cantidad", l.getCantidadActual()))
-                                .collect(java.util.stream.Collectors.toList()); // <--- CORRECCIÓN DE TIPO
+                                .map(l -> {
+                                        Map<String, Object> map = new java.util.HashMap<>();
+                                        map.put("id", l.getId());
+                                        map.put("producto", l.getProducto().getNombreComercial());
+                                        map.put("lote", l.getNumeroLote());
+                                        map.put("fecha", l.getFechaVencimiento());
+                                        map.put("cantidad", l.getCantidadActual());
+                                        map.put("imagenUrl", l.getProducto().getImagenUrl()); // ✅ IMAGEN
+                                        return map;
+                                })
+                                .collect(java.util.stream.Collectors.toList());
 
                 // 2. OBTENER POR VENCER
                 List<Lote> lotesPorVencer = loteRepository
                                 .findByFechaVencimientoBetweenAndCantidadActualGreaterThan(hoy, hoy.plusDays(30), 0);
 
                 List<Map<String, Object>> listaPorVencer = lotesPorVencer.stream()
-                                .map(l -> Map.<String, Object>of(
-                                                "id", l.getId(),
-                                                "producto", l.getProducto().getNombreComercial(),
-                                                "lote", l.getNumeroLote(),
-                                                "fecha", l.getFechaVencimiento(),
-                                                "cantidad", l.getCantidadActual(),
-                                                "diasRestantes",
-                                                java.time.temporal.ChronoUnit.DAYS.between(hoy,
-                                                                l.getFechaVencimiento())))
-                                .collect(java.util.stream.Collectors.toList()); // <--- CORRECCIÓN DE TIPO
+                                .map(l -> {
+                                        Map<String, Object> map = new java.util.HashMap<>();
+                                        map.put("id", l.getId());
+                                        map.put("producto", l.getProducto().getNombreComercial());
+                                        map.put("lote", l.getNumeroLote());
+                                        map.put("fecha", l.getFechaVencimiento());
+                                        map.put("cantidad", l.getCantidadActual());
+                                        map.put("diasRestantes", java.time.temporal.ChronoUnit.DAYS.between(hoy,
+                                                        l.getFechaVencimiento()));
+                                        map.put("imagenUrl", l.getProducto().getImagenUrl()); // ✅ IMAGEN
+                                        return map;
+                                })
+                                .collect(java.util.stream.Collectors.toList());
 
                 // 3. OBTENER STOCK BAJO
                 List<Producto> productosBajoStock = productoRepository.findProductosBajoStock();
@@ -362,13 +668,15 @@ public class InventarioService {
                 List<Map<String, Object>> listaStockBajo = productosBajoStock.stream()
                                 .map(p -> {
                                         Integer stockReal = consultarStockActual(p.getId());
-                                        return Map.<String, Object>of(
-                                                        "id", p.getId(),
-                                                        "nombre", p.getNombreComercial(),
-                                                        "stockActual", stockReal,
-                                                        "stockMinimo", p.getStockMinimo());
+                                        Map<String, Object> map = new java.util.HashMap<>();
+                                        map.put("id", p.getId());
+                                        map.put("nombre", p.getNombreComercial());
+                                        map.put("stockActual", stockReal);
+                                        map.put("stockMinimo", p.getStockMinimo());
+                                        map.put("imagenUrl", p.getImagenUrl()); // ✅ IMAGEN
+                                        return map;
                                 })
-                                .collect(java.util.stream.Collectors.toList()); // <--- CORRECCIÓN DE TIPO
+                                .collect(java.util.stream.Collectors.toList());
 
                 // 4. CALCULAR SALUDABLES
                 long totalProductos = productoRepository.count();

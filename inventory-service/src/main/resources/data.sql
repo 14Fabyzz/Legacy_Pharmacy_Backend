@@ -306,6 +306,10 @@ VALUES
 -- Se crean lotes para cada producto con fechas variadas:
 -- VENCIDO (2024), POR VENCER (2026), VIGENTE (2027)
 
+-- CRITICAL: Delete existing lotes to ensure fresh data on each initialization
+-- This is necessary because INSERT IGNORE does not overwrite existing records
+DELETE FROM `lotes`;
+
 -- Lote 1: Vencido (Hace 1 año)
 INSERT IGNORE INTO `lotes` (`producto_id`, `numero_lote`, `fecha_vencimiento`, `cantidad_actual`, `costo_compra`) 
 SELECT id, CONCAT('L-EXP-', id), DATE_SUB(CURDATE(), INTERVAL 1 YEAR), 5, precio_compra_referencia FROM productos WHERE estado = 'Activo' LIMIT 10;
@@ -335,10 +339,16 @@ SELECT
     p.concentracion,
     p.presentacion,
     p.precio_venta_base,
+    p.precio_venta_total,      -- NUEVO: PVP final con IVA
+    p.precio_venta_unidad,
+    p.precio_venta_blister,    -- NUEVO: Precio por blister
+    p.iva_porcentaje,          -- NUEVO: Porcentaje de IVA
     p.stock_minimo,
-    p.es_fraccionable,          -- <--- NUEVO
-    p.unidades_por_caja,        -- <--- NUEVO
-    p.precio_venta_unidad,      -- <--- NUEVO
+    p.es_fraccionable,
+    p.unidades_por_caja,
+    p.refrigerado,             -- NUEVO: Requiere cadena de frío
+    p.es_controlado,           -- NUEVO: Requiere receta controlada
+    p.imagen_url,              -- ✅ NUEVO: Url de imagen (Cloudinary)
     l.nombre AS laboratorio_nombre,
     c.nombre AS categoria_nombre,
     pa.nombre AS principio_activo_nombre,
@@ -356,6 +366,8 @@ LEFT JOIN principios_activos pa ON p.principio_activo_id = pa.id
 LEFT JOIN lotes lt ON p.id = lt.producto_id AND lt.cantidad_actual > 0
 GROUP BY 
     p.id, p.codigo_interno, p.codigo_barras, p.nombre_comercial, 
-    p.concentracion, p.presentacion, p.precio_venta_base, 
-    p.stock_minimo, p.es_fraccionable, p.unidades_por_caja, p.precio_venta_unidad,
+    p.concentracion, p.presentacion, p.precio_venta_base, p.precio_venta_total,
+    p.precio_venta_unidad, p.precio_venta_blister, p.iva_porcentaje,
+    p.stock_minimo, p.es_fraccionable, p.unidades_por_caja,
+    p.refrigerado, p.es_controlado, p.imagen_url,
     l.nombre, c.nombre, pa.nombre;
