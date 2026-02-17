@@ -183,11 +183,14 @@ public class ProductoController {
             @PathVariable Integer productoId,
             @RequestBody DescontarRequest request) {
 
+        log.info("CONTROLLER: Recibida peticion POST /descontar para producto {}", productoId);
+
         inventarioService.descontarInventario(
                 productoId,
                 request.cantidad(),
                 request.motivo(),
-                request.esVentaPorCaja() != null ? request.esVentaPorCaja() : false);
+                request.tipoVenta() // Pass the Enum directly
+        );
 
         return ResponseEntity.ok(Map.of(
                 "mensaje", "Inventario descontado exitosamente",
@@ -216,7 +219,8 @@ public class ProductoController {
     }
 
     // DTOs
-    public record DescontarRequest(Integer cantidad, String motivo, Boolean esVentaPorCaja) {
+    public record DescontarRequest(Integer cantidad, String motivo,
+            com.legacy.pharmacy.inventario.enums.TipoVenta tipoVenta) {
     }
 
     public record DevolverRequest(Integer cantidad, String motivo) {

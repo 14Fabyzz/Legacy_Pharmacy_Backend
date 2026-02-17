@@ -322,7 +322,9 @@ public class InventarioService {
                 // --- CONFIGURACIÓN DE PRECIOS Y FRACCIONAMIENTO ---
                 // Estos datos permiten al MS-Ventas calcular correctamente el precio según
                 // si la venta es por Caja o por Unidad
-                stock.setPrecioVentaBase(producto.getPrecioVentaBase());
+                stock.setPrecioVentaBase(producto.getPrecioVentaBase()); // Base sin impuestos
+                stock.setPrecioVentaTotal(producto.getPrecioVentaTotal()); // Total con impuestos
+                stock.setIvaPorcentaje(producto.getIvaPorcentaje());
                 stock.setPrecioVentaUnidad(producto.getPrecioVentaUnidad());
                 stock.setPrecioVentaBlister(producto.getPrecioVentaBlister());
                 stock.setEsFraccionable(producto.getEsFraccionable());
@@ -419,35 +421,32 @@ public class InventarioService {
                         if (pendiente <= 0)
                                 break;
 
-                        // NUCLEAR OPTION: Desacoplar la entidad antes de tocar la DB con JDBC
+                        // Desacoplar para evitar conflictos con Hibernate (CRÍTICO)
                         entityManager.detach(lote);
 
                         int aDescontar = Math.min(lote.getCantidadActual(), pendiente);
 
-                        // ATOMIC UPDATE
-                        log.info("DIAGNOSTICO: Intentando descontar de Lote ID {}. CantActual={}, A Descontar={}",
-                                        lote.getId(), lote.getCantidadActual(), aDescontar);
-                        int updated = jdbcTemplate.update(
-                                        "UPDATE lotes SET cantidad_actual = cantidad_actual - ? WHERE id = ? AND cantidad_actual >= ?",
-                                        aDescontar, lote.getId(), aDescontar);
+                        log.info("Insertando movimiento de SALIDA para Lote ID {}. Cantidad enviada a BD: {}",
+                                        lote.getId(), -aDescontar);
 
-                        if (updated > 0) {
-                                // VERIFICACION IN-TRANSACTION
-                                Integer newQty = jdbcTemplate.queryForObject(
-                                                "SELECT cantidad_actual FROM lotes WHERE id = ?", Integer.class,
-                                                lote.getId());
-                                log.info("VERIFICACION IN-TRANSACTION: Lote ID {} ahora tiene {}", lote.getId(),
-                                                newQty);
-
-                                // Insertar Movimiento
+                        try {
+                                // 1. NO HACEMOS UPDATE MANUAL: Eliminamos el jdbcUpdate a la tabla 'lotes'.
+                                // 2. DELEGAMOS AL TRIGGER: Insertamos en 'movimientos' con número NEGATIVO
+                                // (-aDescontar).
+                                // 3. El trigger 'trg_validar_cantidad_disponible' validará la operación.
+                                // 4. El trigger 'trg_actualizar_cantidad_lote' hará la resta matemática
+                                // automáticamente.
 
                                 jdbcTemplate.update(
                                                 "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, usuario_responsable, sucursal_id, observaciones) VALUES (?, ?, ?, ?, ?, ?)",
-                                                lote.getId(), "SALIDA", aDescontar, username, 1, motivo);
+                                                lote.getId(), "SALIDA", -aDescontar, username, 1, motivo);
+
                                 pendiente -= aDescontar;
-                        } else {
-                                // Concurrent modification detected
-                                log.warn("Concurrencia en Lote ID {}", lote.getId());
+
+                        } catch (Exception e) {
+                                // Si el trigger aborta la operación por falta de stock, caerá aquí.
+                                log.warn("Concurrencia o rechazo de BD en Lote ID {}: {}", lote.getId(),
+                                                e.getMessage());
                         }
                 }
 

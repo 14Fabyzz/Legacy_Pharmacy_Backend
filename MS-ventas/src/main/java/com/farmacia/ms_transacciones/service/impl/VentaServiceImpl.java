@@ -25,6 +25,9 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
 public class VentaServiceImpl implements VentaService {
 
@@ -38,6 +41,8 @@ public class VentaServiceImpl implements VentaService {
     private TurnoCajaRepository turnoCajaRepository;
     @Autowired
     private InventarioClient inventarioClient;
+    @Autowired
+    private com.farmacia.ms_transacciones.repository.MovimientoCajaRepository movimientoCajaRepository;
 
     // ID del Cliente Genérico (Mostrador) - NO permitido para medicamentos
     // controlados
@@ -47,6 +52,7 @@ public class VentaServiceImpl implements VentaService {
     @Override
     @Transactional
     public VentaResponseDTO crearVenta(CrearVentaDTO datosVenta) {
+        log.info("VENTA-PROCESO: Iniciando crearVenta para ClienteId: {}", datosVenta.getClienteId());
 
         // 1. VALIDAR CAJA ABIERTA
         TurnoCaja turnoActual = turnoCajaRepository.findByUsuarioIdAndEstado(
@@ -127,7 +133,22 @@ public class VentaServiceImpl implements VentaService {
             BigDecimal precioAUsar;
             switch (tipoVenta) {
                 case CAJA:
-                    precioAUsar = prod.getPrecioVentaBase();
+                    // NUEVO: Usar precio TOTAL (con IVA) si existe
+                    if (prod.getPrecioVentaTotal() != null
+                            && prod.getPrecioVentaTotal().compareTo(BigDecimal.ZERO) > 0) {
+                        precioAUsar = prod.getPrecioVentaTotal();
+                    } else {
+                        // Fallback: Calcular basándose en precioBase + IVA (si existe)
+                        BigDecimal base = prod.getPrecioVentaBase();
+                        if (prod.getIvaPorcentaje() != null && prod.getIvaPorcentaje().compareTo(BigDecimal.ZERO) > 0) {
+                            BigDecimal ivaFactor = prod.getIvaPorcentaje()
+                                    .divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP)
+                                    .add(BigDecimal.ONE);
+                            precioAUsar = base.multiply(ivaFactor).setScale(2, java.math.RoundingMode.HALF_UP);
+                        } else {
+                            precioAUsar = base;
+                        }
+                    }
                     break;
 
                 case BLISTER:
@@ -156,8 +177,13 @@ public class VentaServiceImpl implements VentaService {
                     if (Boolean.TRUE.equals(prod.getEsFraccionable())) {
                         precioAUsar = prod.getPrecioVentaUnidad();
                     } else {
-                        // Producto no fraccionable, forzar venta por caja
-                        precioAUsar = prod.getPrecioVentaBase();
+                        // Producto no fraccionable, forzar venta por caja (con IVA)
+                        if (prod.getPrecioVentaTotal() != null
+                                && prod.getPrecioVentaTotal().compareTo(BigDecimal.ZERO) > 0) {
+                            precioAUsar = prod.getPrecioVentaTotal();
+                        } else {
+                            precioAUsar = prod.getPrecioVentaBase();
+                        }
                         tipoVenta = TipoVenta.CAJA; // Override para consistencia
                     }
                     break;
@@ -196,6 +222,8 @@ public class VentaServiceImpl implements VentaService {
 
             // G. Descontar Inventario SOLO si es producto TANGIBLE
             if (!esServicio) {
+                log.info("VENTA-PROCESO: Llamando a InventarioClient.registrarSalida para ProdId: {}",
+                        item.getProductoId());
                 inventarioClient.registrarSalida(
                         item.getProductoId(),
                         item.getCantidad(),
@@ -223,7 +251,31 @@ public class VentaServiceImpl implements VentaService {
             venta.setCambio(BigDecimal.ZERO);
         }
 
-        return mapToDTO(ventaRepository.save(venta));
+        ventaRepository.save(venta);
+
+        // =================================================================================
+        // ACTUALIZACIÓN DE CAJA (MOVIMIENTO + SALDO) - REQUERIMIENTO CRÍTICO
+        // =================================================================================
+
+        // 1. Registrar Movimiento de Caja (Ingreso)
+        com.farmacia.ms_transacciones.model.MovimientoCaja mov = new com.farmacia.ms_transacciones.model.MovimientoCaja();
+        mov.setTurno(turnoActual);
+        mov.setTipo("INGRESO_VENTA");
+        mov.setMonto(venta.getTotal());
+        mov.setReferencia("VENTA #" + venta.getId()); // Usar ID interno o NumeroFactura según preferencia
+        mov.setDescripcion("Ingreso por Venta ID: " + venta.getId());
+        mov.setFecha(LocalDateTime.now());
+        movimientoCajaRepository.save(mov);
+
+        // 2. Actualizar Saldo Teórico del Turno
+        // Se asume que totalVentasTeorico inicial es 0 o acumulado.
+        BigDecimal nuevoTotalVentas = turnoActual.getTotalVentasTeorico().add(venta.getTotal());
+        turnoActual.setTotalVentasTeorico(nuevoTotalVentas);
+        turnoCajaRepository.save(turnoActual);
+
+        log.info("CAJA-ACTUALIZADA: TurnoID={} NuevoTotalVentas={}", turnoActual.getId(), nuevoTotalVentas);
+
+        return mapToDTO(venta);
     }
 
     private VentaResponseDTO mapToDTO(Venta v) {

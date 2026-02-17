@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 @Data
 @Builder
 public class DetalleProductoDTO {
+    private Integer id; // <-- Added ID for POS
     private String nombreComercial;
     private String codigoInterno;
     private BigDecimal precioCompraReferencia; // Costo
@@ -17,6 +18,7 @@ public class DetalleProductoDTO {
     private BigDecimal precioVentaTotal; // PVP Final
     private BigDecimal precioVentaUnidad; // Si aplica
     private BigDecimal precioVentaBlister; // Si aplica
+    private Boolean esFraccionable; // <-- Added for POS logic
     private Integer stockTotal; // Suma de los lotes
     private String imagenUrl;
 }

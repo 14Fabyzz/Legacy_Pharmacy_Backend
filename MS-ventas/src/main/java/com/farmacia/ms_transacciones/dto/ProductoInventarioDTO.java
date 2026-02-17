@@ -16,6 +16,12 @@ public class ProductoInventarioDTO {
     @JsonProperty("precioVentaBase")
     private BigDecimal precioVentaBase; // Precio por Caja
 
+    @JsonProperty("precioVentaTotal")
+    private BigDecimal precioVentaTotal; // Precio Final con IVA
+
+    @JsonProperty("ivaPorcentaje")
+    private BigDecimal ivaPorcentaje;
+
     @JsonProperty("precioVentaUnidad")
     private BigDecimal precioVentaUnidad; // Precio por Unidad
 
@@ -67,6 +73,22 @@ public class ProductoInventarioDTO {
 
     public void setPrecioVentaBase(BigDecimal precioVentaBase) {
         this.precioVentaBase = precioVentaBase;
+    }
+
+    public BigDecimal getPrecioVentaTotal() {
+        return precioVentaTotal;
+    }
+
+    public void setPrecioVentaTotal(BigDecimal precioVentaTotal) {
+        this.precioVentaTotal = precioVentaTotal;
+    }
+
+    public BigDecimal getIvaPorcentaje() {
+        return ivaPorcentaje;
+    }
+
+    public void setIvaPorcentaje(BigDecimal ivaPorcentaje) {
+        this.ivaPorcentaje = ivaPorcentaje;
     }
 
     public BigDecimal getPrecioVentaUnidad() {

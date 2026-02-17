@@ -6,7 +6,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Data;
 import org.hibernate.annotations.Immutable;
-import java.time.LocalDate; // ⚠️ IMPORTANTE
+import java.time.LocalDate;
+import org.hibernate.annotations.Formula;
+import jakarta.persistence.Transient;
 
 @Data
 @Entity
@@ -46,7 +48,8 @@ public class ProductoCard {
     @Column(name = "iva_porcentaje")
     private Integer ivaPorcentaje; // NUEVO: Porcentaje de IVA
 
-    @Column(name = "stock_total")
+    // ✅ STOCK DINÁMICO (Calculado por Lotes)
+    @Formula("(SELECT COALESCE(SUM(l.cantidad_actual), 0) FROM lotes l WHERE l.producto_id = producto_id AND l.cantidad_actual > 0)")
     private Integer stockTotal;
 
     @Column(name = "stock_minimo")
@@ -70,8 +73,22 @@ public class ProductoCard {
     @Column(name = "proximo_vencimiento")
     private LocalDate proximoVencimiento;
 
-    @Column(name = "nivel_stock")
+    // ✅ CÁLCULO DINÁMICO DE ESTADO
+    // Eliminamos el mapeo a la vista y usamos lógica Java
+    @Transient
     private String nivelStock;
+
+    public String getNivelStock() {
+        if (stockTotal == null)
+            return "SIN_STOCK";
+        if (stockTotal == 0)
+            return "AGOTADO";
+        if (stockMinimo != null && stockTotal <= stockMinimo)
+            return "CRITICO";
+        if (stockMinimo != null && stockTotal <= (stockMinimo + 5))
+            return "BAJO"; // Margen de alerta
+        return "OPTIMO";
+    }
 
     @Column(name = "laboratorio_nombre")
     private String laboratorio;

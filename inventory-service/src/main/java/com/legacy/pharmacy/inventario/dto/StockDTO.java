@@ -13,7 +13,9 @@ public class StockDTO {
     private Integer productoId;
     private String nombreProducto;
     private String tipo; // TANGIBLE o SERVICIO
-    private BigDecimal precioVentaBase; // Precio por Caja
+    private BigDecimal precioVentaBase; // Precio por Caja (Sin IVA)
+    private BigDecimal precioVentaTotal; // PVP Caja (Con IVA) -> NUEVO
+    private BigDecimal ivaPorcentaje; // % IVA -> NUEVO
     private BigDecimal precioVentaUnidad; // Precio por Unidad (Calculado)
     private BigDecimal precioVentaBlister; // Precio por Blister (Calculado/Manual)
     private Boolean esFraccionable; // ¿Permite venta menudeada?

@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.Formula; // <-- Importante para el cálculo dinámico
 
 import java.math.BigDecimal; // Importante para dinero
 import java.math.RoundingMode;
@@ -97,6 +98,12 @@ public class Producto {
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
     private TipoProducto tipo = TipoProducto.TANGIBLE;
+
+    // --- STOCK DINÁMICO (CALCULADO) ---
+    // Esta anotación ejecuta una subconsulta cada vez que se trae el producto.
+    // Reemplaza la necesidad de hacer queries adicionales o tener una columna desactualizada.
+    @Formula("(SELECT COALESCE(SUM(l.cantidad_actual), 0) FROM lotes l WHERE l.producto_id = id AND l.cantidad_actual > 0)")
+    private Integer stockActual;
 
     // --- DATOS DE FRACCIONAMIENTO (NUEVO) ---
 

@@ -16,6 +16,7 @@ public class VentaController {
 
     @PostMapping("/realizar")
     public ResponseEntity<VentaResponseDTO> crearVenta(@RequestBody CrearVentaDTO dto) {
+        System.out.println("CONTROLLER-VENTAS: Recibida peticion POST /realizar");
         return ResponseEntity.ok(ventaService.crearVenta(dto));
     }
 }

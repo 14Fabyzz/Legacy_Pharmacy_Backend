@@ -252,6 +252,7 @@ public class ProductoService {
         // 5. Mapear producto a DetalleProductoDTO
         com.legacy.pharmacy.inventario.dto.DetalleProductoDTO detalleProducto = com.legacy.pharmacy.inventario.dto.DetalleProductoDTO
                 .builder()
+                .id(producto.getId()) // <-- Mapped ID
                 .nombreComercial(producto.getNombreComercial())
                 .codigoInterno(producto.getCodigoInterno())
                 .precioCompraReferencia(producto.getPrecioCompraReferencia())
@@ -261,6 +262,7 @@ public class ProductoService {
                 .precioVentaTotal(producto.getPrecioVentaTotal())
                 .precioVentaUnidad(producto.getPrecioVentaUnidad())
                 .precioVentaBlister(producto.getPrecioVentaBlister())
+                .esFraccionable(producto.getEsFraccionable()) // <-- Mapped esFraccionable
                 .stockTotal(stockTotal)
                 .imagenUrl(producto.getImagenUrl()) // ✅ Mapeo de Imagen
                 .build();
