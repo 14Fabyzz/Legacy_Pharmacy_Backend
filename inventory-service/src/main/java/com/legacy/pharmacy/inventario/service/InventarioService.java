@@ -106,7 +106,6 @@ public class InventarioService {
                         ps.setString(2, entrada.getNumeroLote());
                         ps.setObject(3, entrada.getFechaVencimiento());
                         ps.setInt(4, 0); // ← Se inicia en 0, el trigger lo actualizará al insertar movimiento
-                        ps.setBigDecimal(5, finalCostoUnitario);
                         ps.setInt(6, entrada.getSucursalId());
                         return ps;
                 }, keyHolder);
@@ -114,11 +113,21 @@ public class InventarioService {
                 Number loteId = keyHolder.getKey();
 
                 // Insertar Movimiento
-                String sqlMov = "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, usuario_responsable, sucursal_id, observaciones) VALUES (?, ?, ?, ?, ?, ?)";
+                // TAREA 3: Snapshot Saldo Historico (Entrada)
+                // En una entrada nueva (o sobre lote existente), el saldo DESPUES del
+                // movimiento es cantidadReal (si es nuevo)
+                // o cantidadActual + cantidadReal.
+                // Dado que acabamos de insertar el LOTE con cantidad 0 y el trigger
+                // actualizará,
+                // la "foto" lógica es que este lote nace con 'cantidadReal'.
+                int saldoFoto = cantidadReal;
+
+                String sqlMov = "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones) VALUES (?, ?, ?, ?, ?, ?, ?)";
                 jdbcTemplate.update(sqlMov,
                                 loteId,
                                 "ENTRADA",
                                 cantidadReal,
+                                saldoFoto, // saldo_historico
                                 entrada.getUsuarioResponsable() != null ? entrada.getUsuarioResponsable() : "SISTEMA",
                                 entrada.getSucursalId(),
                                 entrada.getObservaciones());
@@ -217,14 +226,25 @@ public class InventarioService {
 
                         if (filasAfectadas > 0) {
                                 // Éxito: Registro Movimiento
-                                String sqlMov = "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, usuario_responsable, sucursal_id, observaciones) VALUES (?, ?, ?, ?, ?, ?)";
+                                String sqlMov = "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones) VALUES (?, ?, ?, ?, ?, ?, ?)";
+
+                                // TAREA 3: Snapshot Saldo Historico (Salida)
+                                // La cantidad actual del lote (antes del update) era
+                                // 'lote.getCantidadActual()'.
+                                // Hemos restado 'cantidadADescontar'.
+                                // El saldo que queda es:
+                                int saldoFoto = lote.getCantidadActual() - cantidadADescontar;
+
                                 // Cantidad negativa para salidas en historial, o positiva si usas tipo 'SALIDA'
                                 // Usaremos negativo para consistencia matemática si así lo prefieres,
                                 // pero tu enum tiene TIPO. Usaré positivo con tipo SALIDA.
                                 jdbcTemplate.update(sqlMov,
                                                 lote.getId(),
                                                 "SALIDA",
-                                                cantidadADescontar,
+                                                cantidadADescontar, // Cantidad positiva en BD según tu código previo
+                                                                    // (aunque el comentario decía negativo, el código
+                                                                    // usaba positivo)
+                                                saldoFoto, // saldo_historico
                                                 salida.getUsuarioResponsable() != null ? salida.getUsuarioResponsable()
                                                                 : "VENDEDOR",
                                                 salida.getSucursalId(),
@@ -437,9 +457,12 @@ public class InventarioService {
                                 // 4. El trigger 'trg_actualizar_cantidad_lote' hará la resta matemática
                                 // automáticamente.
 
+                                // TAREA 3: Snapshot Saldo Historico (Salida FEFO Delegada)
+                                int saldoFoto = lote.getCantidadActual() - aDescontar;
+
                                 jdbcTemplate.update(
-                                                "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, usuario_responsable, sucursal_id, observaciones) VALUES (?, ?, ?, ?, ?, ?)",
-                                                lote.getId(), "SALIDA", -aDescontar, username, 1, motivo);
+                                                "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                                                lote.getId(), "SALIDA", -aDescontar, saldoFoto, username, 1, motivo);
 
                                 pendiente -= aDescontar;
 
@@ -511,13 +534,19 @@ public class InventarioService {
                                 throw new RuntimeException("No existe un lote para devolver inventario");
                         }
 
+                        // Obtener cantidad actual para la foto (antes de la devolución)
+                        Integer cantidadActual = jdbcTemplate.queryForObject(
+                                        "SELECT cantidad_actual FROM lotes WHERE id = ?", Integer.class, loteId);
+                        int saldoFoto = (cantidadActual != null ? cantidadActual : 0) + cantidad;
+
                         // Insertar movimiento de DEVOLUCION (cantidad positiva)
                         jdbcTemplate.update(
-                                        "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, usuario_responsable, sucursal_id, observaciones) "
+                                        "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones) "
                                                         +
-                                                        "VALUES (?, 'DEVOLUCION', ?, ?, 1, ?)",
+                                                        "VALUES (?, 'DEVOLUCION', ?, ?, ?, 1, ?)",
                                         loteId,
                                         cantidad, // Cantidad positiva
+                                        saldoFoto,
                                         username != null ? username : "SISTEMA",
                                         motivo);
 
@@ -570,12 +599,17 @@ public class InventarioService {
                 try {
                         Integer loteId = jdbcTemplate.queryForObject(sqlLote, Integer.class, productoId);
 
-                        // Insertamos el movimiento de retorno
-                        String sqlInsert = "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, usuario_responsable, sucursal_id, observaciones) "
-                                        +
-                                        "VALUES (?, 'DEVOLUCION', ?, 'MS-VENTAS', 1, 'Devolución de cliente')";
+                        // Calculamos saldo foto (aproximado, ya que es query simple)
+                        Integer cantidadActual = jdbcTemplate.queryForObject(
+                                        "SELECT cantidad_actual FROM lotes WHERE id = ?", Integer.class, loteId);
+                        int saldoFoto = (cantidadActual != null ? cantidadActual : 0) + cantidad;
 
-                        jdbcTemplate.update(sqlInsert, loteId, cantidad);
+                        // Insertamos el movimiento de retorno
+                        String sqlInsert = "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones) "
+                                        +
+                                        "VALUES (?, 'DEVOLUCION', ?, ?, 'MS-VENTAS', 1, 'Devolución de cliente')";
+
+                        jdbcTemplate.update(sqlInsert, loteId, cantidad, saldoFoto);
 
                         // NOTA: Asegúrate de que tu base de datos tenga un Trigger que actualice
                         // la tabla 'lotes' cuando se inserta en 'movimientos'.

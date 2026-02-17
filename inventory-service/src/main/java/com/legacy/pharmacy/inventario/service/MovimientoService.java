@@ -56,6 +56,7 @@ public class MovimientoService {
                     .tipo(m.getTipoMovimiento().name())
                     .cantidad(m.getCantidad())
                     .saldoResultante(saldoAcumulado)
+                    .saldoHistorico(m.getSaldoHistorico()) // TAREA 4
                     .documentoRef(m.getObservacion()) // Usamos observación como referencia por ahora
                     .usuario(m.getUsuarioResponsable())
                     .nombreProducto(m.getLote().getProducto().getNombreComercial())
@@ -87,10 +88,10 @@ public class MovimientoService {
                 .fecha(m.getFechaMovimiento())
                 .tipo(m.getTipoMovimiento().name())
                 .cantidad(m.getCantidad())
-                // REQUERIMIENTO CRITICO: En la vista global, mostramos el saldo ACTUAL del lote
                 // porque no podemos calcular el saldo histórico parcial eficientemente en una
                 // lista paginada global
                 .saldoResultante(m.getLote().getCantidadActual())
+                .saldoHistorico(m.getSaldoHistorico()) // TAREA 4
                 .documentoRef(m.getObservacion())
                 .detalle(m.getObservacion())
                 .lote(m.getLote().getNumeroLote())

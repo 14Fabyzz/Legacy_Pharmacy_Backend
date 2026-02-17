@@ -22,6 +22,9 @@ public class MovimientoKardexDTO {
     @JsonProperty("saldo_resultante")
     private Integer saldoResultante;
 
+    @JsonProperty("saldo_historico")
+    private Integer saldoHistorico;
+
     @JsonProperty("documento_ref")
     private String documentoRef;
 

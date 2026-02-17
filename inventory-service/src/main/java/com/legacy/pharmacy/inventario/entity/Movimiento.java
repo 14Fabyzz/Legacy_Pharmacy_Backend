@@ -44,6 +44,9 @@ public class Movimiento {
     @Column(length = 255)
     private String observacion;
 
+    @Column(name = "saldo_historico")
+    private Integer saldoHistorico;
+
     @PrePersist
     public void prePersist() {
         if (this.fechaMovimiento == null) {
