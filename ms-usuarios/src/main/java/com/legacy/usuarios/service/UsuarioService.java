@@ -137,6 +137,11 @@ public class UsuarioService {
             usuario.setSucursalId(dto.getSucursalId());
         }
 
+        // Actualizar contraseña si viene
+        if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
+            usuario.setPasswordHash(passwordUtil.encodePassword(dto.getPassword()));
+        }
+
         // Actualizar estado si viene
         if (dto.getEstado() != null) {
             usuario.setEstado(dto.getEstado());
