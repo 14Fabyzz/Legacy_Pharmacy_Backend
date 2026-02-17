@@ -58,6 +58,8 @@ public class MovimientoService {
                     .saldoResultante(saldoAcumulado)
                     .documentoRef(m.getObservacion()) // Usamos observación como referencia por ahora
                     .usuario(m.getUsuarioResponsable())
+                    .nombreProducto(m.getLote().getProducto().getNombreComercial())
+                    .codigoBarras(m.getLote().getProducto().getCodigoBarras())
                     .detalle(m.getObservacion())
                     .lote(m.getLote().getNumeroLote())
                     .costoUnitario(m.getLote().getCostoCompra())
@@ -69,5 +71,35 @@ public class MovimientoService {
         java.util.Collections.reverse(kardex);
 
         return kardex;
+    }
+
+    @Transactional(readOnly = true)
+    public List<com.legacy.pharmacy.inventario.dto.MovimientoKardexDTO> obtenerBitacoraReciente() {
+        // 1. Obtener los últimos 50 movimientos
+        // Usamos PageRequest para el LIMIT 50
+        List<Movimiento> movimientos = movimientoRepository
+                .findRecent(org.springframework.data.domain.PageRequest.of(0, 50));
+
+        // 2. Mapear a DTO (Esto disparará N+1 queries por los Lazy Loads, pero es
+        // seguro en Transactional)
+        return movimientos.stream().map(m -> com.legacy.pharmacy.inventario.dto.MovimientoKardexDTO.builder()
+                .id(m.getId())
+                .fecha(m.getFechaMovimiento())
+                .tipo(m.getTipoMovimiento().name())
+                .cantidad(m.getCantidad())
+                // REQUERIMIENTO CRITICO: En la vista global, mostramos el saldo ACTUAL del lote
+                // porque no podemos calcular el saldo histórico parcial eficientemente en una
+                // lista paginada global
+                .saldoResultante(m.getLote().getCantidadActual())
+                .documentoRef(m.getObservacion())
+                .detalle(m.getObservacion())
+                .lote(m.getLote().getNumeroLote())
+                .costoUnitario(m.getLote().getCostoCompra())
+                .usuario(m.getUsuarioResponsable())
+                .nombreProducto(m.getLote().getProducto() != null ? m.getLote().getProducto().getNombreComercial()
+                        : "PRODUCTO ELIMINADO (Lote ID: " + m.getLote().getId() + ")")
+                .codigoBarras(m.getLote().getProducto() != null ? m.getLote().getProducto().getCodigoBarras() : "N/A")
+                .build())
+                .collect(java.util.stream.Collectors.toList());
     }
 }

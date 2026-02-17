@@ -598,30 +598,36 @@ public class InventarioService {
                                 0);
 
                 List<Map<String, Object>> listaVencidos = lotesVencidos.stream()
-                                .map(l -> Map.<String, Object>of(
-                                                "id", l.getId(),
-                                                "producto", l.getProducto().getNombreComercial(), // Requiere
-                                                                                                  // transacción activa
-                                                "lote", l.getNumeroLote(),
-                                                "fecha", l.getFechaVencimiento(),
-                                                "cantidad", l.getCantidadActual()))
-                                .collect(java.util.stream.Collectors.toList()); // <--- CORRECCIÓN DE TIPO
+                                .map(l -> {
+                                        Map<String, Object> map = new java.util.HashMap<>();
+                                        map.put("id", l.getId());
+                                        map.put("producto", l.getProducto().getNombreComercial());
+                                        map.put("lote", l.getNumeroLote());
+                                        map.put("fecha", l.getFechaVencimiento());
+                                        map.put("cantidad", l.getCantidadActual());
+                                        map.put("imagenUrl", l.getProducto().getImagenUrl()); // ✅ IMAGEN
+                                        return map;
+                                })
+                                .collect(java.util.stream.Collectors.toList());
 
                 // 2. OBTENER POR VENCER
                 List<Lote> lotesPorVencer = loteRepository
                                 .findByFechaVencimientoBetweenAndCantidadActualGreaterThan(hoy, hoy.plusDays(30), 0);
 
                 List<Map<String, Object>> listaPorVencer = lotesPorVencer.stream()
-                                .map(l -> Map.<String, Object>of(
-                                                "id", l.getId(),
-                                                "producto", l.getProducto().getNombreComercial(),
-                                                "lote", l.getNumeroLote(),
-                                                "fecha", l.getFechaVencimiento(),
-                                                "cantidad", l.getCantidadActual(),
-                                                "diasRestantes",
-                                                java.time.temporal.ChronoUnit.DAYS.between(hoy,
-                                                                l.getFechaVencimiento())))
-                                .collect(java.util.stream.Collectors.toList()); // <--- CORRECCIÓN DE TIPO
+                                .map(l -> {
+                                        Map<String, Object> map = new java.util.HashMap<>();
+                                        map.put("id", l.getId());
+                                        map.put("producto", l.getProducto().getNombreComercial());
+                                        map.put("lote", l.getNumeroLote());
+                                        map.put("fecha", l.getFechaVencimiento());
+                                        map.put("cantidad", l.getCantidadActual());
+                                        map.put("diasRestantes", java.time.temporal.ChronoUnit.DAYS.between(hoy,
+                                                        l.getFechaVencimiento()));
+                                        map.put("imagenUrl", l.getProducto().getImagenUrl()); // ✅ IMAGEN
+                                        return map;
+                                })
+                                .collect(java.util.stream.Collectors.toList());
 
                 // 3. OBTENER STOCK BAJO
                 List<Producto> productosBajoStock = productoRepository.findProductosBajoStock();
@@ -629,13 +635,15 @@ public class InventarioService {
                 List<Map<String, Object>> listaStockBajo = productosBajoStock.stream()
                                 .map(p -> {
                                         Integer stockReal = consultarStockActual(p.getId());
-                                        return Map.<String, Object>of(
-                                                        "id", p.getId(),
-                                                        "nombre", p.getNombreComercial(),
-                                                        "stockActual", stockReal,
-                                                        "stockMinimo", p.getStockMinimo());
+                                        Map<String, Object> map = new java.util.HashMap<>();
+                                        map.put("id", p.getId());
+                                        map.put("nombre", p.getNombreComercial());
+                                        map.put("stockActual", stockReal);
+                                        map.put("stockMinimo", p.getStockMinimo());
+                                        map.put("imagenUrl", p.getImagenUrl()); // ✅ IMAGEN
+                                        return map;
                                 })
-                                .collect(java.util.stream.Collectors.toList()); // <--- CORRECCIÓN DE TIPO
+                                .collect(java.util.stream.Collectors.toList());
 
                 // 4. CALCULAR SALUDABLES
                 long totalProductos = productoRepository.count();

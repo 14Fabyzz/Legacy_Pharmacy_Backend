@@ -96,6 +96,7 @@ public class UsuarioService {
                 .login(dto.getLogin())
                 .passwordHash(passwordUtil.encodePassword(dto.getPassword()))
                 .rol(rol)
+                .sucursalId(dto.getSucursalId())
                 .estado(EstadoUsuario.ACTIVO)
                 .intentosFallidos(0)
                 .build();
@@ -106,8 +107,7 @@ public class UsuarioService {
         auditoriaService.registrarEvento(
                 guardado,
                 "Usuario creado: " + guardado.getLogin(),
-                null
-        );
+                null);
 
         return convertirADTO(guardado);
     }
@@ -132,6 +132,11 @@ public class UsuarioService {
             usuario.setRol(rol);
         }
 
+        // Actualizar sucursal si viene
+        if (dto.getSucursalId() != null) {
+            usuario.setSucursalId(dto.getSucursalId());
+        }
+
         // Actualizar estado si viene
         if (dto.getEstado() != null) {
             usuario.setEstado(dto.getEstado());
@@ -149,8 +154,7 @@ public class UsuarioService {
         auditoriaService.registrarEvento(
                 actualizado,
                 "Usuario actualizado: " + actualizado.getLogin(),
-                null
-        );
+                null);
 
         return convertirADTO(actualizado);
     }
@@ -170,8 +174,7 @@ public class UsuarioService {
         auditoriaService.registrarEvento(
                 usuario,
                 "Usuario desactivado: " + usuario.getLogin(),
-                null
-        );
+                null);
     }
 
     /**
@@ -195,8 +198,7 @@ public class UsuarioService {
         auditoriaService.registrarEvento(
                 usuario,
                 "Contraseña cambiada para usuario: " + usuario.getLogin(),
-                null
-        );
+                null);
     }
 
     /**
@@ -266,6 +268,7 @@ public class UsuarioService {
                 .login(usuario.getLogin())
                 .rolId(usuario.getRol().getId())
                 .rolNombre(usuario.getRol().getNombre())
+                .sucursalId(usuario.getSucursalId())
                 .estado(usuario.getEstado())
                 .intentosFallidos(usuario.getIntentosFallidos())
                 .fechaBloqueo(usuario.getFechaBloqueo())

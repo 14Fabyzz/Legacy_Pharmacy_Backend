@@ -38,6 +38,9 @@ public class Usuario {
     @JoinColumn(name = "rol_id", nullable = false)
     private Rol rol;
 
+    @Column(name = "sucursal_id")
+    private Long sucursalId;
+
     @Column(nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
     private EstadoUsuario estado;

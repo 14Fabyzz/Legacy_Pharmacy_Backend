@@ -41,7 +41,12 @@ spring:
             - Path=/api/usuarios/registro
             - Method=POST
           filters:
-            - RewritePath=/api/usuarios/registro, /api/auth/register # Ajusté esto asumiendo que tu back usa /auth/register
+            - RewritePath=/api/usuarios/registro, /api/usuarios
+
+        - id: auth-service
+          uri: ${URI_USUARIOS}
+          predicates:
+            - Path=/api/auth/**
 
         # =================================================================
         # RUTAS PROTEGIDAS
@@ -63,6 +68,14 @@ spring:
             - Path=/api/inventario/**
           filters:
             - RewritePath=/api/inventario/(?<segment>.*), /api/v1/inventario/${segment}
+            - AuthenticationFilter
+
+        # Microservicio de Roles
+        - id: roles-service
+          uri: ${URI_USUARIOS}
+          predicates:
+            - Path=/api/roles/**
+          filters:
             - AuthenticationFilter
 
         # Microservicio de Usuarios (General)

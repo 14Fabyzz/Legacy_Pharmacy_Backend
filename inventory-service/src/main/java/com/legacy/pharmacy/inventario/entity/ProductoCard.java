@@ -81,4 +81,8 @@ public class ProductoCard {
 
     @Column(name = "principio_activo_nombre")
     private String principioActivo;
+
+    // ✅ NUEVO CAMPO IMAGEN
+    @Column(name = "imagen_url")
+    private String imagenUrl;
 }
