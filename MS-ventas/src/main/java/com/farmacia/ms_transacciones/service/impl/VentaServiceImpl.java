@@ -96,6 +96,7 @@ public class VentaServiceImpl implements VentaService {
 
         // --- LÓGICA DE DETALLES CON PRECIO DUAL ---
         BigDecimal total = BigDecimal.ZERO;
+        BigDecimal totalIva = BigDecimal.ZERO; // <-- ACUMULADOR DE IVA
 
         for (ItemVentaDTO item : datosVenta.getItems()) {
             // A. Consultar Inventario
@@ -220,6 +221,25 @@ public class VentaServiceImpl implements VentaService {
             detalleVentaRepository.save(det);
             total = total.add(sub);
 
+            // --- CÁLCULO DE IVA ACUMULADO ---
+            // Si el producto tiene IVA configurado, calculamos cuánto del subtotal
+            // corresponde al impuesto.
+            if (prod.getIvaPorcentaje() != null && prod.getIvaPorcentaje().compareTo(BigDecimal.ZERO) > 0) {
+                // precioSinIva = precioConIva / (1 + %IVA/100)
+                // montoIva = precioConIva - precioSinIva
+                BigDecimal ivaFactor = prod.getIvaPorcentaje()
+                        .divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP)
+                        .add(BigDecimal.ONE);
+
+                // El precioAUsar YA INCLUYE IVA (según lógica de caja/unidad con impuestos)
+                BigDecimal precioUnitarioSinIva = precioAUsar.divide(ivaFactor, 4, java.math.RoundingMode.HALF_UP);
+                BigDecimal ivaUnitario = precioAUsar.subtract(precioUnitarioSinIva);
+                BigDecimal ivaTotalItem = ivaUnitario.multiply(new BigDecimal(item.getCantidad()));
+
+                totalIva = totalIva.add(ivaTotalItem);
+            }
+            // --------------------------------
+
             // G. Descontar Inventario SOLO si es producto TANGIBLE
             if (!esServicio) {
                 log.info("VENTA-PROCESO: Llamando a InventarioClient.registrarSalida para ProdId: {}",
@@ -275,16 +295,21 @@ public class VentaServiceImpl implements VentaService {
 
         log.info("CAJA-ACTUALIZADA: TurnoID={} NuevoTotalVentas={}", turnoActual.getId(), nuevoTotalVentas);
 
-        return mapToDTO(venta);
+        return mapToDTO(venta, totalIva);
     }
 
-    private VentaResponseDTO mapToDTO(Venta v) {
+    private VentaResponseDTO mapToDTO(Venta v, BigDecimal totalIvaCalculado) {
         VentaResponseDTO dto = new VentaResponseDTO();
         dto.setId(v.getId());
         dto.setNumeroFactura(v.getNumeroFactura());
         dto.setFechaVenta(v.getFechaVenta());
         dto.setTotal(v.getTotal());
         dto.setEstado(v.getEstado());
+
+        // Asignar IVA calculado (se pasa desde el método crearVenta porque no se guarda
+        // en BD Venta)
+        dto.setTotalIva(totalIvaCalculado != null ? totalIvaCalculado.setScale(2, java.math.RoundingMode.HALF_UP)
+                : BigDecimal.ZERO);
 
         // Nuevos campos
         dto.setMetodoPago(v.getMetodoPago());
