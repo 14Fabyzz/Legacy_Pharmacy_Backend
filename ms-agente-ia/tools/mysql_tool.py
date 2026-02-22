@@ -69,6 +69,9 @@ class MySQLTool:
             tables = [list(row.values())[0] for row in self.cursor.fetchall()]
 
             schema = "ESQUEMA DE LA BASE DE DATOS MySQL:\n\n"
+            
+            # --- PROTECCIÓN: Columnas que NO se enviarán al agente IA ---
+            sensitive_columns = {'password', 'contraseña', 'contrasena', 'jwt', 'token', 'hash', 'secret'}
 
             for table in tables:
                 self._ensure_connection()
@@ -78,6 +81,11 @@ class MySQLTool:
                 schema += f"Tabla: {table}\n"
                 for col in columns:
                     field = col['Field']
+                    
+                    # Salta las columnas sensibles para que la IA no sepa que existen
+                    if field.lower() in sensitive_columns:
+                        continue
+                        
                     col_type = col['Type']
                     null = col['Null']
                     key = col['Key']

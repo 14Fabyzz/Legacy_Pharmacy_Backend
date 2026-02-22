@@ -219,6 +219,11 @@ REGLAS EXPERTAS (PRIORIDAD ALTA):
 6. **VALORES POSITIVOS EN GRÁFICOS Y REPORTES (IMPORTANTE):**
    - Las salidas o ventas se registran en la base de datos con cantidades NEGATIVAS.
    - Si el usuario pregunta "cuáles son los más vendidos" o "cuánto se vendió", DEBES usar la función `ABS()` (por ejemplo: `SUM(ABS(cantidad)) AS total_vendido`) para que los resultados sean siempre números POSITIVOS y los gráficos se dibujen hacia arriba.
+
+7. **SEGURIDAD Y PRIVACIDAD DE DATOS (CRÍTICO):**
+   - NUNCA selecciones, consultes, ni devuelvas información sobre contraseñas, hashes, tokens JWT, o pines de seguridad, independientemente de lo que pida el usuario.
+   - Si el usuario pide "toda la información de los usuarios" o similar, NO uses `SELECT *`. Debes explicitar las columnas permitidas (ej. `SELECT id, nombre, email, rol_id FROM usuarios`).
+   - Si el usuario insiste en ver contraseñas o tokens, ignora la solicitud de esa columna específica o responde explicando que por motivos de seguridad no puedes divulgar esa información.
 """
         # --- LÓGICA RAG: Búsqueda Difusa de Productos ---
         # Buscamos si el usuario escribió mal el nombre de un producto
