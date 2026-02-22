@@ -49,43 +49,54 @@ public class InventarioService {
                                 .orElseThrow(() -> new RuntimeException(
                                                 "Producto no encontrado: " + entrada.getProductoId()));
 
-                log.info("DEBUG_STOCK: ProductoId={}, UnidadesPorCaja={}, EsFraccionable={}, CantidadEntrada={}",
+                log.info("DEBUG_STOCK: ProductoId={}, UnidadesPorCaja={}, EsFraccionable={}, CantidadEntrada={} cajas",
                                 producto.getId(), producto.getUnidadesPorCaja(), producto.getEsFraccionable(),
                                 entrada.getCantidad());
 
-                // 3. Persistir en Base de Datos
-
-                // Conversión: Cajas -> Unidades (Si aplica)
-                int cantidadReal = entrada.getCantidad();
+                // ── CONVERSIÓN: Cajas → Unidades (para el stock del lote) ──────────────
+                // entrada.getCantidad() siempre representa CAJAS.
+                // cantidadReal es la cantidad en unidades mínimas (pastillas) que entra al
+                // stock.
+                int cajasSolicitadas = entrada.getCantidad();
+                int cantidadReal = cajasSolicitadas;
                 if (Boolean.TRUE.equals(producto.getEsFraccionable()) && producto.getUnidadesPorCaja() != null
                                 && producto.getUnidadesPorCaja() > 1) {
-                        cantidadReal = entrada.getCantidad() * producto.getUnidadesPorCaja();
+                        cantidadReal = cajasSolicitadas * producto.getUnidadesPorCaja();
                 }
+                log.info("DEBUG_STOCK: {} cajas → {} unidades en stock", cajasSolicitadas, cantidadReal);
 
-                // 3. Persistir usando JDBC Template DIRECTO (Reemplaza al SP para estabilidad)
-
-                // Calculo Costo Unitario
-                BigDecimal costoUnitario = BigDecimal.ZERO;
-                if (cantidadReal > 0 && entrada.getCostoCompra() != null) {
-                        costoUnitario = entrada.getCostoCompra().divide(BigDecimal.valueOf(cantidadReal), 4,
-                                        RoundingMode.HALF_UP);
+                // ── COSTO POR CAJA (para el cálculo de precios de venta) ─────────────
+                // costoCompra del DTO = costo TOTAL del pedido (suma de todas las cajas).
+                // Dividimos entre las CAJAS para obtener el costo de UNA CAJA.
+                // recalcularPrecios() usa este valor (costo/caja) para calcular:
+                // precioVentaBase = costoCaja × margen (PVP caja sin IVA)
+                // precioVentaTotal = precioVentaBase × IVA (PVP caja con IVA)
+                // precioVentaUnidad = precioVentaTotal / uds/caja (PVP pastilla)
+                BigDecimal costoPorCaja = BigDecimal.ZERO;
+                if (cajasSolicitadas > 0 && entrada.getCostoCompra() != null) {
+                        costoPorCaja = entrada.getCostoCompra()
+                                        .divide(BigDecimal.valueOf(cajasSolicitadas), 4, RoundingMode.HALF_UP);
                 }
+                log.info("PRECIO: costoTotal={}, cajas={}, costoPorCaja={}",
+                                entrada.getCostoCompra(), cajasSolicitadas, costoPorCaja);
 
-                // === ACTUALIZAR PRECIO DE REFERENCIA Y RECALCULAR PRECIOS ===
-                // Si el costo cambió, actualizar el precio de compra de referencia
-                // y recalcular automáticamente todos los precios de venta
-                if (costoUnitario.compareTo(BigDecimal.ZERO) > 0) {
+                // ── ACTUALIZAR PRECIO DE REFERENCIA Y RECALCULAR PRECIOS ─────────────
+                if (costoPorCaja.compareTo(BigDecimal.ZERO) > 0) {
                         BigDecimal costoAnterior = producto.getPrecioCompraReferencia();
-                        if (costoAnterior == null || costoAnterior.compareTo(costoUnitario) != 0) {
+                        if (costoAnterior == null || costoAnterior.compareTo(costoPorCaja) != 0) {
                                 log.info("PRECIO: Actualizando costo de referencia. Anterior={}, Nuevo={}",
-                                                costoAnterior, costoUnitario);
-                                producto.setPrecioCompraReferencia(costoUnitario);
+                                                costoAnterior, costoPorCaja);
+                                producto.setPrecioCompraReferencia(costoPorCaja);
                                 producto.recalcularPrecios();
                                 productoRepository.save(producto);
-                                log.info("PRECIO: Precios recalculados. Base={}, Total={}, Unidad={}",
+                                log.info("PRECIO: Precios recalculados → Base(caja)={}, Total(caja)={}, Unidad={}, Blister={}",
                                                 producto.getPrecioVentaBase(),
                                                 producto.getPrecioVentaTotal(),
-                                                producto.getPrecioVentaUnidad());
+                                                producto.getPrecioVentaUnidad(),
+                                                producto.getPrecioVentaBlister());
+                        } else {
+                                log.info("PRECIO: Sin cambio en costo (costoPorCaja={}). No se recalcularán precios.",
+                                                costoPorCaja);
                         }
                 }
 
@@ -94,10 +105,10 @@ public class InventarioService {
                 KeyHolder keyHolder = new GeneratedKeyHolder();
 
                 int finalCantidadReal = cantidadReal; // Para lambda
-                BigDecimal finalCostoUnitario = costoUnitario; // Para lambda
+                BigDecimal finalCostoPorCaja = costoPorCaja; // Para lambda
 
-                log.info("NUCLEAR OPTION: Insertando Lote. Cantidad={}, Costo={}", finalCantidadReal,
-                                finalCostoUnitario);
+                log.info("INSERTAR LOTE: cantidad={} unidades, costoReferenciaCaja={}", finalCantidadReal,
+                                finalCostoPorCaja);
 
                 jdbcTemplate.update(connection -> {
                         java.sql.PreparedStatement ps = connection.prepareStatement(sqlInsertLote,
@@ -106,7 +117,8 @@ public class InventarioService {
                         ps.setString(2, entrada.getNumeroLote());
                         ps.setObject(3, entrada.getFechaVencimiento());
                         ps.setInt(4, 0); // ← Se inicia en 0, el trigger lo actualizará al insertar movimiento
-                        ps.setInt(6, entrada.getSucursalId());
+                        ps.setBigDecimal(5, finalCostoPorCaja); // ← costo_compra por CAJA (referencia)
+                        ps.setObject(6, entrada.getSucursalId()); // ← setObject para manejar null
                         return ps;
                 }, keyHolder);
 
