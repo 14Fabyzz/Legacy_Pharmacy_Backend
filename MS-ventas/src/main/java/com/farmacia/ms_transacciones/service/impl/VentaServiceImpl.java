@@ -25,9 +25,6 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import lombok.extern.slf4j.Slf4j;
-
-@Slf4j
 @Service
 public class VentaServiceImpl implements VentaService {
 
@@ -52,7 +49,7 @@ public class VentaServiceImpl implements VentaService {
     @Override
     @Transactional
     public VentaResponseDTO crearVenta(CrearVentaDTO datosVenta) {
-        log.info("VENTA-PROCESO: Iniciando crearVenta para ClienteId: {}", datosVenta.getClienteId());
+        System.out.println("VENTA-PROCESO: Iniciando crearVenta para ClienteId: " + datosVenta.getClienteId());
 
         // 1. VALIDAR CAJA ABIERTA
         TurnoCaja turnoActual = turnoCajaRepository.findByUsuarioIdAndEstado(
@@ -96,6 +93,7 @@ public class VentaServiceImpl implements VentaService {
 
         // --- LÓGICA DE DETALLES CON PRECIO DUAL ---
         BigDecimal total = BigDecimal.ZERO;
+        BigDecimal totalIva = BigDecimal.ZERO; // <-- ACUMULADOR DE IVA
 
         for (ItemVentaDTO item : datosVenta.getItems()) {
             // A. Consultar Inventario
@@ -220,10 +218,29 @@ public class VentaServiceImpl implements VentaService {
             detalleVentaRepository.save(det);
             total = total.add(sub);
 
+            // --- CÁLCULO DE IVA ACUMULADO ---
+            // Si el producto tiene IVA configurado, calculamos cuánto del subtotal
+            // corresponde al impuesto.
+            if (prod.getIvaPorcentaje() != null && prod.getIvaPorcentaje().compareTo(BigDecimal.ZERO) > 0) {
+                // precioSinIva = precioConIva / (1 + %IVA/100)
+                // montoIva = precioConIva - precioSinIva
+                BigDecimal ivaFactor = prod.getIvaPorcentaje()
+                        .divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP)
+                        .add(BigDecimal.ONE);
+
+                // El precioAUsar YA INCLUYE IVA (según lógica de caja/unidad con impuestos)
+                BigDecimal precioUnitarioSinIva = precioAUsar.divide(ivaFactor, 4, java.math.RoundingMode.HALF_UP);
+                BigDecimal ivaUnitario = precioAUsar.subtract(precioUnitarioSinIva);
+                BigDecimal ivaTotalItem = ivaUnitario.multiply(new BigDecimal(item.getCantidad()));
+
+                totalIva = totalIva.add(ivaTotalItem);
+            }
+            // --------------------------------
+
             // G. Descontar Inventario SOLO si es producto TANGIBLE
             if (!esServicio) {
-                log.info("VENTA-PROCESO: Llamando a InventarioClient.registrarSalida para ProdId: {}",
-                        item.getProductoId());
+                System.out.println("VENTA-PROCESO: Llamando a InventarioClient.registrarSalida para ProdId: "
+                        + item.getProductoId());
                 inventarioClient.registrarSalida(
                         item.getProductoId(),
                         item.getCantidad(),
@@ -273,18 +290,31 @@ public class VentaServiceImpl implements VentaService {
         turnoActual.setTotalVentasTeorico(nuevoTotalVentas);
         turnoCajaRepository.save(turnoActual);
 
-        log.info("CAJA-ACTUALIZADA: TurnoID={} NuevoTotalVentas={}", turnoActual.getId(), nuevoTotalVentas);
+        System.out
+                .println("CAJA-ACTUALIZADA: TurnoID=" + turnoActual.getId() + " NuevoTotalVentas=" + nuevoTotalVentas);
 
-        return mapToDTO(venta);
+        return mapToDTO(venta, totalIva);
     }
 
-    private VentaResponseDTO mapToDTO(Venta v) {
+    private VentaResponseDTO mapToDTO(Venta v, BigDecimal totalIvaCalculado) {
         VentaResponseDTO dto = new VentaResponseDTO();
         dto.setId(v.getId());
         dto.setNumeroFactura(v.getNumeroFactura());
         dto.setFechaVenta(v.getFechaVenta());
         dto.setTotal(v.getTotal());
         dto.setEstado(v.getEstado());
+
+        // Asignar IVA calculado (se pasa desde el método crearVenta porque no se guarda
+        // en BD Venta)
+        // Ojo: Si la entidad Venta ya tuviera "totalIva", podríamos obtenerlo de ahí si
+        // totalIvaCalculado es null.
+        if (totalIvaCalculado != null) {
+            dto.setTotalIva(totalIvaCalculado.setScale(2, java.math.RoundingMode.HALF_UP));
+        } else if (v.getTotalIva() != null) {
+            dto.setTotalIva(v.getTotalIva().setScale(2, java.math.RoundingMode.HALF_UP));
+        } else {
+            dto.setTotalIva(BigDecimal.ZERO);
+        }
 
         // Nuevos campos
         dto.setMetodoPago(v.getMetodoPago());
@@ -295,8 +325,10 @@ public class VentaServiceImpl implements VentaService {
         if (v.getCliente() != null)
             dto.setClienteId(v.getCliente().getId());
 
-        // Mapeo de items
+        // Mapeo de items y construir resumenProductos
         if (v.getDetalles() != null) {
+            java.util.List<String> resumen = new java.util.ArrayList<>();
+
             dto.setItems(v.getDetalles().stream().map(d -> {
                 ItemVentaDTO i = new ItemVentaDTO();
                 i.setProductoId(d.getProductoId());
@@ -304,13 +336,38 @@ public class VentaServiceImpl implements VentaService {
                 i.setPrecioUnitario(d.getPrecioUnitario());
                 i.setSubtotal(d.getSubtotal());
                 i.setEsVentaPorCaja(d.getEsVentaPorCaja()); // ← NUEVO CAMPO EN RESPUESTA
+
+                // Construir string para el resumen: "Cantidad x NombreProducto"
+                String nombreProd = (d.getProductoNombre() != null) ? d.getProductoNombre()
+                        : "Producto " + d.getProductoId();
+                resumen.add(d.getCantidad() + " x " + nombreProd);
+
                 return i;
             }).collect(Collectors.toList()));
+
+            dto.setResumenProductos(resumen);
+        } else {
+            dto.setResumenProductos(new java.util.ArrayList<>());
         }
 
         dto.setMontoRecibido(v.getMontoRecibido());
         dto.setCambio(v.getCambio());
 
         return dto;
+    }
+
+    @Override
+    public java.util.List<VentaResponseDTO> obtenerHistorialVentas() {
+        // En un entorno de producción, esto debería estar paginado.
+        return ventaRepository.findAll().stream()
+                .map(v -> mapToDTO(v, null))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public java.util.List<VentaResponseDTO> obtenerHistorialVentasPorTurno(Long turnoId) {
+        return ventaRepository.findByTurnoId(turnoId).stream()
+                .map(v -> mapToDTO(v, null))
+                .collect(Collectors.toList());
     }
 }

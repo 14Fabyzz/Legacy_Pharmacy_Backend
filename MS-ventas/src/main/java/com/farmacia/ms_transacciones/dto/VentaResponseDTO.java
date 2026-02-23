@@ -13,6 +13,7 @@ public class VentaResponseDTO {
     // NUEVOS CAMPOS PARA EL VOUCHER - Datos para imprimir en el Voucher
     private java.math.BigDecimal montoRecibido;
     private java.math.BigDecimal cambio; // La devuelta
+    private java.math.BigDecimal totalIva; // Impuesto calculado
 
     private String vendedorNombre;
     private Integer sucursalId;
@@ -22,6 +23,7 @@ public class VentaResponseDTO {
     private String estado;
     private Long clienteId;
     private List<ItemVentaDTO> items;
+    private List<String> resumenProductos;
 
     public Long getId() {
         return id;
@@ -69,6 +71,14 @@ public class VentaResponseDTO {
 
     public void setCambio(BigDecimal cambio) {
         this.cambio = cambio;
+    }
+
+    public BigDecimal getTotalIva() {
+        return totalIva;
+    }
+
+    public void setTotalIva(BigDecimal totalIva) {
+        this.totalIva = totalIva;
     }
 
     public String getVendedorNombre() {
@@ -125,5 +135,13 @@ public class VentaResponseDTO {
 
     public void setItems(List<ItemVentaDTO> items) {
         this.items = items;
+    }
+
+    public List<String> getResumenProductos() {
+        return resumenProductos;
+    }
+
+    public void setResumenProductos(List<String> resumenProductos) {
+        this.resumenProductos = resumenProductos;
     }
 }

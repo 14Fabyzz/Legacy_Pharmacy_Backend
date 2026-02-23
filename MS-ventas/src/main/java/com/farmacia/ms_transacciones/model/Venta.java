@@ -24,6 +24,7 @@ public class Venta {
     // -------------------------------------------------------
 
     private BigDecimal total;
+    private BigDecimal totalIva; // <-- IVA total de la venta
 
     private BigDecimal montoRecibido;
     private BigDecimal cambio;
@@ -102,6 +103,14 @@ public class Venta {
 
     public void setTotal(BigDecimal total) {
         this.total = total;
+    }
+
+    public BigDecimal getTotalIva() {
+        return totalIva;
+    }
+
+    public void setTotalIva(BigDecimal totalIva) {
+        this.totalIva = totalIva;
     }
 
     public BigDecimal getMontoRecibido() {

@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FarmaChat - Tu Asistente Inteligente</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #00b4d8;
+            --primary-dark: #0096c7;
+            --primary-light: #90e0ef;
+            --secondary: #7209b7;
+            --accent: #f72585;
+            --bg-main: #0a0e27;
+            --bg-secondary: #141a3a;
+            --bg-chat: #1a2142;
+            --text-primary: #e8f1f5;
+            --text-secondary: #a8b8c8;
+            --shadow: rgba(0, 180, 216, 0.15);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--bg-main) 0%, var(--bg-secondary) 100%);
+            min-height: 100vh;
+            display: flex;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Efecto de partículas de fondo */
+        body::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image:
+                radial-gradient(circle at 20% 30%, rgba(0, 180, 216, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(114, 9, 183, 0.1) 0%, transparent 50%);
+            animation: pulse 8s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 0.5;
+            }
+
+            50% {
+                opacity: 1;
+            }
+        }
+
+        /* --- Main Layout --- */
+        .main-layout {
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+            height: calc(100vh - 3rem);
+            gap: 1.5rem;
+            z-index: 1;
+        }
+
+        /* --- Panel de Resultados (Derecha) --- */
+        .results-panel {
+            flex: 2;
+            /* Ocupa 2/3 del espacio */
+            height: 100%;
+            background: rgba(26, 33, 66, 0.8);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            border: 1px solid rgba(0, 180, 216, 0.2);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 2rem;
+            color: var(--text-primary);
+            overflow-y: auto;
+            transition: all 0.3s ease;
+        }
+
+        .results-panel h1 {
+            color: var(--primary-light);
+            font-weight: 600;
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(0, 180, 216, 0.2);
+            padding-bottom: 1rem;
+        }
+
+        /* Estilos para el placeholder del panel de resultados */
+        .results-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+            color: var(--text-secondary);
+            opacity: 0.6;
+        }
+
+        .results-placeholder i {
+            font-size: 4rem;
+            margin-bottom: 1.5rem;
+            color: var(--primary);
+        }
+
+        .results-placeholder h2 {
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        /* --- Panel de Chat (Izquierda) --- */
+        .chat-panel {
+            flex: 1;
+            /* Ocupa 1/3 del espacio */
+            height: 100%;
+            min-width: 350px;
+            display: flex;
+        }
+
+        /* --- Contenedor de Chat --- */
+        .chat-container {
+            width: 100%;
+            max-width: none;
+            height: 100%;
+            background: rgba(26, 33, 66, 0.8);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+            z-index: 1;
+            border: 1px solid rgba(0, 180, 216, 0.2);
+        }
+
+        /* Header con gradiente */
+        .chat-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .chat-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 200px;
+            height: 200px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translate(0, 0) rotate(0deg);
+            }
+
+            50% {
+                transform: translate(-20px, -20px) rotate(180deg);
+            }
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .logo-container {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .header-text h1 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 0.2rem;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #4ade80;
+            border-radius: 50%;
+            animation: blink 2s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.3;
+            }
+        }
+
+        /* Área de mensajes */
+        .chat-messages {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            background: var(--bg-chat);
+        }
+
+        .chat-messages::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: rgba(0, 180, 216, 0.3);
+            border-radius: 10px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 180, 216, 0.5);
+        }
+
+        /* Mensajes */
+        .message-wrapper {
+            display: flex;
+            gap: 0.75rem;
+            animation: slideIn 0.3s ease-out;
+            max-width: 100%;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message-wrapper.user {
+            flex-direction: row-reverse;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 1.2rem;
+            color: white;
+            box-shadow: 0 4px 15px var(--shadow);
+        }
+
+        .avatar.bot {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+        }
+
+        .avatar.user {
+            background: linear-gradient(135deg, var(--accent), var(--secondary));
+        }
+
+        .message-content {
+            max-width: 85%;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1rem 1.25rem;
+            border-radius: 18px;
+            color: var(--text-primary);
+            line-height: 1.6;
+            font-size: 0.95rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            position: relative;
+        }
+
+        .message-wrapper.user .message-content {
+            background: linear-gradient(135deg, rgba(0, 180, 216, 0.2), rgba(114, 9, 183, 0.2));
+            border: 1px solid rgba(0, 180, 216, 0.3);
+        }
+
+        .message-wrapper.bot .message-content {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .message-content .chat-table,
+        .message-content .chart-container {
+            display: none;
+        }
+
+        .timestamp {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+            opacity: 0.7;
+        }
+
+        /* Indicador de escritura */
+        .typing-indicator {
+            display: flex;
+            gap: 0.4rem;
+            padding: 0.5rem 0;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--primary);
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+
+            0%,
+            60%,
+            100% {
+                transform: translateY(0);
+                opacity: 0.7;
+            }
+
+            30% {
+                transform: translateY(-10px);
+                opacity: 1;
+            }
+        }
+
+        /* Área de input */
+        .chat-input-wrapper {
+            padding: 1.5rem;
+            background: rgba(20, 26, 58, 0.95);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            flex-shrink: 0;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.75rem 1rem;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .input-container:focus-within {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.1);
+        }
+
+        .chat-input-wrapper input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+        }
+
+        .chat-input-wrapper input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .send-button {
+            width: 42px;
+            height: 42px;
+            border: none;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px var(--shadow);
+        }
+
+        .send-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px var(--shadow);
+        }
+
+        .send-button:active {
+            transform: translateY(0);
+        }
+
+        .send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Mensaje de bienvenida especial */
+        .welcome-card {
+            background: linear-gradient(135deg, rgba(0, 180, 216, 0.1), rgba(114, 9, 183, 0.1));
+            border: 1px solid rgba(0, 180, 216, 0.3);
+            padding: 1.5rem;
+            border-radius: 16px;
+            margin-bottom: 1rem;
+        }
+
+        .welcome-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--primary-light);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .welcome-text {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            font-size: 0.9rem;
+        }
+
+        .quick-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .quick-action-btn {
+            padding: 0.5rem 1rem;
+            background: rgba(0, 180, 216, 0.15);
+            border: 1px solid rgba(0, 180, 216, 0.3);
+            color: var(--primary-light);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .quick-action-btn:hover {
+            background: rgba(0, 180, 216, 0.25);
+            transform: translateY(-2px);
+        }
+
+        /* --- Estilos para la Tabla (Panel Derecho) --- */
+        .results-panel .chat-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid rgba(0, 180, 216, 0.2);
+        }
+
+        .results-panel .chat-table th,
+        .results-panel .chat-table td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(0, 180, 216, 0.2);
+            line-height: 1.4;
+            color: var(--text-primary);
+        }
+
+        .results-panel .chat-table th {
+            background-color: rgba(0, 180, 216, 0.1);
+            color: var(--primary-light);
+            font-weight: 600;
+            white-space: normal;
+            word-break: break-word;
+        }
+
+        .results-panel .chat-table tr:nth-child(even) {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        .results-panel .chat-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* --- Estilos para el Gráfico (Panel Derecho) --- */
+        .results-panel .chart-container {
+            position: relative;
+            width: 100%;
+            max-height: 400px;
+            margin-top: 1.5rem;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 1rem;
+            border-radius: 12px;
+        }
+
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .main-layout {
+                flex-direction: column;
+                height: auto;
+            }
+
+            .chat-panel {
+                min-width: 100%;
+                height: 80vh;
+            }
+
+            .results-panel {
+                height: 60vh;
+            }
+
+            .message-content {
+                max-width: 85%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 0;
+            }
+
+            .main-layout {
+                gap: 0;
+            }
+
+            .chat-panel {
+                height: 100vh;
+            }
+
+            .chat-container {
+                border-radius: 0;
+            }
+
+            .results-panel {
+                height: 70vh;
+                border-radius: 0;
+            }
+
+            .chat-header {
+                padding: 1rem;
+            }
+
+            .header-text h1 {
+                font-size: 1.1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="main-layout">
+
+        <div class="chat-panel">
+            <div class="chat-container">
+                <div class="chat-header">
+                    <div class="header-content">
+                        <div class="logo-container">
+                            <i class="fas fa-pills"></i>
+                        </div>
+                        <div class="header-text">
+                            <h1>FarmaChat</h1>
+                            <div class="status">
+                                <span class="status-dot"></span>
+                                <span>Asistente en línea</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-messages" id="chat-messages">
+                    <div class="welcome-card">
+                        <div class="welcome-title">
+                            <i class="fas fa-hand-sparkles"></i>
+                            ¡Bienvenido a FarmaChat!
+                        </div>
+                        <div class="welcome-text">
+                            Soy tu asistente inteligente. Tus reportes y listas se mostrarán en el panel de la derecha.
+                        </div>
+                        <div class="quick-actions">
+                            <button class="quick-action-btn"
+                                onclick="sendQuickMessage('¿Qué productos tienen bajo nivel de stock?')">
+                                <i class="fas fa-exclamation-triangle"></i> Alertas de Stock
+                            </button>
+                            <button class="quick-action-btn"
+                                onclick="sendQuickMessage('Muestra los productos próximos a vencer en estado rojo')">
+                                <i class="fas fa-clock"></i> Próximos a Vencer
+                            </button>
+                            <button class="quick-action-btn"
+                                onclick="sendQuickMessage('Haz un reporte de cantidad de productos agrupados por proveedor')">
+                                <i class="fas fa-chart-pie"></i> Productos por Proveedor
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-input-wrapper">
+                    <form id="chat-form">
+                        <div class="input-container">
+                            <input type="text" id="user-input" placeholder="Escribe tu pregunta aquí..."
+                                autocomplete="off">
+                            <button type="submit" class="send-button" id="send-btn">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="results-panel" id="results-panel">
+            <div class="results-placeholder" id="results-placeholder">
+                <i class="fas fa-chart-bar"></i>
+                <h2>Panel de Visualización</h2>
+                <p>Tus tablas y gráficos aparecerán aquí.</p>
+            </div>
+        </div>
+
+    </div>
+    <script>
+        // --- JAVASCRIPT (Sin cambios) ---
+
+        const chatMessages = document.getElementById('chat-messages');
+        const chatForm = document.getElementById('chat-form');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+
+        const resultsPanel = document.getElementById('results-panel');
+        const resultsPlaceholder = document.getElementById('results-placeholder');
+
+        const API_URL = 'http://127.0.0.1:8000/ask';
+
+        function getCurrentTime() {
+            const now = new Date();
+            return now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function showInResultsPanel(title, htmlContent) {
+            if (resultsPlaceholder) {
+                resultsPlaceholder.style.display = 'none';
+            }
+
+            resultsPanel.innerHTML = `
+                <h1>${title.replace(/\n/g, '<br>')}</h1>
+                <div class="content-wrapper">
+                    ${htmlContent}
+                </div>
+            `;
+        }
+
+        function addMessage(type, text, showTyping = false) {
+            const wrapper = document.createElement('div');
+            wrapper.classList.add('message-wrapper', type);
+
+            const avatar = document.createElement('div');
+            avatar.classList.add('avatar', type === 'user' ? 'user' : 'bot');
+            avatar.innerHTML = type === 'user'
+                ? '<i class="fas fa-user"></i>'
+                : '<i class="fas fa-robot"></i>';
+
+            const content = document.createElement('div');
+            content.classList.add('message-content');
+
+            if (showTyping) {
+                wrapper.classList.add('typing');
+                content.innerHTML = `
+                    <div class="typing-indicator">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                `;
+            } else {
+                const formattedText = text.replace(/\n/g, '<br>');
+                content.innerHTML = `
+                    <div>${formattedText}</div>
+                    <div class="timestamp">${getCurrentTime()}</div>
+                `;
+            }
+
+            wrapper.appendChild(avatar);
+            wrapper.appendChild(content);
+            chatMessages.appendChild(wrapper);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            return wrapper;
+        }
+
+        function translateHeader(header) {
+            const translations = {
+                'nombre_producto': 'Producto',
+                'cantidad_total_disponible': 'Disponible',
+                'precio_venta': 'Precio',
+                'nombre_proveedor': 'Proveedor',
+                'telefono_proveedor': 'Teléfono',
+                'direccion_proveedor': 'Dirección',
+                'fecha_venta': 'Fecha',
+                'total_venta': 'Total',
+            };
+            return translations[header] || header;
+        }
+
+        function createTableHtml(data) {
+            if (!data || data.length === 0) return '';
+            const headers = Object.keys(data[0]);
+            let table = '<table class="chat-table">';
+            table += '<thead><tr>';
+            for (const header of headers) {
+                table += `<th>${translateHeader(header)}</th>`;
+            }
+            table += '</tr></thead>';
+            table += '<tbody>';
+            for (const row of data) {
+                table += '<tr>';
+                for (const header of headers) {
+                    const cellData = row[header] !== null && row[header] !== undefined ? row[header] : '';
+                    table += `<td>${cellData}</td>`;
+                }
+                table += '</tr>';
+            }
+            table += '</tbody></table>';
+            return table;
+        }
+
+        function addTableMessage(title, tableData) {
+            const tableHtml = createTableHtml(tableData);
+            showInResultsPanel(title, tableHtml);
+            addMessage('bot', `Aquí tienes el reporte: ${title}`);
+        }
+
+        function renderChart(canvasId, chartType, data, labelKey, dataKey) {
+            try {
+                const ctx = document.getElementById(canvasId).getContext('2d');
+
+                const labels = data.map(item => item[labelKey]);
+                const dataPoints = data.map(item => item[dataKey]);
+
+                Chart.defaults.color = 'rgba(232, 241, 245, 0.7)';
+                Chart.defaults.borderColor = 'rgba(0, 180, 216, 0.2)';
+
+                new Chart(ctx, {
+                    type: chartType,
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: translateHeader(dataKey),
+                            data: dataPoints,
+                            backgroundColor: 'rgba(0, 180, 216, 0.2)',
+                            borderColor: 'rgba(0, 180, 216, 1)',
+                            borderWidth: 1,
+                            fill: chartType === 'line'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: 'rgba(0, 180, 216, 0.1)'
+                                },
+                                ticks: {
+                                    color: 'rgba(232, 241, 245, 0.7)'
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    color: 'rgba(232, 241, 245, 0.7)'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: dataKey.length > 1,
+                                labels: {
+                                    color: 'rgba(232, 241, 245, 0.9)'
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (e) {
+                console.error("Error al dibujar el gráfico:", e);
+            }
+        }
+
+        function addChartMessage(title, chartData) {
+            const canvasId = 'chart-' + Date.now();
+            const chartHtml = `
+                <div class="chart-container" style="position: relative; height:400px; width:100%">
+                    <canvas id="${canvasId}"></canvas>
+                </div>
+            `;
+            showInResultsPanel(title, chartHtml);
+            addMessage('bot', `Aquí tienes el gráfico: ${title}`);
+
+            setTimeout(() => {
+                renderChart(canvasId, chartData.chart_type, chartData.content, chartData.label_key, chartData.data_key);
+            }, 0);
+        }
+
+        async function sendMessage(question) {
+            if (!question.trim()) return;
+
+            addMessage('user', question);
+            userInput.value = '';
+            sendBtn.disabled = true;
+
+            const typingMessage = addMessage('bot', '', true);
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: question })
+                });
+
+                if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
+
+                const data = await response.json();
+                const answer = data.answer;
+
+                chatMessages.removeChild(typingMessage);
+
+                try {
+                    const jsonData = JSON.parse(answer);
+
+                    if (jsonData && jsonData.type === 'table') {
+                        addTableMessage(jsonData.title, jsonData.content);
+
+                    } else if (jsonData && jsonData.type === 'chart') {
+                        addChartMessage(jsonData.title, jsonData);
+
+                    } else {
+                        addMessage('bot', answer);
+                    }
+                } catch (e) {
+                    addMessage('bot', answer);
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                chatMessages.removeChild(typingMessage);
+                addMessage('bot', '❌ Lo siento, ocurrió un error. Por favor, intenta nuevamente.');
+            } finally {
+                sendBtn.disabled = false;
+                userInput.focus();
+            }
+        }
+
+        function sendQuickMessage(message) {
+            userInput.value = message;
+            sendMessage(message);
+        }
+
+        chatForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            sendMessage(userInput.value);
+        });
+
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage(userInput.value);
+            }
+        });
+
+        userInput.focus();
+    </script>
+</body>
+
+</html>

@@ -97,6 +97,15 @@ spring:
             - RewritePath=/api/ventas/(?<segment>.*), /api/v1/ventas/${segment}
             - AuthenticationFilter
 
+        # Microservicio de Agente IA
+        - id: agente-ia-service
+          uri: ${URI_AGENTE_IA:http://ms-agente-ia:8000}
+          predicates:
+            - Path=/api/v1/chatbot/**
+          filters:
+            - RewritePath=/api/v1/chatbot/(?<segment>.*), /$\{segment}
+            - AuthenticationFilter
+
 # =============================================================================
 # JWT CONFIGURATION
 # =============================================================================
