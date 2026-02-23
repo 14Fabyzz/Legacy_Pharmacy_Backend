@@ -8,9 +8,6 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
-import lombok.extern.slf4j.Slf4j;
-
-@Slf4j
 @Component
 public class InventarioClient {
 
@@ -39,7 +36,8 @@ public class InventarioClient {
                     ProductoInventarioDTO.class);
             return res.getBody();
         } catch (Exception e) {
-            log.error("Error en obtenerProducto: ", e);
+            System.err.println("Error en obtenerProducto: " + e.getMessage());
+            e.printStackTrace();
             throw new RuntimeException("Error conectando a Inventario para producto ID: " + id);
         }
     }
@@ -59,7 +57,7 @@ public class InventarioClient {
                     "{\"cantidad\": %d, \"motivo\": \"VENTA_SUCURSAL_%d\", \"sucursalId\": %d, \"tipoVenta\": %s}",
                     cantidad, sucursalId, sucursalId, tipoVentaJson);
 
-            log.info("VENTA-CLIENTE: Enviando POST a Inventario: URL={}, Body={}", url, jsonBody);
+            System.out.println("VENTA-CLIENTE: Enviando POST a Inventario: URL=" + url + ", Body=" + jsonBody);
 
             HttpEntity<String> entity = new HttpEntity<>(jsonBody, getHeaders());
             ResponseEntity<Void> res = restTemplate.exchange(url, HttpMethod.POST, entity, Void.class);
