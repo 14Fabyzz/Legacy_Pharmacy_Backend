@@ -48,8 +48,7 @@ public class ProductoCard {
     @Column(name = "iva_porcentaje")
     private Integer ivaPorcentaje; // NUEVO: Porcentaje de IVA
 
-    // ✅ STOCK DINÁMICO (Calculado por Lotes)
-    @Formula("(SELECT COALESCE(SUM(l.cantidad_actual), 0) FROM lotes l WHERE l.producto_id = producto_id AND l.cantidad_actual > 0)")
+    @Column(name = "stock_total")
     private Integer stockTotal;
 
     @Column(name = "stock_minimo")
