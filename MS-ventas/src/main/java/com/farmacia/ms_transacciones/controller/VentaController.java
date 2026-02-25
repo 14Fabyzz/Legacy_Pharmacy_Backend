@@ -19,4 +19,17 @@ public class VentaController {
         System.out.println("CONTROLLER-VENTAS: Recibida peticion POST /realizar");
         return ResponseEntity.ok(ventaService.crearVenta(dto));
     }
+
+    @GetMapping
+    public ResponseEntity<java.util.List<VentaResponseDTO>> obtenerHistorialVentas() {
+        System.out.println("CONTROLLER-VENTAS: Recibida peticion GET /api/v1/ventas");
+        return ResponseEntity.ok(ventaService.obtenerHistorialVentas());
+    }
+
+    @GetMapping("/turno/{turnoId}")
+    public ResponseEntity<java.util.List<VentaResponseDTO>> obtenerHistorialVentasPorTurno(
+            @PathVariable Long turnoId) {
+        System.out.println("CONTROLLER-VENTAS: Recibida peticion GET /api/v1/ventas/turno/" + turnoId);
+        return ResponseEntity.ok(ventaService.obtenerHistorialVentasPorTurno(turnoId));
+    }
 }

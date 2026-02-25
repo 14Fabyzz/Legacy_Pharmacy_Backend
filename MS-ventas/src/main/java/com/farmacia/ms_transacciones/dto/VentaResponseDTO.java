@@ -23,6 +23,7 @@ public class VentaResponseDTO {
     private String estado;
     private Long clienteId;
     private List<ItemVentaDTO> items;
+    private List<String> resumenProductos;
 
     public Long getId() {
         return id;
@@ -134,5 +135,13 @@ public class VentaResponseDTO {
 
     public void setItems(List<ItemVentaDTO> items) {
         this.items = items;
+    }
+
+    public List<String> getResumenProductos() {
+        return resumenProductos;
+    }
+
+    public void setResumenProductos(List<String> resumenProductos) {
+        this.resumenProductos = resumenProductos;
     }
 }

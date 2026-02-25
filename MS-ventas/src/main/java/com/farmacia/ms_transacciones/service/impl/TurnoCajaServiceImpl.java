@@ -98,4 +98,12 @@ public class TurnoCajaServiceImpl implements TurnoCajaService {
         return turnoCajaRepository.findByUsuarioIdAndEstado(usuarioId, "ABIERTO")
                 .orElseThrow(() -> new RuntimeException("No hay un turno abierto para este usuario."));
     }
+
+    @Override
+    public TurnoCaja obtenerTurnoAbiertoGlobal() {
+        // Busca el turno activo a nivel general, devolviendo el más reciente en estado
+        // ABIERTO
+        return turnoCajaRepository.findFirstByEstadoOrderByFechaAperturaDesc("ABIERTO")
+                .orElseThrow(() -> new RuntimeException("Actualmente no hay ninguna caja abierta en la farmacia."));
+    }
 }

@@ -1,0 +1,19 @@
+services:
+  # Microservicio de Reportes (solo necesita conexión a BD, no su propio MySQL)
+  ms-reportes:
+    build: .
+    container_name: ms-reportes
+    ports:
+      - "8084:8084"
+    environment:
+      # Conexión a Aiven PostgreSQL (misma BD de MS-ventas, solo lectura)
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://pg-2714c85d-hincapiemaya66-ca69.h.aivencloud.com:16558/defaultdb?sslmode=require
+      - SPRING_DATASOURCE_USERNAME=${AIVEN_USER}
+      - SPRING_DATASOURCE_PASSWORD=${AIVEN_PG_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+    networks:
+      - reportes-net
+
+networks:
+  reportes-net:
+    driver: bridge
