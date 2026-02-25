@@ -11,7 +11,7 @@ spring:
         - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
       globalcors:
         cors-configurations:
-          '[/**]':
+          "[/**]":
             allowedOrigins: "http://localhost:4200"
             allowedMethods:
               - GET
@@ -104,6 +104,14 @@ spring:
             - Path=/api/v1/chatbot/**
           filters:
             - RewritePath=/api/v1/chatbot/(?<segment>.*), /$\{segment}
+            - AuthenticationFilter
+
+        # Microservicio de Reportes
+        - id: reportes-service
+          uri: ${URI_REPORTES:http://localhost:8084}
+          predicates:
+            - Path=/api/v1/reportes/**
+          filters:
             - AuthenticationFilter
 
 # =============================================================================

@@ -11,6 +11,7 @@ services:
       - URI_USUARIOS=http://ms-usuarios:8082
       - URI_VENTAS=http://ms-ventas:8083
       - URI_AGENTE_IA=http://ms-agente-ia:8000
+      - URI_REPORTES=http://ms-reportes:8084
       - JWT_SECRET=${JWT_SECRET}
     networks:
       - pharmacy-network
