@@ -87,6 +87,20 @@ services:
     networks:
       - pharmacy-network
 
+  ms-reportes:
+    build: ./ms-reportes
+    container_name: ms-reportes
+    ports:
+      - "8084:8084"
+    environment:
+      # ms-reportes usa spring-dotenv: las variables se inyectan como AIVEN_USER, AIVEN_PG_PASSWORD
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://pg-2714c85d-hincapiemaya66-ca69.h.aivencloud.com:16558/defaultdb?sslmode=require
+      - AIVEN_USER=${AIVEN_USER}
+      - AIVEN_PG_PASSWORD=${AIVEN_PG_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+    networks:
+      - pharmacy-network
+
 networks:
   pharmacy-network:
     driver: bridge
