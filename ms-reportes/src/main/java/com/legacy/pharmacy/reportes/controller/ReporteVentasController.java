@@ -56,4 +56,24 @@ public class ReporteVentasController {
 
         return ResponseEntity.ok(reporte);
     }
+
+    @GetMapping("/top-rotacion")
+    public ResponseEntity<java.util.List<com.legacy.pharmacy.reportes.dto.TopProductoResponseDTO>> obtenerTopRotacion(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
+            @RequestParam(required = false, defaultValue = "10") Integer limite) {
+
+        // Verificar que el usuario sea ADMIN/ADMINISTRADOR
+        if (!UserContext.isAdmin()) {
+            throw new BusinessException(
+                    "Acceso denegado: solo usuarios con rol ADMINISTRADOR pueden consultar el ranking");
+        }
+
+        log.info("Solicitud de reporte Top {} rotación: {} a {}, usuario={}",
+                limite, fechaInicio, fechaFin, UserContext.getUsername());
+
+        var reporte = reporteVentasService.obtenerTopRotacion(fechaInicio, fechaFin, limite);
+
+        return ResponseEntity.ok(reporte);
+    }
 }

@@ -2,6 +2,7 @@ package com.legacy.pharmacy.reportes.service;
 
 import com.legacy.pharmacy.reportes.dto.PeriodoVentaDTO;
 import com.legacy.pharmacy.reportes.dto.ReporteVentasConsolidadasDTO;
+import com.legacy.pharmacy.reportes.dto.TopProductoResponseDTO;
 import com.legacy.pharmacy.reportes.enums.Periodicidad;
 import com.legacy.pharmacy.reportes.exception.BusinessException;
 import com.legacy.pharmacy.reportes.exception.ResourceNotFoundException;
@@ -144,6 +145,67 @@ public class ReporteVentasService {
         };
     }
 
+    /**
+     * Genera un reporte de productos de mayor rotación (Top Moving Products).
+     *
+     * @param fechaInicio Fecha inicial del rango
+     * @param fechaFin    Fecha final del rango (inclusiva)
+     * @param limite      Cantidad máxima de productos a retornar (por defecto 10)
+     * @return Lista de DTOs con la información de los productos más vendidos
+     */
+    public List<TopProductoResponseDTO> obtenerTopRotacion(
+            LocalDate fechaInicio,
+            LocalDate fechaFin,
+            Integer limite) {
+
+        // Validar fechas
+        if (fechaInicio == null || fechaFin == null) {
+            throw new BusinessException("Las fechas de inicio y fin son obligatorias");
+        }
+        if (fechaInicio.isAfter(fechaFin)) {
+            throw new BusinessException("La fecha de inicio no puede ser posterior a la fecha de fin");
+        }
+
+        // Determinar el límite real
+        int limit = (limite != null && limite > 0) ? limite : 10;
+
+        // Convertir a LocalDateTime para las queries
+        LocalDateTime inicio = fechaInicio.atStartOfDay();
+        LocalDateTime fin = fechaFin.atTime(LocalTime.MAX); // 23:59:59.999999999
+
+        log.debug("Generando reporte de Top {} productos de mayor rotación: {} a {}",
+                limit, fechaInicio, fechaFin);
+
+        // Consultar repositorio
+        List<Object[]> resultados = ventaReporteRepository.obtenerTopProductosMayorRotacion(
+                inicio, fin, limit);
+
+        if (resultados == null || resultados.isEmpty()) {
+            throw new ResourceNotFoundException(
+                    "No se encontraron ventas para generar el ranking en el período consultado");
+        }
+
+        List<TopProductoResponseDTO> topProductos = new ArrayList<>();
+
+        for (Object[] row : resultados) {
+            String nombreProducto = (String) row[0];
+            String presentacion = (String) row[1];
+            Long totalVendido = toLong(row[2]);
+            BigDecimal ingresoGenerado = toBigDecimal(row[3]).setScale(2, RoundingMode.HALF_UP);
+
+            TopProductoResponseDTO dto = TopProductoResponseDTO.builder()
+                    .nombreProducto(nombreProducto)
+                    .presentacion(presentacion)
+                    .totalVendido(totalVendido)
+                    .ingresoGenerado(ingresoGenerado)
+                    .build();
+
+            topProductos.add(dto);
+        }
+
+        return topProductos;
+    }
+
     // ==========================================
     // Utilidades de conversión segura
     // ==========================================
@@ -161,6 +223,8 @@ public class ReporteVentasService {
             return 0L;
         if (value instanceof Long l)
             return l;
+        if (value instanceof Number n)
+            return n.longValue();
         return Long.parseLong(value.toString());
     }
 }
