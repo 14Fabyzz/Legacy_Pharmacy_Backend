@@ -4,8 +4,15 @@ import com.legacy.pharmacy.inventario.entity.Categoria;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+import java.util.Optional;
+
 @Repository
 public interface CategoriaRepository extends JpaRepository<Categoria, Integer> {
-    // Aquí podrías agregar métodos mágicos como:
-    // Optional<Categoria> findByNombre(String nombre);
+
+    /** Para el combobox/select del frontend: solo las categorías activas */
+    List<Categoria> findByActivaTrueOrderByNombreAsc();
+
+    /** Para validar nombres duplicados (case-insensitive) */
+    Optional<Categoria> findByNombreIgnoreCase(String nombre);
 }
