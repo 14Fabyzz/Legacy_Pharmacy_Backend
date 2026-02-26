@@ -88,7 +88,15 @@ spring:
             # La ruta entrante /api/usuarios se reenvía tal cual al microservicio
             - AuthenticationFilter
 
-        # Microservicio de Ventas
+        # Microservicio de Ventas (Soporte directo para /api/v1/ventas)
+        - id: ventas-service-v1
+          uri: ${URI_VENTAS}
+          predicates:
+            - Path=/api/v1/ventas/**
+          filters:
+            - AuthenticationFilter
+
+        # Microservicio de Ventas (Ruta antigua)
         - id: ventas-service
           uri: ${URI_VENTAS}
           predicates:
