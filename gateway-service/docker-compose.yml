@@ -19,6 +19,7 @@ services:
     ports:
       - "8080:8080"
     environment:
+      - URI_REPORTES=http://ms-reportes:8084
       - USUARIOS_URI=http://ms-usuarios:8082
       - INVENTORY_URI=http://ms-inventory:8081
       - VENTAS_URI=http://ms-ventas:8083
