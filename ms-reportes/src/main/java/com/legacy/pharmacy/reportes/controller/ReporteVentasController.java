@@ -76,4 +76,24 @@ public class ReporteVentasController {
 
         return ResponseEntity.ok(reporte);
     }
+
+    @GetMapping("/consolidado-pagos")
+    public ResponseEntity<com.legacy.pharmacy.reportes.dto.ConsolidadoPagosResponseDTO> obtenerConsolidadoPagos(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
+            @RequestParam(required = false) Integer sucursalId) {
+
+        // Verificar que el usuario sea ADMIN/ADMINISTRADOR
+        if (!UserContext.isAdmin()) {
+            throw new BusinessException(
+                    "Acceso denegado: solo usuarios con rol ADMINISTRADOR pueden generar reportes");
+        }
+
+        log.info("Solicitud de reporte consolidado de pagos: {} a {}, sucursal={}, usuario={}",
+                fechaInicio, fechaFin, sucursalId, UserContext.getUsername());
+
+        var reporte = reporteVentasService.generarConsolidadoPagos(fechaInicio, fechaFin, sucursalId);
+
+        return ResponseEntity.ok(reporte);
+    }
 }

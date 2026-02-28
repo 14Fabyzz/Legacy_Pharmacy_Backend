@@ -206,6 +206,113 @@ public class ReporteVentasService {
         return topProductos;
     }
 
+    /**
+     * Genera un reporte consolidado de pagos para el rango dado.
+     *
+     * @param fechaInicio Fecha inicial del rango
+     * @param fechaFin    Fecha final del rango (inclusiva)
+     * @param sucursalId  Filtro opcional por sucursal (null = todas)
+     * @return DTO con consolidado agrupado por método de pago
+     */
+    public com.legacy.pharmacy.reportes.dto.ConsolidadoPagosResponseDTO generarConsolidadoPagos(
+            LocalDate fechaInicio,
+            LocalDate fechaFin,
+            Integer sucursalId) {
+
+        // Validar fechas
+        if (fechaInicio == null || fechaFin == null) {
+            throw new BusinessException("Las fechas de inicio y fin son obligatorias");
+        }
+        if (fechaInicio.isAfter(fechaFin)) {
+            throw new BusinessException("La fecha de inicio no puede ser posterior a la fecha de fin");
+        }
+
+        LocalDateTime inicio = fechaInicio.atStartOfDay();
+        LocalDateTime fin = fechaFin.atTime(LocalTime.MAX); // 23:59:59.999999999
+
+        log.debug("Generando reporte Consolidado de Pagos: {} a {}, sucursal={}",
+                fechaInicio, fechaFin, sucursalId);
+
+        // Consultar repositorio para agrupación
+        List<Object[]> reporteIngresosRaw = ventaReporteRepository.obtenerIngresosPorMetodoPago(
+                inicio, fin, sucursalId);
+
+        if (reporteIngresosRaw == null || reporteIngresosRaw.isEmpty()) {
+            throw new ResourceNotFoundException(
+                    "No se encontraron ventas para calcular el consolidado de pagos en el período consultado");
+        }
+
+        BigDecimal granTotal = BigDecimal.ZERO;
+        List<com.legacy.pharmacy.reportes.dto.MetodoPagoDTO> metodosPago = new ArrayList<>();
+
+        // Primera pasada para calcular el Gran Total y listar métodos
+        for (Object[] row : reporteIngresosRaw) {
+            String nombreMetodo = (String) row[0];
+            Long cantidadVentas = toLong(row[1]);
+            BigDecimal totalRecaudado = toBigDecimal(row[2]);
+
+            granTotal = granTotal.add(totalRecaudado);
+
+            com.legacy.pharmacy.reportes.dto.MetodoPagoDTO dto = com.legacy.pharmacy.reportes.dto.MetodoPagoDTO
+                    .builder()
+                    .nombreMetodo(nombreMetodo != null ? nombreMetodo : "DESCONOCIDO")
+                    .cantidadVentas(cantidadVentas)
+                    .totalRecaudado(totalRecaudado.setScale(2, RoundingMode.HALF_UP))
+                    .build();
+            metodosPago.add(dto);
+        }
+
+        // Segunda pasada para calcular porcentajes de participación
+        if (granTotal.compareTo(BigDecimal.ZERO) > 0) {
+            for (com.legacy.pharmacy.reportes.dto.MetodoPagoDTO metodo : metodosPago) {
+                BigDecimal porcentaje = metodo.getTotalRecaudado()
+                        .divide(granTotal, 4, RoundingMode.HALF_UP)
+                        .multiply(new BigDecimal("100"))
+                        .setScale(2, RoundingMode.HALF_UP);
+                metodo.setPorcentajeParticipacion(porcentaje);
+            }
+        } else {
+            for (com.legacy.pharmacy.reportes.dto.MetodoPagoDTO metodo : metodosPago) {
+                metodo.setPorcentajeParticipacion(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+            }
+        }
+
+        // Obtener desglose de referencias de pago
+        List<Object[]> detallesRaw = ventaReporteRepository.obtenerDetallesReferenciaPago(
+                inicio, fin, sucursalId);
+
+        List<com.legacy.pharmacy.reportes.dto.DetalleReferenciaPagoDTO> detallesReferencias = new ArrayList<>();
+        if (detallesRaw != null && !detallesRaw.isEmpty()) {
+            for (Object[] row : detallesRaw) {
+                Long idVenta = toLong(row[0]);
+                String referenciaPago = (String) row[1];
+                BigDecimal monto = toBigDecimal(row[2]);
+                LocalDateTime fechaVenta = toLocalDateTime(row[3]);
+                String metodoPago = (String) row[4];
+
+                com.legacy.pharmacy.reportes.dto.DetalleReferenciaPagoDTO detalle = com.legacy.pharmacy.reportes.dto.DetalleReferenciaPagoDTO
+                        .builder()
+                        .idVenta(idVenta)
+                        .referenciaPago(referenciaPago)
+                        .monto(monto.setScale(2, RoundingMode.HALF_UP))
+                        .fechaVenta(fechaVenta)
+                        .metodoPago(metodoPago)
+                        .build();
+
+                detallesReferencias.add(detalle);
+            }
+        }
+
+        return com.legacy.pharmacy.reportes.dto.ConsolidadoPagosResponseDTO.builder()
+                .fechaInicio(fechaInicio)
+                .fechaFin(fechaFin)
+                .sucursalId(sucursalId)
+                .granTotal(granTotal.setScale(2, RoundingMode.HALF_UP))
+                .metodosPago(metodosPago)
+                .detallesReferencias(detallesReferencias)
+                .build();
+    }
+
     // ==========================================
     // Utilidades de conversión segura
     // ==========================================
@@ -226,5 +333,17 @@ public class ReporteVentasService {
         if (value instanceof Number n)
             return n.longValue();
         return Long.parseLong(value.toString());
+    }
+
+    private LocalDateTime toLocalDateTime(Object value) {
+        if (value == null)
+            return null;
+        if (value instanceof LocalDateTime ldt)
+            return ldt;
+        if (value instanceof java.sql.Timestamp ts)
+            return ts.toLocalDateTime();
+        if (value instanceof java.sql.Date d)
+            return d.toLocalDate().atStartOfDay();
+        return LocalDateTime.parse(value.toString().replace(" ", "T"));
     }
 }
