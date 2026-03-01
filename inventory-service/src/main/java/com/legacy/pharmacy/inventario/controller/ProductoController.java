@@ -120,7 +120,12 @@ public class ProductoController {
     }
 
     @PatchMapping("/productos/{id}/estado")
-    public ResponseEntity<?> cambiarEstado(@PathVariable Integer id, @RequestParam String nuevoEstado) {
+    public ResponseEntity<?> cambiarEstado(@PathVariable Integer id, @RequestBody Map<String, String> body) {
+        String nuevoEstado = body.get("nuevoEstado");
+        if (nuevoEstado == null || nuevoEstado.isBlank()) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "El campo 'nuevoEstado' es obligatorio en el body"));
+        }
         productoService.cambiarEstado(id, nuevoEstado);
         return ResponseEntity.ok(Map.of("mensaje", "Estado actualizado a " + nuevoEstado));
     }
