@@ -21,8 +21,12 @@ import jakarta.persistence.StoredProcedureQuery;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 
@@ -634,60 +638,69 @@ public class InventarioService {
                 }
         }
 
-        @Transactional(readOnly = true) // ← VITAL PARA QUE NO FALLE
+        @Transactional(readOnly = true)
         public DashboardAlertasDTO obtenerDashboardAlertas() {
-                LocalDate hoy = LocalDate.now();
-                LocalDate en30Dias = hoy.plusDays(30);
 
-                // ─── QUERY 1: VENCIDOS ───────────────────────────────────────────────────────
-                // Una sola query JPQL con JOIN — trae id, nombreProducto, lote, fecha,
-                // cantidad, imagenUrl sin disparar lazy-loads adicionales sobre Producto.
-                List<com.legacy.pharmacy.inventario.dto.LoteAlertaDTO> vencidos = loteRepository
-                                .findLotesVencidosParaDashboard(hoy);
+                // ── Cálculo de fechas límite según Semaforización Farmacéutica Colombia
+                // ────────
+                // ROJO : fecha_vencimiento <= hoy + 90 días (incluye ya vencidos)
+                // AMARILLO: fecha_vencimiento > hoy + 90 días AND <= hoy + 180 días
+                // VERDE : fecha_vencimiento > hoy + 180 días (solo COUNT, sin lista)
+                final LocalDate hoy = LocalDate.now();
+                final LocalDate limiteRojo = hoy.plusDays(90);
+                final LocalDate limiteAmarillo = hoy.plusDays(180);
 
-                List<Map<String, Object>> listaVencidos = vencidos.stream()
+                // ─── QUERY 1: SEMÁFORO ROJO ──────────────────────────────────────────────────
+                // JOIN + Projection → un solo round-trip, sin lazy-loads sobre Producto.
+                // diasRestantes es negativo para lotes ya vencidos (útil para el frontend).
+                List<com.legacy.pharmacy.inventario.dto.LoteAlertaDTO> rojosRaw = loteRepository
+                                .findLotesSemaforoRojo(hoy, limiteRojo);
+
+                List<Map<String, Object>> listaRoja = rojosRaw.stream()
                                 .map(l -> {
-                                        Map<String, Object> m = new java.util.HashMap<>();
+                                        Map<String, Object> m = new HashMap<>();
                                         m.put("id", l.getId());
                                         m.put("producto", l.getNombreProducto());
                                         m.put("lote", l.getLote());
                                         m.put("fecha", l.getFecha());
                                         m.put("cantidad", l.getCantidad());
+                                        m.put("diasRestantes", ChronoUnit.DAYS.between(hoy, l.getFecha()));
                                         m.put("imagenUrl", l.getImagenUrl());
                                         return m;
                                 })
-                                .collect(java.util.stream.Collectors.toList());
+                                .collect(Collectors.toList());
 
-                // ─── QUERY 2: POR VENCER ─────────────────────────────────────────────────────
-                // Ventana [hoy, hoy+30 días], misma estrategia JOIN + Projection.
-                List<com.legacy.pharmacy.inventario.dto.LoteAlertaDTO> porVencer = loteRepository
-                                .findLotesPorVencerParaDashboard(hoy, en30Dias);
+                // ─── QUERY 2: SEMÁFORO AMARILLO ──────────────────────────────────────────────
+                // Ventana exclusiva: (limiteRojo, limiteAmarillo].
+                List<com.legacy.pharmacy.inventario.dto.LoteAlertaDTO> amarillosRaw = loteRepository
+                                .findLotesSemaforoAmarillo(limiteRojo, limiteAmarillo);
 
-                List<Map<String, Object>> listaPorVencer = porVencer.stream()
+                List<Map<String, Object>> listaAmarilla = amarillosRaw.stream()
                                 .map(l -> {
-                                        Map<String, Object> m = new java.util.HashMap<>();
+                                        Map<String, Object> m = new HashMap<>();
                                         m.put("id", l.getId());
                                         m.put("producto", l.getNombreProducto());
                                         m.put("lote", l.getLote());
                                         m.put("fecha", l.getFecha());
                                         m.put("cantidad", l.getCantidad());
-                                        m.put("diasRestantes",
-                                                        java.time.temporal.ChronoUnit.DAYS.between(hoy, l.getFecha()));
+                                        m.put("diasRestantes", ChronoUnit.DAYS.between(hoy, l.getFecha()));
                                         m.put("imagenUrl", l.getImagenUrl());
                                         return m;
                                 })
-                                .collect(java.util.stream.Collectors.toList());
+                                .collect(Collectors.toList());
 
-                // ─── QUERY 3: STOCK BAJO ─────────────────────────────────────────────────────
-                // Query nativa con LEFT JOIN + GROUP BY + HAVING.
-                // La BD calcula el SUM(cantidad_actual) y filtra en un único round-trip.
-                // ELIMINA el N+1 anterior: findProductosBajoStock() + consultarStockActual()×N
+                // ─── QUERY 3: SEMÁFORO VERDE (solo COUNT) ────────────────────────────────────
+                // No cargamos entidades a memoria; el dashboard solo necesita el contador.
+                long totalVerde = loteRepository.countLotesSemaforoVerde(limiteAmarillo);
+
+                // ─── QUERY 4: STOCK BAJO (sin cambios) ───────────────────────────────────────
+                // Query nativa con LEFT JOIN + GROUP BY + HAVING en un solo round-trip.
                 List<com.legacy.pharmacy.inventario.dto.StockBajoDTO> stockBajo = productoRepository
                                 .findProductosBajoStockConAgregacion();
 
                 List<Map<String, Object>> listaStockBajo = stockBajo.stream()
                                 .map(p -> {
-                                        Map<String, Object> m = new java.util.HashMap<>();
+                                        Map<String, Object> m = new HashMap<>();
                                         m.put("id", p.getId());
                                         m.put("nombre", p.getNombre());
                                         m.put("stockActual", p.getStockActual());
@@ -695,19 +708,16 @@ public class InventarioService {
                                         m.put("imagenUrl", p.getImagenUrl());
                                         return m;
                                 })
-                                .collect(java.util.stream.Collectors.toList());
-
-                // ─── QUERY 4: CONTEO TOTAL ───────────────────────────────────────────────────
-                long totalProductos = productoRepository.count();
-                long totalSaludables = Math.max(0, totalProductos - listaStockBajo.size());
+                                .collect(Collectors.toList());
 
                 return DashboardAlertasDTO.builder()
-                                .totalVencidos(listaVencidos.size())
-                                .totalPorVencer(listaPorVencer.size())
+                                .totalRojo(listaRoja.size())
+                                .totalAmarillo(listaAmarilla.size())
+                                .totalVerde(totalVerde)
                                 .totalStockBajo(listaStockBajo.size())
-                                .totalSaludables(totalSaludables)
-                                .listaVencidos(listaVencidos)
-                                .listaPorVencer(listaPorVencer)
+                                .listaRoja(listaRoja)
+                                .listaAmarilla(listaAmarilla)
+                                .listaVerde(Collections.emptyList()) // seguro para Angular *ngFor
                                 .listaStockBajo(listaStockBajo)
                                 .build();
         }
