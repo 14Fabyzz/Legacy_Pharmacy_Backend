@@ -300,74 +300,16 @@ INSERT IGNORE INTO `productos`
 VALUES 
 ('164', '.', 'Acetaminofen 500Mg Caja X 300 Tabletas Coaspharma', '500Mg', 'Caja', 'INVIMA 2022M-6655443', (SELECT id FROM laboratorios WHERE nombre = 'GENERICO' LIMIT 1), (SELECT id FROM categorias WHERE nombre = 'GENERAL' LIMIT 1), (SELECT id FROM principios_activos WHERE nombre = 'ACETAMINOFEN' LIMIT 1), 14.0, 28.0, 0.0, 100.0, 25, 0, 0, 'Activo');
 
--- -----------------------------------------------------------------------------
--- 3. INSERTAR LOTES SIMULADOS (Para pruebas de Vencimiento)
--- -----------------------------------------------------------------------------
--- Se crean lotes para cada producto con fechas variadas:
--- VENCIDO (2024), POR VENCER (2026), VIGENTE (2027)
-
--- CRITICAL: Delete existing lotes to ensure fresh data on each initialization
--- This is necessary because INSERT IGNORE does not overwrite existing records
-DELETE FROM `lotes`;
-
--- Lote 1: Vencido (Hace 1 año)
-INSERT IGNORE INTO `lotes` (`producto_id`, `numero_lote`, `fecha_vencimiento`, `cantidad_actual`, `costo_compra`) 
-SELECT id, CONCAT('L-EXP-', id), DATE_SUB(CURDATE(), INTERVAL 1 YEAR), 5, precio_compra_referencia FROM productos WHERE estado = 'Activo' LIMIT 10;
-
--- Lote 2: Por Vencer (En 3 meses - Alerta Amarilla)
-INSERT IGNORE INTO `lotes` (`producto_id`, `numero_lote`, `fecha_vencimiento`, `cantidad_actual`, `costo_compra`) 
-SELECT id, CONCAT('L-WARN-', id), DATE_ADD(CURDATE(), INTERVAL 3 MONTH), 20, precio_compra_referencia FROM productos WHERE estado = 'Activo' LIMIT 10 OFFSET 10;
-
--- Lote 3: Vigente (En 2 años - Alerta Verde)
-INSERT IGNORE INTO `lotes` (`producto_id`, `numero_lote`, `fecha_vencimiento`, `cantidad_actual`, `costo_compra`) 
-SELECT id, CONCAT('L-OK-', id), DATE_ADD(CURDATE(), INTERVAL 2 YEAR), 50, precio_compra_referencia FROM productos WHERE estado = 'Activo';
-
--- -----------------------------------------------------------------------------
--- 4. VISTA DE STOCK (Dashboard)
--- -----------------------------------------------------------------------------
--- Hibernate intenta crear una tabla para la entidad @Immutable "ProductoCard".
--- Borramos esa tabla vacia y creamos la vista real.
-
-DROP TABLE IF EXISTS `v_stock_productos`;
-
-CREATE OR REPLACE VIEW `v_stock_productos` AS
-SELECT
-    p.id AS producto_id,
-    p.codigo_interno,
-    p.codigo_barras,
-    p.nombre_comercial,
-    p.concentracion,
-    p.presentacion,
-    p.precio_venta_base,
-    p.precio_venta_total,      -- NUEVO: PVP final con IVA
-    p.precio_venta_unidad,
-    p.precio_venta_blister,    -- NUEVO: Precio por blister
-    p.iva_porcentaje,          -- NUEVO: Porcentaje de IVA
-    p.stock_minimo,
-    p.es_fraccionable,
-    p.unidades_por_caja,
-    p.refrigerado,             -- NUEVO: Requiere cadena de frío
-    p.es_controlado,           -- NUEVO: Requiere receta controlada
-    p.imagen_url,              -- ✅ NUEVO: Url de imagen (Cloudinary)
-    l.nombre AS laboratorio_nombre,
-    c.nombre AS categoria_nombre,
-    pa.nombre AS principio_activo_nombre,
-    COALESCE(SUM(lt.cantidad_actual), 0) AS stock_total,
-    MIN(lt.fecha_vencimiento) AS proximo_vencimiento,
-    CASE
-        WHEN COALESCE(SUM(lt.cantidad_actual), 0) = 0 THEN 'SIN_STOCK'
-        WHEN COALESCE(SUM(lt.cantidad_actual), 0) <= p.stock_minimo THEN 'BAJO'
-        ELSE 'OPTIMO'
-    END AS nivel_stock
-FROM productos p
-LEFT JOIN laboratorios l ON p.laboratorio_id = l.id
-LEFT JOIN categorias c ON p.categoria_id = c.id
-LEFT JOIN principios_activos pa ON p.principio_activo_id = pa.id
-LEFT JOIN lotes lt ON p.id = lt.producto_id AND lt.cantidad_actual > 0
-GROUP BY 
-    p.id, p.codigo_interno, p.codigo_barras, p.nombre_comercial, 
-    p.concentracion, p.presentacion, p.precio_venta_base, p.precio_venta_total,
-    p.precio_venta_unidad, p.precio_venta_blister, p.iva_porcentaje,
-    p.stock_minimo, p.es_fraccionable, p.unidades_por_caja,
-    p.refrigerado, p.es_controlado, p.imagen_url,
-    l.nombre, c.nombre, pa.nombre;
+-- =============================================================================
+-- FIN DEL SCRIPT DE DATOS MAESTROS
+-- =============================================================================
+-- NOTA IMPORTANTE:
+-- Las secciones 3 (Lotes de prueba) y 4 (Vista SQL) han sido eliminadas de este
+-- archivo por razones de seguridad:
+--
+--   - Sección 3 contenía un 'DELETE FROM lotes' que destruía datos de producción.
+--   - La Vista SQL es gestionada por ViewInitializer.java en el arranque.
+--
+-- Para poblar lotes de prueba en un entorno de desarrollo, ejecutar manualmente:
+--   scripts/seed_lotes_test_MANUAL.sql
+-- =============================================================================
