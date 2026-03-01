@@ -1,5 +1,6 @@
 package com.legacy.pharmacy.inventario.repository;
 
+import com.legacy.pharmacy.inventario.dto.LoteAlertaDTO;
 import com.legacy.pharmacy.inventario.entity.Lote;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -50,5 +51,34 @@ public interface LoteRepository extends JpaRepository<Lote, Integer> {
         // Buscar próximos a vencer (Entre hoy y X días) con saldo
         List<Lote> findByFechaVencimientoBetweenAndCantidadActualGreaterThan(LocalDate inicio, LocalDate fin,
                         Integer cantidad);
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // QUERIES OPTIMIZADAS PARA DASHBOARD — usan JOIN para traer solo los campos
+        // necesarios en un único round-trip (eliminan over-fetching + lazy N+1)
+        // ─────────────────────────────────────────────────────────────────────────
+
+        /**
+         * Lotes VENCIDOS con stock > 0.
+         * Usa Interface Projection para proyectar solo 6 campos sin cargar entidades
+         * completas ni disparar lazy-loads adicionales sobre Producto.
+         */
+        @Query("SELECT l.id AS id, p.nombreComercial AS nombreProducto, " +
+                        "l.numeroLote AS lote, l.fechaVencimiento AS fecha, " +
+                        "l.cantidadActual AS cantidad, p.imagenUrl AS imagenUrl " +
+                        "FROM Lote l JOIN l.producto p " +
+                        "WHERE l.fechaVencimiento < :hoy AND l.cantidadActual > 0")
+        List<LoteAlertaDTO> findLotesVencidosParaDashboard(@Param("hoy") LocalDate hoy);
+
+        /**
+         * Lotes POR VENCER (ventana de 30 días) con stock > 0.
+         * Mismo patrón de Projection que la query de vencidos.
+         */
+        @Query("SELECT l.id AS id, p.nombreComercial AS nombreProducto, " +
+                        "l.numeroLote AS lote, l.fechaVencimiento AS fecha, " +
+                        "l.cantidadActual AS cantidad, p.imagenUrl AS imagenUrl " +
+                        "FROM Lote l JOIN l.producto p " +
+                        "WHERE l.fechaVencimiento BETWEEN :inicio AND :fin AND l.cantidadActual > 0")
+        List<LoteAlertaDTO> findLotesPorVencerParaDashboard(@Param("inicio") LocalDate inicio,
+                        @Param("fin") LocalDate fin);
 
 }

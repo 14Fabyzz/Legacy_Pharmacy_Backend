@@ -634,67 +634,73 @@ public class InventarioService {
                 }
         }
 
-        @Transactional(readOnly = true) // <--- ESTO ES VITAL PARA QUE NO FALLE
+        @Transactional(readOnly = true) // ← VITAL PARA QUE NO FALLE
         public DashboardAlertasDTO obtenerDashboardAlertas() {
                 LocalDate hoy = LocalDate.now();
+                LocalDate en30Dias = hoy.plusDays(30);
 
-                // 1. OBTENER VENCIDOS
-                List<Lote> lotesVencidos = loteRepository.findByFechaVencimientoBeforeAndCantidadActualGreaterThan(hoy,
-                                0);
+                // ─── QUERY 1: VENCIDOS ───────────────────────────────────────────────────────
+                // Una sola query JPQL con JOIN — trae id, nombreProducto, lote, fecha,
+                // cantidad, imagenUrl sin disparar lazy-loads adicionales sobre Producto.
+                List<com.legacy.pharmacy.inventario.dto.LoteAlertaDTO> vencidos = loteRepository
+                                .findLotesVencidosParaDashboard(hoy);
 
-                List<Map<String, Object>> listaVencidos = lotesVencidos.stream()
+                List<Map<String, Object>> listaVencidos = vencidos.stream()
                                 .map(l -> {
-                                        Map<String, Object> map = new java.util.HashMap<>();
-                                        map.put("id", l.getId());
-                                        map.put("producto", l.getProducto().getNombreComercial());
-                                        map.put("lote", l.getNumeroLote());
-                                        map.put("fecha", l.getFechaVencimiento());
-                                        map.put("cantidad", l.getCantidadActual());
-                                        map.put("imagenUrl", l.getProducto().getImagenUrl()); // ✅ IMAGEN
-                                        return map;
+                                        Map<String, Object> m = new java.util.HashMap<>();
+                                        m.put("id", l.getId());
+                                        m.put("producto", l.getNombreProducto());
+                                        m.put("lote", l.getLote());
+                                        m.put("fecha", l.getFecha());
+                                        m.put("cantidad", l.getCantidad());
+                                        m.put("imagenUrl", l.getImagenUrl());
+                                        return m;
                                 })
                                 .collect(java.util.stream.Collectors.toList());
 
-                // 2. OBTENER POR VENCER
-                List<Lote> lotesPorVencer = loteRepository
-                                .findByFechaVencimientoBetweenAndCantidadActualGreaterThan(hoy, hoy.plusDays(30), 0);
+                // ─── QUERY 2: POR VENCER ─────────────────────────────────────────────────────
+                // Ventana [hoy, hoy+30 días], misma estrategia JOIN + Projection.
+                List<com.legacy.pharmacy.inventario.dto.LoteAlertaDTO> porVencer = loteRepository
+                                .findLotesPorVencerParaDashboard(hoy, en30Dias);
 
-                List<Map<String, Object>> listaPorVencer = lotesPorVencer.stream()
+                List<Map<String, Object>> listaPorVencer = porVencer.stream()
                                 .map(l -> {
-                                        Map<String, Object> map = new java.util.HashMap<>();
-                                        map.put("id", l.getId());
-                                        map.put("producto", l.getProducto().getNombreComercial());
-                                        map.put("lote", l.getNumeroLote());
-                                        map.put("fecha", l.getFechaVencimiento());
-                                        map.put("cantidad", l.getCantidadActual());
-                                        map.put("diasRestantes", java.time.temporal.ChronoUnit.DAYS.between(hoy,
-                                                        l.getFechaVencimiento()));
-                                        map.put("imagenUrl", l.getProducto().getImagenUrl()); // ✅ IMAGEN
-                                        return map;
+                                        Map<String, Object> m = new java.util.HashMap<>();
+                                        m.put("id", l.getId());
+                                        m.put("producto", l.getNombreProducto());
+                                        m.put("lote", l.getLote());
+                                        m.put("fecha", l.getFecha());
+                                        m.put("cantidad", l.getCantidad());
+                                        m.put("diasRestantes",
+                                                        java.time.temporal.ChronoUnit.DAYS.between(hoy, l.getFecha()));
+                                        m.put("imagenUrl", l.getImagenUrl());
+                                        return m;
                                 })
                                 .collect(java.util.stream.Collectors.toList());
 
-                // 3. OBTENER STOCK BAJO
-                List<Producto> productosBajoStock = productoRepository.findProductosBajoStock();
+                // ─── QUERY 3: STOCK BAJO ─────────────────────────────────────────────────────
+                // Query nativa con LEFT JOIN + GROUP BY + HAVING.
+                // La BD calcula el SUM(cantidad_actual) y filtra en un único round-trip.
+                // ELIMINA el N+1 anterior: findProductosBajoStock() + consultarStockActual()×N
+                List<com.legacy.pharmacy.inventario.dto.StockBajoDTO> stockBajo = productoRepository
+                                .findProductosBajoStockConAgregacion();
 
-                List<Map<String, Object>> listaStockBajo = productosBajoStock.stream()
+                List<Map<String, Object>> listaStockBajo = stockBajo.stream()
                                 .map(p -> {
-                                        Integer stockReal = consultarStockActual(p.getId());
-                                        Map<String, Object> map = new java.util.HashMap<>();
-                                        map.put("id", p.getId());
-                                        map.put("nombre", p.getNombreComercial());
-                                        map.put("stockActual", stockReal);
-                                        map.put("stockMinimo", p.getStockMinimo());
-                                        map.put("imagenUrl", p.getImagenUrl()); // ✅ IMAGEN
-                                        return map;
+                                        Map<String, Object> m = new java.util.HashMap<>();
+                                        m.put("id", p.getId());
+                                        m.put("nombre", p.getNombre());
+                                        m.put("stockActual", p.getStockActual());
+                                        m.put("stockMinimo", p.getStockMinimo());
+                                        m.put("imagenUrl", p.getImagenUrl());
+                                        return m;
                                 })
                                 .collect(java.util.stream.Collectors.toList());
 
-                // 4. CALCULAR SALUDABLES
+                // ─── QUERY 4: CONTEO TOTAL ───────────────────────────────────────────────────
                 long totalProductos = productoRepository.count();
                 long totalSaludables = Math.max(0, totalProductos - listaStockBajo.size());
 
-                // 5. CONSTRUIR RESPUESTA
                 return DashboardAlertasDTO.builder()
                                 .totalVencidos(listaVencidos.size())
                                 .totalPorVencer(listaPorVencer.size())
