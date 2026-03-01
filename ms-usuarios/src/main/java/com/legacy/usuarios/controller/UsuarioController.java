@@ -88,14 +88,13 @@ public class UsuarioController {
     @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<UsuarioDTO> actualizar(
             @PathVariable Long id,
-            @Valid @RequestBody UsuarioUpdateDTO dto
-    ) {
+            @Valid @RequestBody UsuarioUpdateDTO dto) {
         UsuarioDTO usuario = usuarioService.actualizar(id, dto);
         return ResponseEntity.ok(usuario);
     }
 
     /**
-     * Desactivar usuario (RF22.3)
+     * Desactivar usuario (RF22.3) - Soft delete
      * DELETE /api/usuarios/{id}
      * Requiere: ADMINISTRADOR
      */
@@ -107,6 +106,30 @@ public class UsuarioController {
     }
 
     /**
+     * Cambiar estado de usuario (ACTIVO / INACTIVO / BLOQUEADO)
+     * PATCH /api/usuarios/{id}/estado
+     * Body: { "nuevoEstado": "ACTIVO" | "INACTIVO" | "BLOQUEADO" }
+     * Requiere: ADMINISTRADOR
+     */
+    @PatchMapping("/{id}/estado")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public ResponseEntity<UsuarioDTO> cambiarEstado(
+            @PathVariable Long id,
+            @RequestBody java.util.Map<String, String> body) {
+        String nuevoEstadoStr = body.get("nuevoEstado");
+        if (nuevoEstadoStr == null || nuevoEstadoStr.isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+        com.legacy.usuarios.entity.Usuario.EstadoUsuario nuevoEstado;
+        try {
+            nuevoEstado = com.legacy.usuarios.entity.Usuario.EstadoUsuario.valueOf(nuevoEstadoStr.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(usuarioService.cambiarEstado(id, nuevoEstado));
+    }
+
+    /**
      * Cambiar contraseña
      * PUT /api/usuarios/{id}/password
      * Requiere: Autenticado (propio usuario o ADMINISTRADOR)
@@ -114,8 +137,7 @@ public class UsuarioController {
     @PutMapping("/{id}/password")
     public ResponseEntity<Void> cambiarPassword(
             @PathVariable Long id,
-            @Valid @RequestBody CambioPasswordDTO dto
-    ) {
+            @Valid @RequestBody CambioPasswordDTO dto) {
         usuarioService.cambiarPassword(id, dto);
         return ResponseEntity.ok().build();
     }
