@@ -215,7 +215,9 @@ public class ProductoController {
         inventarioService.devolverInventario(
                 productoId,
                 request.cantidad(),
-                request.motivo());
+                request.motivo(),
+                request.tipoVenta(),
+                request.destinoProducto());
 
         return ResponseEntity.ok(Map.of(
                 "mensaje", "Inventario devuelto exitosamente",
@@ -228,6 +230,7 @@ public class ProductoController {
             com.legacy.pharmacy.inventario.enums.TipoVenta tipoVenta) {
     }
 
-    public record DevolverRequest(Integer cantidad, String motivo) {
+    public record DevolverRequest(Integer cantidad, String motivo,
+            com.legacy.pharmacy.inventario.enums.TipoVenta tipoVenta, String destinoProducto) {
     }
 }

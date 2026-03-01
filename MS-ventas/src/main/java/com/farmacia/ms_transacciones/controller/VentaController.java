@@ -32,4 +32,18 @@ public class VentaController {
         System.out.println("CONTROLLER-VENTAS: Recibida peticion GET /api/v1/ventas/turno/" + turnoId);
         return ResponseEntity.ok(ventaService.obtenerHistorialVentasPorTurno(turnoId));
     }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<VentaResponseDTO> obtenerVentaPorId(@PathVariable Long id) {
+        System.out.println("CONTROLLER-VENTAS: Recibida peticion GET /api/v1/ventas/" + id);
+        return ResponseEntity.ok(ventaService.obtenerVentaPorId(id));
+    }
+
+    @PostMapping("/{id}/devolucion")
+    public ResponseEntity<VentaResponseDTO> procesarDevolucion(
+            @PathVariable Long id,
+            @RequestBody com.farmacia.ms_transacciones.dto.DevolucionRequestDTO solicitud) {
+        System.out.println("CONTROLLER-VENTAS: Recibida peticion POST /api/v1/ventas/" + id + "/devolucion");
+        return ResponseEntity.ok(ventaService.procesarDevolucion(id, solicitud));
+    }
 }

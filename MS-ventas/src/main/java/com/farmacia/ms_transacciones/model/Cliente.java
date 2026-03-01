@@ -12,6 +12,23 @@ public class Cliente {
     private String apellido;
     private String numeroIdentificacion;
     private String email;
+    private String telefono;
+
+    @Column(name = "tipo_cliente")
+    private String tipoCliente;
+
+    // NOTE: We have a boolean 'activo', but the DB also has 'estado' (e.g.
+    // "ACTIVO")
+    private String estado;
+
+    @Column(name = "created_at")
+    private java.time.LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private java.time.LocalDateTime updatedAt;
+
+    @Column(name = "activo", columnDefinition = "boolean default true")
+    private Boolean activo = true;
 
     public Long getId() {
         return id;
@@ -51,5 +68,53 @@ public class Cliente {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public Boolean getActivo() {
+        return activo;
+    }
+
+    public void setActivo(Boolean activo) {
+        this.activo = activo;
+    }
+
+    public String getTelefono() {
+        return telefono;
+    }
+
+    public void setTelefono(String telefono) {
+        this.telefono = telefono;
+    }
+
+    public String getTipoCliente() {
+        return tipoCliente;
+    }
+
+    public void setTipoCliente(String tipoCliente) {
+        this.tipoCliente = tipoCliente;
+    }
+
+    public String getEstado() {
+        return estado;
+    }
+
+    public void setEstado(String estado) {
+        this.estado = estado;
+    }
+
+    public java.time.LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(java.time.LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public java.time.LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(java.time.LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }
