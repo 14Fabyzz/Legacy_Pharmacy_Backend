@@ -41,6 +41,12 @@ public class VentaServiceImpl implements VentaService {
     @Autowired
     private com.farmacia.ms_transacciones.repository.MovimientoCajaRepository movimientoCajaRepository;
 
+    @Autowired
+    private com.farmacia.ms_transacciones.repository.DevolucionRepository devolucionRepository;
+
+    @Autowired
+    private com.farmacia.ms_transacciones.repository.DetalleDevolucionRepository detalleDevolucionRepository;
+
     // ID del Cliente Genérico (Mostrador) - NO permitido para medicamentos
     // controlados
     @org.springframework.beans.factory.annotation.Value("${ventas.cliente-generico-id:1}")
@@ -369,5 +375,170 @@ public class VentaServiceImpl implements VentaService {
         return ventaRepository.findByTurnoId(turnoId).stream()
                 .map(v -> mapToDTO(v, null))
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public VentaResponseDTO obtenerVentaPorId(Long id) {
+        Venta v = ventaRepository.findById(id)
+                .orElseThrow(() -> new com.farmacia.ms_transacciones.exception.BusinessException(
+                        "Venta no encontrada con ID: " + id));
+        return mapToDTO(v, null);
+    }
+
+    @Override
+    @Transactional
+    public VentaResponseDTO procesarDevolucion(Long idVenta,
+            com.farmacia.ms_transacciones.dto.DevolucionRequestDTO solicitud) {
+        System.out.println("VENTA-DEVOLUCION: Iniciando proceso de devolucion para Venta #" + idVenta);
+
+        // 1. OBTENER VENTA
+        Venta venta = ventaRepository.findById(idVenta)
+                .orElseThrow(() -> new RuntimeException("No se encontró la venta con ID: " + idVenta));
+
+        if ("DEVUELTA".equals(venta.getEstado())) {
+            throw new RuntimeException("La venta ya ha sido devuelta en su totalidad.");
+        }
+
+        // 2. OBTENER TURNO ACTUAL (OBLIGATORIO)
+        TurnoCaja turnoActual = turnoCajaRepository.findByUsuarioIdAndEstado(
+                String.valueOf(UserContext.getUserId()), "ABIERTO")
+                .orElseThrow(() -> new RuntimeException("ERROR: Debes abrir caja para procesar devoluciones."));
+
+        // 3. CREAR CABECERA DE DEVOLUCION
+        com.farmacia.ms_transacciones.model.Devolucion devolucion = new com.farmacia.ms_transacciones.model.Devolucion();
+        devolucion.setVenta(venta);
+        devolucion.setTurno(turnoActual);
+        devolucion.setFecha(LocalDateTime.now());
+        devolucion.setEstado("COMPLETADA");
+        devolucion.setMotivoGeneral((solicitud.getMotivo() != null && !solicitud.getMotivo().isEmpty())
+                ? solicitud.getMotivo()
+                : "Devolución a solicitud del cliente");
+        devolucion.setTotalDevuelto(BigDecimal.ZERO); // Se calculará abajo
+
+        devolucionRepository.save(devolucion);
+
+        BigDecimal montoTotalDevuelto = BigDecimal.ZERO;
+        boolean requestVacio = (solicitud.getItems() == null || solicitud.getItems().isEmpty());
+
+        if (requestVacio) {
+            // Devolver todo lo que falta por devolver de TODOS los ítems de la Venta
+            for (DetalleVenta det : venta.getDetalles()) {
+                Integer cantYaDevuelta = detalleDevolucionRepository.sumCantidadDevueltaByDetalleVentaId(det.getId());
+                int devueltoHistorico = (cantYaDevuelta != null) ? cantYaDevuelta : 0;
+                int disponibleParaDevolver = det.getCantidad() - devueltoHistorico;
+
+                if (disponibleParaDevolver > 0) {
+                    montoTotalDevuelto = montoTotalDevuelto.add(
+                            crearDetalleDevolucion(devolucion, det, disponibleParaDevolver, null, null, null));
+                }
+            }
+        } else {
+            // Devolución Parcial (basada estrictamente en el arreglo del DTO)
+            for (com.farmacia.ms_transacciones.dto.ItemDevolucionDTO itemReq : solicitud.getItems()) {
+                DetalleVenta det = venta.getDetalles().stream()
+                        .filter(d -> d.getProductoId().equals(itemReq.getProductoId()))
+                        .findFirst()
+                        .orElseThrow(() -> new RuntimeException(
+                                "El producto " + itemReq.getProductoId() + " no pertenece a esta venta."));
+
+                Integer cantYaDevuelta = detalleDevolucionRepository.sumCantidadDevueltaByDetalleVentaId(det.getId());
+                int devueltoHistorico = (cantYaDevuelta != null) ? cantYaDevuelta : 0;
+                int cantidadDisponible = det.getCantidad() - devueltoHistorico;
+
+                if (itemReq.getCantidad() > cantidadDisponible) {
+                    throw new RuntimeException("No se puede devolver " + itemReq.getCantidad() + " del producto "
+                            + det.getProductoNombre() + ". Solo hay " + cantidadDisponible
+                            + " disponible para devolución.");
+                }
+
+                if (itemReq.getCantidad() > 0) {
+                    montoTotalDevuelto = montoTotalDevuelto.add(
+                            crearDetalleDevolucion(devolucion, det, itemReq.getCantidad(), itemReq.getMotivoDetalle(),
+                                    itemReq.getDestinoProducto(), itemReq.getLoteId()));
+                }
+            }
+        }
+
+        if (montoTotalDevuelto.compareTo(BigDecimal.ZERO) == 0) {
+            throw new RuntimeException("No hay ítems válidos para devolver.");
+        }
+
+        // 4. ACTUALIZAR TOTALES Y ESTADO
+        devolucion.setTotalDevuelto(montoTotalDevuelto);
+        devolucionRepository.save(devolucion);
+
+        boolean todosDevueltos = true;
+        for (DetalleVenta d : venta.getDetalles()) {
+            int qty = d.getCantidad();
+            Integer ret = detalleDevolucionRepository.sumCantidadDevueltaByDetalleVentaId(d.getId());
+            int hist = (ret != null) ? ret : 0;
+            if (hist < qty) {
+                todosDevueltos = false;
+                break;
+            }
+        }
+
+        venta.setEstado(todosDevueltos ? "DEVUELTA" : "PARCIALMENTE_DEVUELTA");
+        ventaRepository.save(venta);
+
+        // 5. GENERAR ASIENTO CONTABLE DE LA CAJA (EGRESO)
+        com.farmacia.ms_transacciones.model.MovimientoCaja movReq = new com.farmacia.ms_transacciones.model.MovimientoCaja();
+        movReq.setTurno(turnoActual);
+        movReq.setTipo("DEVOLUCION_VENTA");
+        movReq.setMonto(montoTotalDevuelto);
+        movReq.setReferencia("DEV REQ #" + devolucion.getId() + " - VTA #" + idVenta);
+        movReq.setDescripcion("Reembolso de Devolución #" + devolucion.getId() + ". " + devolucion.getMotivoGeneral());
+        movReq.setFecha(LocalDateTime.now());
+        movimientoCajaRepository.save(movReq);
+
+        // 6. ACTUALIZAR SALDO DEL TURNO
+        BigDecimal nuevoTotalVentas = (turnoActual.getTotalVentasTeorico() != null ? turnoActual.getTotalVentasTeorico()
+                : BigDecimal.ZERO).subtract(montoTotalDevuelto);
+        turnoActual.setTotalVentasTeorico(nuevoTotalVentas);
+
+        BigDecimal nuevoTotalEgresos = (turnoActual.getTotalEgresos() != null ? turnoActual.getTotalEgresos()
+                : BigDecimal.ZERO).add(montoTotalDevuelto);
+        turnoActual.setTotalEgresos(nuevoTotalEgresos);
+        turnoCajaRepository.save(turnoActual);
+
+        System.out.println("VENTA-DEVOLUCION: Operación Completa. Mapeando ResponseDTO dinámico.");
+        return mapToDTO(venta, null);
+    }
+
+    private BigDecimal crearDetalleDevolucion(
+            com.farmacia.ms_transacciones.model.Devolucion devolucion, DetalleVenta detOriginal,
+            int cantidadDevolver, String motivo, String destino, Long loteId) {
+
+        // Calcular dinero antes de impuestos (o con ellos, depende de la regla del
+        // unitario)
+        BigDecimal subtotalRembolso = detOriginal.getPrecioUnitario().multiply(new BigDecimal(cantidadDevolver));
+
+        com.farmacia.ms_transacciones.model.DetalleDevolucion detDev = new com.farmacia.ms_transacciones.model.DetalleDevolucion();
+        detDev.setDevolucion(devolucion);
+        detDev.setDetalleVenta(detOriginal);
+        detDev.setCantidadDevuelta(cantidadDevolver);
+        detDev.setPrecioUnitario(detOriginal.getPrecioUnitario());
+        detDev.setSubtotal(subtotalRembolso);
+        detDev.setMotivoDetalle(motivo);
+        detDev.setDestinoProducto(destino);
+        detDev.setLoteId(loteId); // En caso de que se soporte en un futuro
+        detDev.setEstado("COMPLETADA");
+
+        detalleDevolucionRepository.save(detDev);
+
+        // Notificar Módulo Inventarios
+        try {
+            System.out.println("INVENTARIO_CLIENT: Notificando devolución. ProdId: " + detOriginal.getProductoId()
+                    + " Cant: " + cantidadDevolver + " Tipo: " + detOriginal.getTipoVenta() + " Destino: " + destino);
+            // El loteId se usaría acá en el futuro: (ej:
+            // inventarioClient.registrarDevolucionLote(..., loteId))
+            inventarioClient.registrarDevolucion(detOriginal.getProductoId(), cantidadDevolver,
+                    detOriginal.getTipoVenta(), destino);
+        } catch (Exception e) {
+            throw new RuntimeException("Error notificando MS-Inventario para el ítem " + detOriginal.getProductoNombre()
+                    + " : " + e.getMessage());
+        }
+
+        return subtotalRembolso;
     }
 }

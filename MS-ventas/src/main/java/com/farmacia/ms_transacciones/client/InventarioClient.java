@@ -70,11 +70,16 @@ public class InventarioClient {
     }
 
     // --- MÉTODO RENOMBRADO: registrarDevolucion ---
-    public void registrarDevolucion(Integer productoId, Integer cantidad) {
+    public void registrarDevolucion(Integer productoId, Integer cantidad,
+            com.farmacia.ms_transacciones.enums.TipoVenta tipoVenta, String destinoProducto) {
         try {
             // NOTA: La ruta cambió a .../productos/{id}/devolver
             String url = inventarioBaseUrl + "/productos/" + productoId + "/devolver";
-            String jsonBody = String.format("{\"cantidad\": %d, \"motivo\": \"DEVOLUCION_CLIENTE\"}", cantidad);
+            String tipoVentaJson = (tipoVenta != null) ? "\"" + tipoVenta.name() + "\"" : "null";
+            String destinoProductoJson = (destinoProducto != null) ? "\"" + destinoProducto + "\"" : "null";
+            String jsonBody = String.format(
+                    "{\"cantidad\": %d, \"motivo\": \"DEVOLUCION_CLIENTE\", \"tipoVenta\": %s, \"destinoProducto\": %s}",
+                    cantidad, tipoVentaJson, destinoProductoJson);
 
             HttpEntity<String> entity = new HttpEntity<>(jsonBody, getHeaders());
             ResponseEntity<Void> response = restTemplate.exchange(url, HttpMethod.POST, entity, Void.class);

@@ -25,6 +25,7 @@ public class TurnoCaja {
     private BigDecimal totalVentasTeorico; // Lo que dice el sistema
     private BigDecimal totalEfectivoReal; // Lo que cuenta el cajero
     private BigDecimal diferencia; // Real - Teorico
+    private BigDecimal totalEgresos; // Egresos (incluye devoluciones)
 
     private String observacionesCierre;
 
@@ -114,5 +115,13 @@ public class TurnoCaja {
 
     public void setObservacionesCierre(String observacionesCierre) {
         this.observacionesCierre = observacionesCierre;
+    }
+
+    public BigDecimal getTotalEgresos() {
+        return totalEgresos;
+    }
+
+    public void setTotalEgresos(BigDecimal totalEgresos) {
+        this.totalEgresos = totalEgresos;
     }
 }

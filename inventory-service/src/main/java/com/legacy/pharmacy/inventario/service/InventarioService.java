@@ -517,9 +517,10 @@ public class InventarioService {
          * No usa procedimientos almacenados para evitar duplicación
          */
         @Transactional
-        public void devolverInventario(Integer productoId, Integer cantidad, String motivo) {
-                log.info("Devolviendo {} unidades del producto {} - Motivo: {} - Usuario: {}",
-                                cantidad, productoId, motivo, UserContext.getUsername());
+        public void devolverInventario(Integer productoId, Integer cantidad, String motivo,
+                        com.legacy.pharmacy.inventario.enums.TipoVenta tipoVenta, String destinoProducto) {
+                log.info("Devolviendo {} unidades (Tipo:{}) del producto {} - Motivo: {} - Destino: {} - Usuario: {}",
+                                cantidad, tipoVenta, productoId, motivo, destinoProducto, UserContext.getUsername());
 
                 Long userId = UserContext.getUserId();
                 String username = UserContext.getUsername();
@@ -531,6 +532,29 @@ public class InventarioService {
                 // Verificar que el producto existe
                 Producto producto = productoRepository.findById(productoId)
                                 .orElseThrow(() -> new RuntimeException("Producto no encontrado: " + productoId));
+
+                // 1. CALCULAR CANTIDAD REAL (CONVERSIÓN DE CAJAS/BLISTERS A UNIDADES)
+                int cantidadReal = cantidad;
+                if (tipoVenta != null) {
+                        switch (tipoVenta) {
+                                case CAJA:
+                                        if (producto.getUnidadesPorCaja() != null
+                                                        && producto.getUnidadesPorCaja() > 0) {
+                                                cantidadReal = cantidad * producto.getUnidadesPorCaja();
+                                        }
+                                        break;
+                                case BLISTER:
+                                        if (producto.getUnidadesPorBlister() != null
+                                                        && producto.getUnidadesPorBlister() > 0) {
+                                                cantidadReal = cantidad * producto.getUnidadesPorBlister();
+                                        }
+                                        break;
+                                case UNIDAD:
+                                default:
+                                        break;
+                        }
+                }
+                log.info("Conversión de Devolución: {} {} -> {} Unidades Totales", cantidad, tipoVenta, cantidadReal);
 
                 try {
                         // Obtener el lote más reciente del producto
@@ -549,23 +573,41 @@ public class InventarioService {
                         // Obtener cantidad actual para la foto (antes de la devolución)
                         Integer cantidadActual = jdbcTemplate.queryForObject(
                                         "SELECT cantidad_actual FROM lotes WHERE id = ?", Integer.class, loteId);
-                        int saldoFoto = (cantidadActual != null ? cantidadActual : 0) + cantidad;
+                        int saldoFoto = (cantidadActual != null ? cantidadActual : 0) + cantidadReal;
 
                         // Insertar movimiento de DEVOLUCION (cantidad positiva)
+                        String obsDev = motivo;
+                        if (destinoProducto != null && !destinoProducto.trim().isEmpty()) {
+                                obsDev += " | Destino: " + destinoProducto;
+                        }
+
                         jdbcTemplate.update(
                                         "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones) "
                                                         +
                                                         "VALUES (?, 'DEVOLUCION', ?, ?, ?, 1, ?)",
                                         loteId,
-                                        cantidad, // Cantidad positiva
+                                        cantidadReal, // Cantidad positiva ya en unidades
                                         saldoFoto,
                                         username != null ? username : "SISTEMA",
-                                        motivo);
+                                        obsDev);
 
-                        // El trigger se encargará de actualizar la cantidad_actual
+                        // Si el destino NO es inventario disponible, retirarlo como MERMA/CUARENTENA
+                        if (destinoProducto != null && (destinoProducto.equalsIgnoreCase("MERMA")
+                                        || destinoProducto.equalsIgnoreCase("CUARENTENA"))) {
+                                int saldoDespuesAjuste = saldoFoto - cantidadReal;
+                                jdbcTemplate.update(
+                                                "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones) "
+                                                                +
+                                                                "VALUES (?, 'AJUSTE_NEGATIVO', ?, ?, ?, 1, ?)",
+                                                loteId,
+                                                -cantidadReal, // Movimiento negativo
+                                                saldoDespuesAjuste,
+                                                username != null ? username : "SISTEMA",
+                                                "Traslado automático a " + destinoProducto + " tras devolución");
+                        }
 
-                        log.info("Inventario devuelto exitosamente: producto={}, cantidad={}, lote={}",
-                                        productoId, cantidad, loteId);
+                        log.info("Inventario devuelto exitosamente: producto={}, unidades={}, lote={}",
+                                        productoId, cantidadReal, loteId);
 
                 } catch (Exception e) {
                         log.error("Error al devolver inventario: {}", e.getMessage());
@@ -602,9 +644,36 @@ public class InventarioService {
                                 com.legacy.pharmacy.inventario.enums.TipoVenta.UNIDAD);
         }
 
-        // 3. Reponer Inventario (Devolución)
         @Transactional
-        public void reponerInventarioDevolucion(Integer productoId, Integer cantidad) {
+        public void reponerInventarioDevolucion(Integer productoId, Integer cantidad,
+                        com.legacy.pharmacy.inventario.enums.TipoVenta tipoVenta, String destinoProducto) {
+                // Obtenemos producto para el factor de conversión
+                Producto producto = productoRepository.findById(productoId)
+                                .orElseThrow(() -> new RuntimeException("Producto no encontrado: " + productoId));
+
+                // 1. CALCULAR CANTIDAD REAL (CONVERSIÓN DE CAJAS/BLISTERS A UNIDADES)
+                int cantidadReal = cantidad;
+                if (tipoVenta != null) {
+                        switch (tipoVenta) {
+                                case CAJA:
+                                        if (producto.getUnidadesPorCaja() != null
+                                                        && producto.getUnidadesPorCaja() > 0) {
+                                                cantidadReal = cantidad * producto.getUnidadesPorCaja();
+                                        }
+                                        break;
+                                case BLISTER:
+                                        if (producto.getUnidadesPorBlister() != null
+                                                        && producto.getUnidadesPorBlister() > 0) {
+                                                cantidadReal = cantidad * producto.getUnidadesPorBlister();
+                                        }
+                                        break;
+                                case UNIDAD:
+                                default:
+                                        break;
+                        }
+                }
+                log.info("Conversión de Reposición: {} {} -> {} Unidades Totales", cantidad, tipoVenta, cantidadReal);
+
                 // Buscamos el último lote activo para sumarle ahí (simplificado)
                 // O insertamos un movimiento de entrada
                 String sqlLote = "SELECT id FROM lotes WHERE producto_id = ? ORDER BY fecha_vencimiento DESC LIMIT 1";
@@ -614,20 +683,29 @@ public class InventarioService {
                         // Calculamos saldo foto (aproximado, ya que es query simple)
                         Integer cantidadActual = jdbcTemplate.queryForObject(
                                         "SELECT cantidad_actual FROM lotes WHERE id = ?", Integer.class, loteId);
-                        int saldoFoto = (cantidadActual != null ? cantidadActual : 0) + cantidad;
+                        int saldoFoto = (cantidadActual != null ? cantidadActual : 0) + cantidadReal;
 
                         // Insertamos el movimiento de retorno
+                        String obs = "Devolución integral";
+                        if (destinoProducto != null && !destinoProducto.trim().isEmpty()) {
+                                obs += " | Destino: " + destinoProducto;
+                        }
+
                         String sqlInsert = "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones) "
                                         +
-                                        "VALUES (?, 'DEVOLUCION', ?, ?, 'MS-VENTAS', 1, 'Devolución de cliente')";
+                                        "VALUES (?, 'DEVOLUCION', ?, ?, 'MS-VENTAS', 1, ?)";
 
-                        jdbcTemplate.update(sqlInsert, loteId, cantidad, saldoFoto);
+                        jdbcTemplate.update(sqlInsert, loteId, cantidadReal, saldoFoto, obs);
 
-                        // NOTA: Asegúrate de que tu base de datos tenga un Trigger que actualice
-                        // la tabla 'lotes' cuando se inserta en 'movimientos'.
-                        // Si no tienes trigger, debes hacer el update manual aquí:
-                        // jdbcTemplate.update("UPDATE lotes SET cantidad_actual = cantidad_actual + ?
-                        // WHERE id = ?", cantidad, loteId);
+                        if (destinoProducto != null && (destinoProducto.equalsIgnoreCase("MERMA")
+                                        || destinoProducto.equalsIgnoreCase("CUARENTENA"))) {
+                                int saldoDespuesAjuste = saldoFoto - cantidadReal;
+                                jdbcTemplate.update(
+                                                "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones) "
+                                                                + "VALUES (?, 'AJUSTE_NEGATIVO', ?, ?, 'MS-VENTAS', 1, ?)",
+                                                loteId, -cantidadReal, saldoDespuesAjuste,
+                                                "Traslado automático a " + destinoProducto + " tras devolución");
+                        }
 
                 } catch (Exception e) {
                         throw new RuntimeException("No se encontró lote para procesar la devolución");

@@ -20,7 +20,6 @@ public class DetalleVenta {
     private BigDecimal precioUnitario;
     private BigDecimal subtotal;
 
-    // New field: TipoVenta enum (mapped to DB column)
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_venta")
     private TipoVenta tipoVenta;
