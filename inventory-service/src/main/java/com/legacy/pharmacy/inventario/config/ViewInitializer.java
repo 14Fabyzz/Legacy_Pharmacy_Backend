@@ -1,57 +1,38 @@
 package com.legacy.pharmacy.inventario.config;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.Resource;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Component;
-import org.springframework.util.FileCopyUtils;
-
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-
 /**
- * Inicializador de Vistas de Base de Datos.
- * 
- * Este componente se ejecuta al iniciar la aplicación y se encarga de
- * recrear la vista 'v_stock_productos'. Esto es necesario porque:
- * 1. Hibernate no actualiza vistas automáticamente.
- * 2. data.sql está desactivado (spring.sql.init.mode=never) para evitar borrar
- * datos.
- * 3. La vista debe coincidir exactamente con la entidad ProductoCard para
- * evitar errores.
+ * ============================================================
+ * ⚠️ CLASE DESHABILITADA — ANTIPATRÓN CRÍTICO RESUELTO
+ * ============================================================
+ *
+ * PROBLEMA ORIGINAL:
+ * Esta clase implementaba CommandLineRunner y ejecutaba un DDL
+ * (CREATE OR REPLACE VIEW v_stock_productos) en cada arranque
+ * de la aplicación mediante jdbcTemplate.execute(sql).
+ *
+ * IMPACTO EN PRODUCCIÓN:
+ * El DDL de la vista adquiere un "Metadata Lock" exclusivo en
+ * MySQL sobre las tablas base (productos, lotes, categorías, etc.).
+ * Cualquier query DML (SELECT) en ejecución concurrente queda
+ * bloqueada en estado "Waiting for table metadata lock", saturando
+ * el pool de conexiones y congelando el Dashboard del Frontend.
+ *
+ * SOLUCIÓN APLICADA:
+ * La vista 'v_stock_productos' NUNCA debe recrearse en tiempo de
+ * ejecución (runtime). Debe existir únicamente como un objeto
+ * estático en la base de datos, creado UNA SOLA VEZ mediante el
+ * script: src/main/resources/schema-view.sql
+ *
+ * Para aplicar o actualizar la vista, ejecutar manualmente el
+ * script en un cliente MySQL (Workbench, DBeaver) durante una
+ * ventana de mantenimiento con bajo tráfico.
+ *
+ * Esta clase puede eliminarse de forma segura. Queda como
+ * documentación del antipatrón para evitar su reintroducción.
+ * ============================================================
  */
-@Component
-public class ViewInitializer implements CommandLineRunner {
-
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
-
-    @Override
-    public void run(String... args) throws Exception {
-        System.out.println("----------------------------------------------------------");
-        System.out.println("➡️  INICIANDO ACTUALIZACIÓN DE VISTAS (ViewInitializer)   ⬅️");
-        System.out.println("----------------------------------------------------------");
-
-        try {
-            // Leer el archivo schema-view.sql
-            Resource resource = new ClassPathResource("schema-view.sql");
-            InputStreamReader reader = new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8);
-            String sql = FileCopyUtils.copyToString(reader);
-
-            // Ejecutar el SQL
-            jdbcTemplate.execute(sql);
-
-            System.out.println("✅ Vista 'v_stock_productos' actualizada correctamente.");
-
-        } catch (Exception e) {
-            System.err.println("❌ ERROR CRÍTICO al actualizar vistas: " + e.getMessage());
-            e.printStackTrace();
-            // No lanzamos la excepción para no detener el arranque, pero el dashboard
-            // fallará si esto no funciona.
-        }
-
-        System.out.println("----------------------------------------------------------");
-    }
+public class ViewInitializer {
+    // Clase intencionalmente vacía.
+    // NO agregar @Component, @Service ni ninguna anotación de Spring.
+    // VER COMENTARIO JAVADOC SUPERIOR.
 }
