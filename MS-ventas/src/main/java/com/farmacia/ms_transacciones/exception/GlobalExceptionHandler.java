@@ -62,6 +62,30 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Maneja errores de tipo de dato en los parámetros de la URL (Casting
+     * exceptions)
+     */
+    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatchException(
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex,
+            WebRequest request) {
+
+        String errorMsg = String.format("El parámetro '%s' debe ser de tipo '%s'. Valor recibido: '%s'",
+                ex.getName(),
+                ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "Desconocido",
+                ex.getValue());
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                "Petición Inválida (Bad Request)",
+                errorMsg,
+                request.getDescription(false).replace("uri=", ""));
+
+        log.warn("Type mismatch exception: {}", errorMsg);
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    /**
      * Maneja todas las demás excepciones no capturadas
      */
     @ExceptionHandler(Exception.class)

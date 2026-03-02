@@ -1,5 +1,6 @@
 package com.legacy.pharmacy.inventario.repository;
 
+import com.legacy.pharmacy.inventario.dto.LoteAlertaDTO;
 import com.legacy.pharmacy.inventario.entity.Lote;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -50,5 +51,66 @@ public interface LoteRepository extends JpaRepository<Lote, Integer> {
         // Buscar próximos a vencer (Entre hoy y X días) con saldo
         List<Lote> findByFechaVencimientoBetweenAndCantidadActualGreaterThan(LocalDate inicio, LocalDate fin,
                         Integer cantidad);
+
+        // ─────────────────────────────────────────────────────────────────────────────
+        // QUERIES DE SEMAFORIZACIÓN FARMACÉUTICA (Estándar Legal Colombia)
+        // ROJO : vencidos o vencen en <= 90 días → fecha <= limiteRojo
+        // AMARILLO: vencen entre 91 y 180 días → fecha > limiteRojo AND fecha <=
+        // limiteAmarillo
+        // VERDE : vencen en > 180 días → solo COUNT (optimización de memoria)
+        //
+        // Todas usan Interface Projection (LoteAlertaDTO) con JOIN explícito para
+        // traer únicamente los 6 campos necesarios en un único round-trip,
+        // eliminando over-fetching y el lazy N+1 sobre la relación Lote → Producto.
+        // ─────────────────────────────────────────────────────────────────────────────
+
+        /**
+         * SEMÁFORO ROJO — Lotes vencidos o que vencen en <= 90 días, con stock > 0.
+         * Cubre tanto lotes ya vencidos (fecha < hoy) como los próximos a vencer
+         * dentro de la ventana crítica (hoy <= fecha <= limiteRojo = hoy + 90 días).
+         *
+         * @param hoy        Fecha actual (LocalDate.now()). Parámetro de documentación;
+         *                   la condición usa únicamente limiteRojo.
+         * @param limiteRojo hoy.plusDays(90)
+         */
+        @Query("SELECT l.id AS id, p.nombreComercial AS nombreProducto, " +
+                        "l.numeroLote AS lote, l.fechaVencimiento AS fecha, " +
+                        "l.cantidadActual AS cantidad, p.imagenUrl AS imagenUrl " +
+                        "FROM Lote l JOIN l.producto p " +
+                        "WHERE l.fechaVencimiento <= :limiteRojo AND l.cantidadActual > 0 " +
+                        "ORDER BY l.fechaVencimiento ASC")
+        List<LoteAlertaDTO> findLotesSemaforoRojo(@Param("hoy") LocalDate hoy,
+                        @Param("limiteRojo") LocalDate limiteRojo);
+
+        /**
+         * SEMÁFORO AMARILLO — Lotes que vencen entre 91 y 180 días, con stock > 0.
+         *
+         * @param limiteRojo     hoy.plusDays(90) (exclusivo — inicio de la ventana
+         *                       amarilla)
+         * @param limiteAmarillo hoy.plusDays(180) (inclusivo — fin de la ventana
+         *                       amarilla)
+         */
+        @Query("SELECT l.id AS id, p.nombreComercial AS nombreProducto, " +
+                        "l.numeroLote AS lote, l.fechaVencimiento AS fecha, " +
+                        "l.cantidadActual AS cantidad, p.imagenUrl AS imagenUrl " +
+                        "FROM Lote l JOIN l.producto p " +
+                        "WHERE l.fechaVencimiento > :limiteRojo " +
+                        "AND l.fechaVencimiento <= :limiteAmarillo " +
+                        "AND l.cantidadActual > 0 " +
+                        "ORDER BY l.fechaVencimiento ASC")
+        List<LoteAlertaDTO> findLotesSemaforoAmarillo(@Param("limiteRojo") LocalDate limiteRojo,
+                        @Param("limiteAmarillo") LocalDate limiteAmarillo);
+
+        /**
+         * SEMÁFORO VERDE — COUNT de lotes que vencen en > 180 días, con stock > 0.
+         * Se expone solo el conteo para la tarjeta resumida del Dashboard.
+         * Evita cargar a memoria cientos de lotes saludables que no se muestran en
+         * detalle.
+         *
+         * @param limiteAmarillo hoy.plusDays(180)
+         */
+        @Query("SELECT COUNT(l) FROM Lote l " +
+                        "WHERE l.fechaVencimiento > :limiteAmarillo AND l.cantidadActual > 0")
+        long countLotesSemaforoVerde(@Param("limiteAmarillo") LocalDate limiteAmarillo);
 
 }

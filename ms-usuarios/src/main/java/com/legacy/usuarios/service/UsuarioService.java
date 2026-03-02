@@ -183,6 +183,34 @@ public class UsuarioService {
     }
 
     /**
+     * Cambiar estado de usuario explícitamente (ACTIVO / INACTIVO / BLOQUEADO)
+     * Al reactivar (ACTIVO) se resetean los intentos fallidos y la fecha de
+     * bloqueo.
+     */
+    @Transactional
+    public UsuarioDTO cambiarEstado(Long id, EstadoUsuario nuevoEstado) {
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado con ID: " + id));
+
+        EstadoUsuario estadoAnterior = usuario.getEstado();
+        usuario.setEstado(nuevoEstado);
+
+        if (nuevoEstado == EstadoUsuario.ACTIVO) {
+            usuario.setIntentosFallidos(0);
+            usuario.setFechaBloqueo(null);
+        }
+
+        usuarioRepository.save(usuario);
+
+        auditoriaService.registrarEvento(
+                usuario,
+                "Estado de usuario cambió de " + estadoAnterior + " a " + nuevoEstado + ": " + usuario.getLogin(),
+                null);
+
+        return convertirADTO(usuario);
+    }
+
+    /**
      * Cambiar contraseña
      */
     @Transactional

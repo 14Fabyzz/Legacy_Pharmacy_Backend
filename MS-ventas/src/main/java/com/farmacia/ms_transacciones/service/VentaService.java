@@ -11,4 +11,8 @@ public interface VentaService {
     List<VentaResponseDTO> obtenerHistorialVentas();
 
     List<VentaResponseDTO> obtenerHistorialVentasPorTurno(Long turnoId);
+
+    VentaResponseDTO obtenerVentaPorId(Long id);
+
+    VentaResponseDTO procesarDevolucion(Long idVenta, com.farmacia.ms_transacciones.dto.DevolucionRequestDTO solicitud);
 }

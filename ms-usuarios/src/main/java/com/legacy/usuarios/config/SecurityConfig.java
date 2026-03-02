@@ -50,11 +50,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/roles/**").hasRole("ADMINISTRADOR")
                         .requestMatchers("/api/usuarios/**").authenticated()
 
-                        .anyRequest().authenticated()
-                )
+                        .anyRequest().authenticated())
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -76,6 +74,10 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        // OPTIMIZACIÓN APM: Strength=10 es el balance óptimo seguridad/velocidad.
+        // BCrypt strength 10 ≈ 80ms | strength 12 ≈ 300ms | strength 14 ≈ 1200ms (☠️)
+        // No subir de 11 en producción con BD remota (Aiven añade latencia de red
+        // extra).
+        return new BCryptPasswordEncoder(10);
     }
 }

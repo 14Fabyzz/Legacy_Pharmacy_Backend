@@ -24,18 +24,21 @@ public class AuthService {
     /**
      * Autenticar usuario y generar token JWT (RF24.1)
      */
-    @Transactional
+    // OPTIMIZACIÓN APM: Se eliminó @Transactional del método login().
+    // La transacción ya no es necesaria aquí porque auditoriaService es ahora
+    // @Async
+    // (su propia transacción). Mantener @Transactional abriría una conexión de BD
+    // durante todo el tiempo del hash BCrypt (~80ms) + el viaje async a Aiven.
     public LoginResponseDTO login(LoginRequestDTO request, String ipOrigen, String userAgent) {
-        // Buscar usuario por login
-        Usuario usuario = usuarioRepository.findByLogin(request.getLogin())
+        // OPTIMIZACIÓN APM: JOIN FETCH → usuario + rol en UN SOLO query a la BD remota
+        Usuario usuario = usuarioRepository.findByLoginWithRol(request.getLogin())
                 .orElseThrow(() -> {
                     // Registrar intento fallido en auditoría
                     auditoriaService.registrarLoginFallido(
                             request.getLogin(),
                             ipOrigen,
                             userAgent,
-                            "Usuario no encontrado"
-                    );
+                            "Usuario no encontrado");
                     return new UnauthorizedException("Credenciales inválidas");
                 });
 
@@ -45,8 +48,7 @@ public class AuthService {
                     request.getLogin(),
                     ipOrigen,
                     userAgent,
-                    "Cuenta bloqueada"
-            );
+                    "Cuenta bloqueada");
             throw new UnauthorizedException("Cuenta bloqueada. Contacte al administrador");
         }
 
@@ -55,8 +57,7 @@ public class AuthService {
                     request.getLogin(),
                     ipOrigen,
                     userAgent,
-                    "Cuenta inactiva"
-            );
+                    "Cuenta inactiva");
             throw new UnauthorizedException("Cuenta inactiva");
         }
 
@@ -69,8 +70,7 @@ public class AuthService {
                     request.getLogin(),
                     ipOrigen,
                     userAgent,
-                    "Contraseña incorrecta"
-            );
+                    "Contraseña incorrecta");
 
             throw new UnauthorizedException("Credenciales inválidas");
         }
@@ -85,8 +85,7 @@ public class AuthService {
         String token = jwtService.generateToken(
                 usuario.getLogin(),
                 usuario.getId(),
-                usuario.getRol().getNombre()
-        );
+                usuario.getRol().getNombre());
 
         // Registrar login exitoso en auditoría
         auditoriaService.registrarLoginExitoso(usuario, ipOrigen, userAgent);
@@ -106,9 +105,8 @@ public class AuthService {
     /**
      * Logout (opcional - para auditoría)
      */
-    @Transactional
     public void logout(String login) {
-        usuarioRepository.findByLogin(login).ifPresent(usuario -> {
+        usuarioRepository.findByLoginWithRol(login).ifPresent(usuario -> {
             auditoriaService.registrarLogout(usuario);
         });
     }

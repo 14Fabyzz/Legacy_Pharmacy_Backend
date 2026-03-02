@@ -21,8 +21,12 @@ import jakarta.persistence.StoredProcedureQuery;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 
@@ -517,9 +521,10 @@ public class InventarioService {
          * No usa procedimientos almacenados para evitar duplicación
          */
         @Transactional
-        public void devolverInventario(Integer productoId, Integer cantidad, String motivo) {
-                log.info("Devolviendo {} unidades del producto {} - Motivo: {} - Usuario: {}",
-                                cantidad, productoId, motivo, UserContext.getUsername());
+        public void devolverInventario(Integer productoId, Integer cantidad, String motivo,
+                        com.legacy.pharmacy.inventario.enums.TipoVenta tipoVenta, String destinoProducto) {
+                log.info("Devolviendo {} unidades (Tipo:{}) del producto {} - Motivo: {} - Destino: {} - Usuario: {}",
+                                cantidad, tipoVenta, productoId, motivo, destinoProducto, UserContext.getUsername());
 
                 Long userId = UserContext.getUserId();
                 String username = UserContext.getUsername();
@@ -531,6 +536,29 @@ public class InventarioService {
                 // Verificar que el producto existe
                 Producto producto = productoRepository.findById(productoId)
                                 .orElseThrow(() -> new RuntimeException("Producto no encontrado: " + productoId));
+
+                // 1. CALCULAR CANTIDAD REAL (CONVERSIÓN DE CAJAS/BLISTERS A UNIDADES)
+                int cantidadReal = cantidad;
+                if (tipoVenta != null) {
+                        switch (tipoVenta) {
+                                case CAJA:
+                                        if (producto.getUnidadesPorCaja() != null
+                                                        && producto.getUnidadesPorCaja() > 0) {
+                                                cantidadReal = cantidad * producto.getUnidadesPorCaja();
+                                        }
+                                        break;
+                                case BLISTER:
+                                        if (producto.getUnidadesPorBlister() != null
+                                                        && producto.getUnidadesPorBlister() > 0) {
+                                                cantidadReal = cantidad * producto.getUnidadesPorBlister();
+                                        }
+                                        break;
+                                case UNIDAD:
+                                default:
+                                        break;
+                        }
+                }
+                log.info("Conversión de Devolución: {} {} -> {} Unidades Totales", cantidad, tipoVenta, cantidadReal);
 
                 try {
                         // Obtener el lote más reciente del producto
@@ -549,23 +577,41 @@ public class InventarioService {
                         // Obtener cantidad actual para la foto (antes de la devolución)
                         Integer cantidadActual = jdbcTemplate.queryForObject(
                                         "SELECT cantidad_actual FROM lotes WHERE id = ?", Integer.class, loteId);
-                        int saldoFoto = (cantidadActual != null ? cantidadActual : 0) + cantidad;
+                        int saldoFoto = (cantidadActual != null ? cantidadActual : 0) + cantidadReal;
 
                         // Insertar movimiento de DEVOLUCION (cantidad positiva)
+                        String obsDev = motivo;
+                        if (destinoProducto != null && !destinoProducto.trim().isEmpty()) {
+                                obsDev += " | Destino: " + destinoProducto;
+                        }
+
                         jdbcTemplate.update(
                                         "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones) "
                                                         +
                                                         "VALUES (?, 'DEVOLUCION', ?, ?, ?, 1, ?)",
                                         loteId,
-                                        cantidad, // Cantidad positiva
+                                        cantidadReal, // Cantidad positiva ya en unidades
                                         saldoFoto,
                                         username != null ? username : "SISTEMA",
-                                        motivo);
+                                        obsDev);
 
-                        // El trigger se encargará de actualizar la cantidad_actual
+                        // Si el destino NO es inventario disponible, retirarlo como MERMA/CUARENTENA
+                        if (destinoProducto != null && (destinoProducto.equalsIgnoreCase("MERMA")
+                                        || destinoProducto.equalsIgnoreCase("CUARENTENA"))) {
+                                int saldoDespuesAjuste = saldoFoto - cantidadReal;
+                                jdbcTemplate.update(
+                                                "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones) "
+                                                                +
+                                                                "VALUES (?, 'AJUSTE_NEGATIVO', ?, ?, ?, 1, ?)",
+                                                loteId,
+                                                -cantidadReal, // Movimiento negativo
+                                                saldoDespuesAjuste,
+                                                username != null ? username : "SISTEMA",
+                                                "Traslado automático a " + destinoProducto + " tras devolución");
+                        }
 
-                        log.info("Inventario devuelto exitosamente: producto={}, cantidad={}, lote={}",
-                                        productoId, cantidad, loteId);
+                        log.info("Inventario devuelto exitosamente: producto={}, unidades={}, lote={}",
+                                        productoId, cantidadReal, loteId);
 
                 } catch (Exception e) {
                         log.error("Error al devolver inventario: {}", e.getMessage());
@@ -602,9 +648,36 @@ public class InventarioService {
                                 com.legacy.pharmacy.inventario.enums.TipoVenta.UNIDAD);
         }
 
-        // 3. Reponer Inventario (Devolución)
         @Transactional
-        public void reponerInventarioDevolucion(Integer productoId, Integer cantidad) {
+        public void reponerInventarioDevolucion(Integer productoId, Integer cantidad,
+                        com.legacy.pharmacy.inventario.enums.TipoVenta tipoVenta, String destinoProducto) {
+                // Obtenemos producto para el factor de conversión
+                Producto producto = productoRepository.findById(productoId)
+                                .orElseThrow(() -> new RuntimeException("Producto no encontrado: " + productoId));
+
+                // 1. CALCULAR CANTIDAD REAL (CONVERSIÓN DE CAJAS/BLISTERS A UNIDADES)
+                int cantidadReal = cantidad;
+                if (tipoVenta != null) {
+                        switch (tipoVenta) {
+                                case CAJA:
+                                        if (producto.getUnidadesPorCaja() != null
+                                                        && producto.getUnidadesPorCaja() > 0) {
+                                                cantidadReal = cantidad * producto.getUnidadesPorCaja();
+                                        }
+                                        break;
+                                case BLISTER:
+                                        if (producto.getUnidadesPorBlister() != null
+                                                        && producto.getUnidadesPorBlister() > 0) {
+                                                cantidadReal = cantidad * producto.getUnidadesPorBlister();
+                                        }
+                                        break;
+                                case UNIDAD:
+                                default:
+                                        break;
+                        }
+                }
+                log.info("Conversión de Reposición: {} {} -> {} Unidades Totales", cantidad, tipoVenta, cantidadReal);
+
                 // Buscamos el último lote activo para sumarle ahí (simplificado)
                 // O insertamos un movimiento de entrada
                 String sqlLote = "SELECT id FROM lotes WHERE producto_id = ? ORDER BY fecha_vencimiento DESC LIMIT 1";
@@ -614,94 +687,115 @@ public class InventarioService {
                         // Calculamos saldo foto (aproximado, ya que es query simple)
                         Integer cantidadActual = jdbcTemplate.queryForObject(
                                         "SELECT cantidad_actual FROM lotes WHERE id = ?", Integer.class, loteId);
-                        int saldoFoto = (cantidadActual != null ? cantidadActual : 0) + cantidad;
+                        int saldoFoto = (cantidadActual != null ? cantidadActual : 0) + cantidadReal;
 
                         // Insertamos el movimiento de retorno
+                        String obs = "Devolución integral";
+                        if (destinoProducto != null && !destinoProducto.trim().isEmpty()) {
+                                obs += " | Destino: " + destinoProducto;
+                        }
+
                         String sqlInsert = "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones) "
                                         +
-                                        "VALUES (?, 'DEVOLUCION', ?, ?, 'MS-VENTAS', 1, 'Devolución de cliente')";
+                                        "VALUES (?, 'DEVOLUCION', ?, ?, 'MS-VENTAS', 1, ?)";
 
-                        jdbcTemplate.update(sqlInsert, loteId, cantidad, saldoFoto);
+                        jdbcTemplate.update(sqlInsert, loteId, cantidadReal, saldoFoto, obs);
 
-                        // NOTA: Asegúrate de que tu base de datos tenga un Trigger que actualice
-                        // la tabla 'lotes' cuando se inserta en 'movimientos'.
-                        // Si no tienes trigger, debes hacer el update manual aquí:
-                        // jdbcTemplate.update("UPDATE lotes SET cantidad_actual = cantidad_actual + ?
-                        // WHERE id = ?", cantidad, loteId);
+                        if (destinoProducto != null && (destinoProducto.equalsIgnoreCase("MERMA")
+                                        || destinoProducto.equalsIgnoreCase("CUARENTENA"))) {
+                                int saldoDespuesAjuste = saldoFoto - cantidadReal;
+                                jdbcTemplate.update(
+                                                "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones) "
+                                                                + "VALUES (?, 'AJUSTE_NEGATIVO', ?, ?, 'MS-VENTAS', 1, ?)",
+                                                loteId, -cantidadReal, saldoDespuesAjuste,
+                                                "Traslado automático a " + destinoProducto + " tras devolución");
+                        }
 
                 } catch (Exception e) {
                         throw new RuntimeException("No se encontró lote para procesar la devolución");
                 }
         }
 
-        @Transactional(readOnly = true) // <--- ESTO ES VITAL PARA QUE NO FALLE
+        @Transactional(readOnly = true)
         public DashboardAlertasDTO obtenerDashboardAlertas() {
-                LocalDate hoy = LocalDate.now();
 
-                // 1. OBTENER VENCIDOS
-                List<Lote> lotesVencidos = loteRepository.findByFechaVencimientoBeforeAndCantidadActualGreaterThan(hoy,
-                                0);
+                // ── Cálculo de fechas límite según Semaforización Farmacéutica Colombia
+                // ────────
+                // ROJO : fecha_vencimiento <= hoy + 90 días (incluye ya vencidos)
+                // AMARILLO: fecha_vencimiento > hoy + 90 días AND <= hoy + 180 días
+                // VERDE : fecha_vencimiento > hoy + 180 días (solo COUNT, sin lista)
+                final LocalDate hoy = LocalDate.now();
+                final LocalDate limiteRojo = hoy.plusDays(90);
+                final LocalDate limiteAmarillo = hoy.plusDays(180);
 
-                List<Map<String, Object>> listaVencidos = lotesVencidos.stream()
+                // ─── QUERY 1: SEMÁFORO ROJO ──────────────────────────────────────────────────
+                // JOIN + Projection → un solo round-trip, sin lazy-loads sobre Producto.
+                // diasRestantes es negativo para lotes ya vencidos (útil para el frontend).
+                List<com.legacy.pharmacy.inventario.dto.LoteAlertaDTO> rojosRaw = loteRepository
+                                .findLotesSemaforoRojo(hoy, limiteRojo);
+
+                List<Map<String, Object>> listaRoja = rojosRaw.stream()
                                 .map(l -> {
-                                        Map<String, Object> map = new java.util.HashMap<>();
-                                        map.put("id", l.getId());
-                                        map.put("producto", l.getProducto().getNombreComercial());
-                                        map.put("lote", l.getNumeroLote());
-                                        map.put("fecha", l.getFechaVencimiento());
-                                        map.put("cantidad", l.getCantidadActual());
-                                        map.put("imagenUrl", l.getProducto().getImagenUrl()); // ✅ IMAGEN
-                                        return map;
+                                        Map<String, Object> m = new HashMap<>();
+                                        m.put("id", l.getId());
+                                        m.put("producto", l.getNombreProducto());
+                                        m.put("lote", l.getLote());
+                                        m.put("fecha", l.getFecha());
+                                        m.put("cantidad", l.getCantidad());
+                                        m.put("diasRestantes", ChronoUnit.DAYS.between(hoy, l.getFecha()));
+                                        m.put("imagenUrl", l.getImagenUrl());
+                                        return m;
                                 })
-                                .collect(java.util.stream.Collectors.toList());
+                                .collect(Collectors.toList());
 
-                // 2. OBTENER POR VENCER
-                List<Lote> lotesPorVencer = loteRepository
-                                .findByFechaVencimientoBetweenAndCantidadActualGreaterThan(hoy, hoy.plusDays(30), 0);
+                // ─── QUERY 2: SEMÁFORO AMARILLO ──────────────────────────────────────────────
+                // Ventana exclusiva: (limiteRojo, limiteAmarillo].
+                List<com.legacy.pharmacy.inventario.dto.LoteAlertaDTO> amarillosRaw = loteRepository
+                                .findLotesSemaforoAmarillo(limiteRojo, limiteAmarillo);
 
-                List<Map<String, Object>> listaPorVencer = lotesPorVencer.stream()
+                List<Map<String, Object>> listaAmarilla = amarillosRaw.stream()
                                 .map(l -> {
-                                        Map<String, Object> map = new java.util.HashMap<>();
-                                        map.put("id", l.getId());
-                                        map.put("producto", l.getProducto().getNombreComercial());
-                                        map.put("lote", l.getNumeroLote());
-                                        map.put("fecha", l.getFechaVencimiento());
-                                        map.put("cantidad", l.getCantidadActual());
-                                        map.put("diasRestantes", java.time.temporal.ChronoUnit.DAYS.between(hoy,
-                                                        l.getFechaVencimiento()));
-                                        map.put("imagenUrl", l.getProducto().getImagenUrl()); // ✅ IMAGEN
-                                        return map;
+                                        Map<String, Object> m = new HashMap<>();
+                                        m.put("id", l.getId());
+                                        m.put("producto", l.getNombreProducto());
+                                        m.put("lote", l.getLote());
+                                        m.put("fecha", l.getFecha());
+                                        m.put("cantidad", l.getCantidad());
+                                        m.put("diasRestantes", ChronoUnit.DAYS.between(hoy, l.getFecha()));
+                                        m.put("imagenUrl", l.getImagenUrl());
+                                        return m;
                                 })
-                                .collect(java.util.stream.Collectors.toList());
+                                .collect(Collectors.toList());
 
-                // 3. OBTENER STOCK BAJO
-                List<Producto> productosBajoStock = productoRepository.findProductosBajoStock();
+                // ─── QUERY 3: SEMÁFORO VERDE (solo COUNT) ────────────────────────────────────
+                // No cargamos entidades a memoria; el dashboard solo necesita el contador.
+                long totalVerde = loteRepository.countLotesSemaforoVerde(limiteAmarillo);
 
-                List<Map<String, Object>> listaStockBajo = productosBajoStock.stream()
+                // ─── QUERY 4: STOCK BAJO (sin cambios) ───────────────────────────────────────
+                // Query nativa con LEFT JOIN + GROUP BY + HAVING en un solo round-trip.
+                List<com.legacy.pharmacy.inventario.dto.StockBajoDTO> stockBajo = productoRepository
+                                .findProductosBajoStockConAgregacion();
+
+                List<Map<String, Object>> listaStockBajo = stockBajo.stream()
                                 .map(p -> {
-                                        Integer stockReal = consultarStockActual(p.getId());
-                                        Map<String, Object> map = new java.util.HashMap<>();
-                                        map.put("id", p.getId());
-                                        map.put("nombre", p.getNombreComercial());
-                                        map.put("stockActual", stockReal);
-                                        map.put("stockMinimo", p.getStockMinimo());
-                                        map.put("imagenUrl", p.getImagenUrl()); // ✅ IMAGEN
-                                        return map;
+                                        Map<String, Object> m = new HashMap<>();
+                                        m.put("id", p.getId());
+                                        m.put("nombre", p.getNombre());
+                                        m.put("stockActual", p.getStockActual());
+                                        m.put("stockMinimo", p.getStockMinimo());
+                                        m.put("imagenUrl", p.getImagenUrl());
+                                        return m;
                                 })
-                                .collect(java.util.stream.Collectors.toList());
+                                .collect(Collectors.toList());
 
-                // 4. CALCULAR SALUDABLES
-                long totalProductos = productoRepository.count();
-                long totalSaludables = Math.max(0, totalProductos - listaStockBajo.size());
-
-                // 5. CONSTRUIR RESPUESTA
                 return DashboardAlertasDTO.builder()
-                                .totalVencidos(listaVencidos.size())
-                                .totalPorVencer(listaPorVencer.size())
+                                .totalRojo(listaRoja.size())
+                                .totalAmarillo(listaAmarilla.size())
+                                .totalVerde(totalVerde)
                                 .totalStockBajo(listaStockBajo.size())
-                                .totalSaludables(totalSaludables)
-                                .listaVencidos(listaVencidos)
-                                .listaPorVencer(listaPorVencer)
+                                .listaRoja(listaRoja)
+                                .listaAmarilla(listaAmarilla)
+                                .listaVerde(Collections.emptyList()) // seguro para Angular *ngFor
                                 .listaStockBajo(listaStockBajo)
                                 .build();
         }

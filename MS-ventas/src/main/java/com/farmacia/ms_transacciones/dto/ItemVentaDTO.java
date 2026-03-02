@@ -16,6 +16,7 @@ public class ItemVentaDTO {
 
     private BigDecimal precioUnitario; // Opcional, para respuesta
     private BigDecimal subtotal; // Opcional, para respuesta
+    private Integer cantidadDevuelta; // Opcional, para respuesta
 
     public Integer getProductoId() {
         return productoId;
@@ -63,5 +64,13 @@ public class ItemVentaDTO {
 
     public void setSubtotal(BigDecimal subtotal) {
         this.subtotal = subtotal;
+    }
+
+    public Integer getCantidadDevuelta() {
+        return cantidadDevuelta;
+    }
+
+    public void setCantidadDevuelta(Integer cantidadDevuelta) {
+        this.cantidadDevuelta = cantidadDevuelta;
     }
 }

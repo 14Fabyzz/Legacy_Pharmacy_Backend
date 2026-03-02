@@ -20,11 +20,11 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String login) throws UsernameNotFoundException {
-        // Buscar usuario por login
-        Usuario usuario = usuarioRepository.findByLogin(login)
+        // OPTIMIZACIÓN APM: JOIN FETCH → usuario + rol en UN SOLO query (evita N+1 en
+        // Aiven)
+        Usuario usuario = usuarioRepository.findByLoginWithRol(login)
                 .orElseThrow(() -> new UsernameNotFoundException(
-                        "Usuario no encontrado con login: " + login
-                ));
+                        "Usuario no encontrado con login: " + login));
 
         // Verificar que el usuario esté activo
         if (usuario.getEstado() != Usuario.EstadoUsuario.ACTIVO) {
