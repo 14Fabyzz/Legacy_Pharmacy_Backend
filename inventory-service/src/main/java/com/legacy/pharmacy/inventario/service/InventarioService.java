@@ -47,7 +47,7 @@ public class InventarioService {
         private EntityManager entityManager;
 
         @Transactional
-        public Map<String, Object> registrarEntrada(EntradaMercanciaDTO entrada) {
+        public Map<String, Object> registrarEntrada(EntradaMercanciaDTO entrada, String usuarioResponsable) {
                 // 1. Validar producto y obtener datos de conversión
                 Producto producto = productoRepository.findById(entrada.getProductoId())
                                 .orElseThrow(() -> new RuntimeException(
@@ -144,7 +144,7 @@ public class InventarioService {
                                 "ENTRADA",
                                 cantidadReal,
                                 saldoFoto, // saldo_historico
-                                entrada.getUsuarioResponsable() != null ? entrada.getUsuarioResponsable() : "SISTEMA",
+                                usuarioResponsable != null ? usuarioResponsable : "SISTEMA",
                                 entrada.getSucursalId(),
                                 entrada.getObservaciones());
 
@@ -154,12 +154,13 @@ public class InventarioService {
         // AGREGA ESTO A InventarioService.java
 
         @Transactional
-        public Map<String, Object> registrarEntradaMasiva(List<EntradaMercanciaDTO> entradas) {
+        public Map<String, Object> registrarEntradaMasiva(List<EntradaMercanciaDTO> entradas,
+                        String usuarioResponsable) {
                 int procesados = 0;
 
                 for (EntradaMercanciaDTO dto : entradas) {
                         // Reutilizamos la lógica que ya tienes para registrar uno solo
-                        registrarEntrada(dto);
+                        registrarEntrada(dto, usuarioResponsable);
                         procesados++;
                 }
 

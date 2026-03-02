@@ -23,8 +23,10 @@ public class InventarioController {
     @PostMapping("/entrada")
     public ResponseEntity<Map<String, Object>> registrarEntrada(@RequestBody @Valid EntradaMercanciaDTO entradaDTO) {
         try {
+            String contextUser = com.legacy.pharmacy.inventario.config.UserContext.getUsername();
+            String username = (contextUser != null && !contextUser.trim().isEmpty()) ? contextUser : "SISTEMA";
             // Recibimos el Map con la respuesta
-            Map<String, Object> resultado = inventarioService.registrarEntrada(entradaDTO);
+            Map<String, Object> resultado = inventarioService.registrarEntrada(entradaDTO, username);
             return ResponseEntity.ok(resultado);
 
         } catch (Exception e) {
@@ -36,7 +38,9 @@ public class InventarioController {
     @PostMapping("/lotes/entrada-masiva")
     public ResponseEntity<?> registrarEntradaMasiva(@RequestBody @Valid List<EntradaMercanciaDTO> entradas) {
         try {
-            var resultado = inventarioService.registrarEntradaMasiva(entradas);
+            String contextUser = com.legacy.pharmacy.inventario.config.UserContext.getUsername();
+            String username = (contextUser != null && !contextUser.trim().isEmpty()) ? contextUser : "SISTEMA";
+            var resultado = inventarioService.registrarEntradaMasiva(entradas, username);
             return ResponseEntity.ok(resultado);
         } catch (Exception e) {
             e.printStackTrace();
