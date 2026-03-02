@@ -2,11 +2,12 @@
 Programa principal - Agente MCP
 Se conecta directamente a la base de datos real especificada en config.py
 """
-from agent import MCPAgent
-from config import (
-    GEMINI_API_KEY, 
-    GEMINI_MODEL, 
+from app.agent import MCPAgent
+from app.config import (
+    GEMINI_API_KEY,
+    GEMINI_MODEL,
     MYSQL_CONFIG,
+    POSTGRES_CONFIG,
     DATABASE_TYPE
 )
 
@@ -17,21 +18,21 @@ def main():
     print("🤖 AGENTE MCP - CONECTANDO A BASE DE DATOS REAL")
     print("=" * 80)
     
-    if DATABASE_TYPE != 'mysql':
-        print(f"❌ Error: Este agente está configurado para usar SOLO MySQL.")
-        print(f"Asegúrate que DATABASE_TYPE en config.py sea 'mysql'")
+    if DATABASE_TYPE not in ('mysql', 'multi'):
+        print(f"❌ Error: Este agente está configurado para usar MySQL o Multi-Datasource.")
+        print(f"Asegúrate que DATABASE_TYPE en config.py sea 'multi'")
         return
         
-    print(f"\n📊 Conectando a: {MYSQL_CONFIG['database']} en {MYSQL_CONFIG['host']}...")
+    print(f"\n📊 Conectando a Sistema...")
     
     try:
         # Crear agente
-        # La conexión a MySQL se intenta automáticamente al crear el agente
         agente = MCPAgent(
             api_key=GEMINI_API_KEY,
             model_name=GEMINI_MODEL,
-            db_type='mysql',
-            mysql_config=MYSQL_CONFIG
+            db_type=DATABASE_TYPE,
+            mysql_config=MYSQL_CONFIG,
+            postgres_config=POSTGRES_CONFIG
         )
         
     except Exception as e:
