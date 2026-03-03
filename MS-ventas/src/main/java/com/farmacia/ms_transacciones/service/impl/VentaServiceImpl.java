@@ -251,7 +251,8 @@ public class VentaServiceImpl implements VentaService {
                         item.getProductoId(),
                         item.getCantidad(),
                         turnoActual.getSucursalId(),
-                        tipoVenta // ← NUEVO: Enviar TipoVenta en lugar de Boolean
+                        tipoVenta, // ← NUEVO: Enviar TipoVenta en lugar de Boolean
+                        venta.getNumeroFactura() // ← NUEVO: Asegura la trazabilidad hasta el Kardex
                 );
             }
         }
@@ -530,10 +531,12 @@ public class VentaServiceImpl implements VentaService {
         try {
             System.out.println("INVENTARIO_CLIENT: Notificando devolución. ProdId: " + detOriginal.getProductoId()
                     + " Cant: " + cantidadDevolver + " Tipo: " + detOriginal.getTipoVenta() + " Destino: " + destino);
-            // El loteId se usaría acá en el futuro: (ej:
-            // inventarioClient.registrarDevolucionLote(..., loteId))
+
+            // Usamos el ID del reembolso de esta devolución, o el número original
+            String refDevolucion = "DEV-" + devolucion.getId() + "-FAC-" + devolucion.getVenta().getNumeroFactura();
+
             inventarioClient.registrarDevolucion(detOriginal.getProductoId(), cantidadDevolver,
-                    detOriginal.getTipoVenta(), destino);
+                    detOriginal.getTipoVenta(), destino, refDevolucion);
         } catch (Exception e) {
             throw new RuntimeException("Error notificando MS-Inventario para el ítem " + detOriginal.getProductoNombre()
                     + " : " + e.getMessage());
