@@ -26,4 +26,6 @@ public class SalidaMercanciaDTO {
     private String usuarioResponsable; // <-- Added for audit
 
     private com.legacy.pharmacy.inventario.enums.TipoVenta tipoVenta;
+
+    private String documentoRef;
 }

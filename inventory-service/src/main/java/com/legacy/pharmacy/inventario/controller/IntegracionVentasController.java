@@ -47,7 +47,11 @@ public class IntegracionVentasController {
     @PostMapping("/salida")
     public ResponseEntity<?> registrarVenta(@RequestBody MovimientoVentaDTO dto) {
         try {
-            inventarioService.descontarInventarioVenta(dto.getProductoId(), dto.getCantidad());
+            String docRef = dto.getDocumentoRef();
+            if (docRef == null || docRef.isBlank()) {
+                docRef = "TICKET-VENTA-" + java.util.UUID.randomUUID().toString().substring(0, 8);
+            }
+            inventarioService.descontarInventarioVenta(dto.getProductoId(), dto.getCantidad(), docRef);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -58,11 +62,16 @@ public class IntegracionVentasController {
     @PostMapping("/entrada")
     public ResponseEntity<?> registrarDevolucion(@RequestBody MovimientoVentaDTO dto) {
         try {
+            String docRef = dto.getDocumentoRef();
+            if (docRef == null || docRef.isBlank()) {
+                docRef = "RETORNO-VENTA-" + java.util.UUID.randomUUID().toString().substring(0, 8);
+            }
             inventarioService.reponerInventarioDevolucion(
                     dto.getProductoId(),
                     dto.getCantidad(),
                     dto.getTipoVenta(),
-                    dto.getDestinoProducto());
+                    dto.getDestinoProducto(),
+                    docRef);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
