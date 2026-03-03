@@ -30,7 +30,8 @@ public class Venta {
     private BigDecimal cambio;
 
     // --- DATOS DE PAGO ---
-    private String metodoPago; // 'EFECTIVO', 'TRANSFERENCIA'
+    @Enumerated(EnumType.STRING)
+    private com.farmacia.ms_transacciones.enums.MetodoPago metodoPago; // 'EFECTIVO', 'TARJETA', 'TRANSFERENCIA'
     private String referenciaPago; // Ej: "Bancolombia a la cuenta 987..." -> NUEVO
     // ---------------------
 
@@ -129,11 +130,11 @@ public class Venta {
         this.cambio = cambio;
     }
 
-    public String getMetodoPago() {
+    public com.farmacia.ms_transacciones.enums.MetodoPago getMetodoPago() {
         return metodoPago;
     }
 
-    public void setMetodoPago(String metodoPago) {
+    public void setMetodoPago(com.farmacia.ms_transacciones.enums.MetodoPago metodoPago) {
         this.metodoPago = metodoPago;
     }
 

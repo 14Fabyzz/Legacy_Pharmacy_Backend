@@ -17,7 +17,7 @@ public class VentaResponseDTO {
 
     private String vendedorNombre;
     private Integer sucursalId;
-    private String metodoPago;
+    private com.farmacia.ms_transacciones.enums.MetodoPago metodoPago;
     private String referenciaPago;
 
     private String estado;
@@ -97,11 +97,11 @@ public class VentaResponseDTO {
         this.sucursalId = sucursalId;
     }
 
-    public String getMetodoPago() {
+    public com.farmacia.ms_transacciones.enums.MetodoPago getMetodoPago() {
         return metodoPago;
     }
 
-    public void setMetodoPago(String metodoPago) {
+    public void setMetodoPago(com.farmacia.ms_transacciones.enums.MetodoPago metodoPago) {
         this.metodoPago = metodoPago;
     }
 

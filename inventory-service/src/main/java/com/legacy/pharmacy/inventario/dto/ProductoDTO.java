@@ -2,7 +2,7 @@ package com.legacy.pharmacy.inventario.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
+// Removed unused import
 import lombok.Data;
 import java.math.BigDecimal;
 

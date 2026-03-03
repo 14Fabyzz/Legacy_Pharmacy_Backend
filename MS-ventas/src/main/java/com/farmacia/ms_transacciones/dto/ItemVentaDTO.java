@@ -14,6 +14,7 @@ public class ItemVentaDTO {
     @Deprecated
     private Boolean esVentaPorCaja; // true = Caja, false/null = Unidad
 
+    private BigDecimal descuento; // Opcional, para descuentos autorizados
     private BigDecimal precioUnitario; // Opcional, para respuesta
     private BigDecimal subtotal; // Opcional, para respuesta
     private Integer cantidadDevuelta; // Opcional, para respuesta
@@ -56,6 +57,14 @@ public class ItemVentaDTO {
 
     public void setPrecioUnitario(BigDecimal precioUnitario) {
         this.precioUnitario = precioUnitario;
+    }
+
+    public BigDecimal getDescuento() {
+        return descuento;
+    }
+
+    public void setDescuento(BigDecimal descuento) {
+        this.descuento = descuento;
     }
 
     public BigDecimal getSubtotal() {

@@ -1,7 +1,7 @@
 package com.legacy.pharmacy.inventario.config;
 
 import com.cloudinary.Cloudinary;
-import com.cloudinary.utils.ObjectUtils;
+// Removed unused import
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

@@ -43,7 +43,7 @@ public class ProductoController {
         }
 
         // 2. Subir la nueva imagen
-        Map result = cloudinaryService.upload(file);
+        Map<String, Object> result = cloudinaryService.upload(file);
 
         // 3. Actualizar producto
         producto.setImagenUrl((String) result.get("url"));

@@ -18,6 +18,7 @@ public class DetalleVenta {
     private String productoNombre; // Opcional, pero útil para historial
     private Integer cantidad;
     private BigDecimal precioUnitario;
+    private BigDecimal descuento;
     private BigDecimal subtotal;
 
     @Enumerated(EnumType.STRING)
@@ -72,6 +73,14 @@ public class DetalleVenta {
 
     public void setPrecioUnitario(BigDecimal precioUnitario) {
         this.precioUnitario = precioUnitario;
+    }
+
+    public BigDecimal getDescuento() {
+        return descuento;
+    }
+
+    public void setDescuento(BigDecimal descuento) {
+        this.descuento = descuento;
     }
 
     public BigDecimal getSubtotal() {

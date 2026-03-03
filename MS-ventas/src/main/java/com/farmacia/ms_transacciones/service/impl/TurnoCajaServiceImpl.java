@@ -4,7 +4,6 @@ import com.farmacia.ms_transacciones.config.UserContext;
 import com.farmacia.ms_transacciones.dto.AperturaCajaDTO;
 import com.farmacia.ms_transacciones.dto.CierreCajaDTO;
 import com.farmacia.ms_transacciones.model.TurnoCaja;
-import com.farmacia.ms_transacciones.model.Venta;
 import com.farmacia.ms_transacciones.repository.TurnoCajaRepository;
 import com.farmacia.ms_transacciones.repository.VentaRepository;
 import com.farmacia.ms_transacciones.service.TurnoCajaService;

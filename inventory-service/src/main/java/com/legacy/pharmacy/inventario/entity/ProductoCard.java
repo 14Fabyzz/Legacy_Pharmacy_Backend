@@ -7,7 +7,7 @@ import jakarta.persistence.Table;
 import lombok.Data;
 import org.hibernate.annotations.Immutable;
 import java.time.LocalDate;
-import org.hibernate.annotations.Formula;
+// Removed unused import
 import jakarta.persistence.Transient;
 
 @Data

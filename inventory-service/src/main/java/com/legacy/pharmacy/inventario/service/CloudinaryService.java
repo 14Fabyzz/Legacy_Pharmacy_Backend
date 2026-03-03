@@ -10,7 +10,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.HashMap;
+// Removed unused import
 import java.util.Map;
 
 @Service
@@ -19,9 +19,10 @@ public class CloudinaryService {
     @Autowired
     private Cloudinary cloudinary;
 
-    public Map upload(MultipartFile multipartFile) {
+    public Map<String, Object> upload(MultipartFile multipartFile) {
         File file = convert(multipartFile);
-        Map result = null;
+        @SuppressWarnings("unchecked")
+        Map<String, Object> result = null;
         try {
             result = cloudinary.uploader().upload(file, ObjectUtils.emptyMap());
         } catch (IOException e) {
@@ -36,7 +37,8 @@ public class CloudinaryService {
         return result;
     }
 
-    public Map delete(String id) {
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> delete(String id) {
         try {
             return cloudinary.uploader().destroy(id, ObjectUtils.emptyMap());
         } catch (IOException e) {

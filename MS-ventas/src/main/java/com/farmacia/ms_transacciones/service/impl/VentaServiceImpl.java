@@ -63,9 +63,11 @@ public class VentaServiceImpl implements VentaService {
                 .orElseThrow(() -> new RuntimeException("ERROR: No puedes vender. Debes abrir caja primero."));
 
         // 2. VALIDAR MÉTODO DE PAGO
-        if ("TRANSFERENCIA".equalsIgnoreCase(datosVenta.getMetodoPago())) {
+        if (datosVenta.getMetodoPago() == com.farmacia.ms_transacciones.enums.MetodoPago.TRANSFERENCIA ||
+                datosVenta.getMetodoPago() == com.farmacia.ms_transacciones.enums.MetodoPago.TARJETA) {
             if (datosVenta.getReferenciaPago() == null || datosVenta.getReferenciaPago().trim().isEmpty()) {
-                throw new RuntimeException("Para pagos con Transferencia, debe especificar el destino/referencia.");
+                throw new com.farmacia.ms_transacciones.exception.BusinessException(
+                        "Para pagos con Tarjeta o Transferencia, debe especificar la referencia de pago (Nro Referencia / Voucher).");
             }
         }
 
@@ -128,7 +130,6 @@ public class VentaServiceImpl implements VentaService {
             TipoVenta tipoVenta = item.getTipoVenta();
             if (tipoVenta == null) {
                 // Backward compatibility: convertir esVentaPorCaja a TipoVenta
-                @SuppressWarnings("deprecation")
                 Boolean esVentaPorCaja = item.getEsVentaPorCaja();
                 tipoVenta = Boolean.TRUE.equals(esVentaPorCaja) ? TipoVenta.CAJA : TipoVenta.UNIDAD;
             }
@@ -204,21 +205,70 @@ public class VentaServiceImpl implements VentaService {
                 }
             }
 
-            // F. Crear Detalle con precio dinámico
+            // --- 🛡️ VALIDACIÓN DE SEGURIDAD: PRECIOS Y DESCUENTOS ---
+            BigDecimal precioFinal = precioAUsar;
+            BigDecimal descuentoSolicitado = item.getDescuento() != null ? item.getDescuento() : BigDecimal.ZERO;
+
+            boolean precioModificado = item.getPrecioUnitario() != null
+                    && item.getPrecioUnitario().compareTo(precioAUsar) != 0;
+            boolean tieneDescuento = descuentoSolicitado.compareTo(BigDecimal.ZERO) > 0;
+
+            if (precioModificado || tieneDescuento) {
+                String rolUsuario = com.farmacia.ms_transacciones.config.UserContext.getUserRole();
+                System.out.println(
+                        "VENTA-SEGURIDAD: Evaluando permisos para alteración de precio. Rol detectado: " + rolUsuario);
+
+                boolean tienePermiso = false;
+                if (rolUsuario != null) {
+                    String rolNormalizado = rolUsuario.toUpperCase();
+                    if (rolNormalizado.contains("ADMIN") || rolNormalizado.contains("SUPERVISOR")) {
+                        tienePermiso = true;
+                    }
+                }
+
+                if (!tienePermiso) {
+                    throw new com.farmacia.ms_transacciones.exception.BusinessException(
+                            "Acceso Denegado: Su rol no permite alterar precios o aplicar descuentos.");
+                }
+
+                if (precioModificado) {
+                    precioFinal = item.getPrecioUnitario();
+                }
+
+                // Convertir porcentaje a decimal (ej. 10 / 100 = 0.10)
+                BigDecimal factorDescuento = descuentoSolicitado.divide(new BigDecimal("100"), 4,
+                        java.math.RoundingMode.HALF_UP);
+
+                // Calcular monto a descontar (ej. 4750 * 0.10 = 475)
+                BigDecimal montoDescontado = precioFinal.multiply(factorDescuento);
+
+                // Precio real pagado
+                precioFinal = precioFinal.subtract(montoDescontado);
+
+                if (precioFinal.compareTo(BigDecimal.ZERO) < 0) {
+                    precioFinal = BigDecimal.ZERO;
+                }
+            }
+            // --------------------------------------------------------
+
+            // F. Crear Detalle con precio dinámico y validado
             DetalleVenta det = new DetalleVenta();
             det.setVenta(venta);
             det.setProductoId(item.getProductoId());
             det.setProductoNombre(prod.getNombreComercial());
             det.setCantidad(item.getCantidad());
-            det.setPrecioUnitario(precioAUsar); // ← PRECIO DINÁMICO
+
+            // Guardamos el PRECIO FINAL MÁS DESCUENTO COMO PRECIO UNITARIO REAL
+            det.setPrecioUnitario(precioFinal);
+            det.setDescuento(descuentoSolicitado);
+
             det.setTipoVenta(tipoVenta); // ← NUEVO: Registro de TipoVenta
 
             // Backward compatibility: mapear también al campo deprecated
-            @SuppressWarnings("deprecation")
             Boolean esVentaPorCajaDeprecated = (tipoVenta == TipoVenta.CAJA);
             det.setEsVentaPorCaja(esVentaPorCajaDeprecated);
 
-            BigDecimal sub = precioAUsar.multiply(new BigDecimal(item.getCantidad()));
+            BigDecimal sub = precioFinal.multiply(new BigDecimal(item.getCantidad()));
             det.setSubtotal(sub);
 
             detalleVentaRepository.save(det);
@@ -234,9 +284,9 @@ public class VentaServiceImpl implements VentaService {
                         .divide(BigDecimal.valueOf(100), 4, java.math.RoundingMode.HALF_UP)
                         .add(BigDecimal.ONE);
 
-                // El precioAUsar YA INCLUYE IVA (según lógica de caja/unidad con impuestos)
-                BigDecimal precioUnitarioSinIva = precioAUsar.divide(ivaFactor, 4, java.math.RoundingMode.HALF_UP);
-                BigDecimal ivaUnitario = precioAUsar.subtract(precioUnitarioSinIva);
+                // El cálculo de IVA se realiza sobre el precio final cobrado
+                BigDecimal precioUnitarioSinIva = precioFinal.divide(ivaFactor, 4, java.math.RoundingMode.HALF_UP);
+                BigDecimal ivaUnitario = precioFinal.subtract(precioUnitarioSinIva);
                 BigDecimal ivaTotalItem = ivaUnitario.multiply(new BigDecimal(item.getCantidad()));
 
                 totalIva = totalIva.add(ivaTotalItem);
@@ -259,7 +309,7 @@ public class VentaServiceImpl implements VentaService {
         venta.setTotal(total);
 
         // --- LÓGICA DE PAGO Y CAMBIO ---
-        if ("EFECTIVO".equalsIgnoreCase(venta.getMetodoPago())) {
+        if (com.farmacia.ms_transacciones.enums.MetodoPago.EFECTIVO.equals(venta.getMetodoPago())) {
             if (datosVenta.getMontoRecibido() == null) {
                 throw new RuntimeException("En pagos en efectivo debe indicar el monto recibido.");
             }
@@ -340,6 +390,7 @@ public class VentaServiceImpl implements VentaService {
                 i.setProductoId(d.getProductoId());
                 i.setCantidad(d.getCantidad());
                 i.setPrecioUnitario(d.getPrecioUnitario());
+                i.setDescuento(d.getDescuento());
                 i.setSubtotal(d.getSubtotal());
                 i.setEsVentaPorCaja(d.getEsVentaPorCaja()); // ← NUEVO CAMPO EN RESPUESTA
 

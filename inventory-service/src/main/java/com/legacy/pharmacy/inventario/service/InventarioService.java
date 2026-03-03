@@ -13,11 +13,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate; // ← NUEVO
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.ParameterMode;
 import jakarta.persistence.PersistenceContext;
-import jakarta.persistence.StoredProcedureQuery;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -214,12 +211,6 @@ public class InventarioService {
                 }
 
                 // 4. LÓGICA FEFO EN JAVA (Reemplaza al SP)
-                com.legacy.pharmacy.inventario.entity.TipoMovimiento tipoMov = com.legacy.pharmacy.inventario.entity.TipoMovimiento.SALIDA; // O
-                                                                                                                                            // VENTA
-                                                                                                                                            // según
-                                                                                                                                            // tu
-                                                                                                                                            // enum
-
                 // Buscamos lotes ordenados por vencimiento (FEFO)
                 List<Lote> lotes = loteRepository
                                 .findByProductoIdAndCantidadActualGreaterThanOrderByFechaVencimientoAsc(
