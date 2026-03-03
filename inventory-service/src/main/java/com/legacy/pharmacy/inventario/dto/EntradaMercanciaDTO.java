@@ -32,4 +32,6 @@ public class EntradaMercanciaDTO {
     private String usuarioResponsable; // Quién hace la operación
 
     private String observaciones;
+
+    private String documentoRef;
 }

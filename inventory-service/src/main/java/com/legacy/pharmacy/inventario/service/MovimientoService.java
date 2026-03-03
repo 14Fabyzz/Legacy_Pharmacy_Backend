@@ -57,7 +57,7 @@ public class MovimientoService {
                     .cantidad(m.getCantidad())
                     .saldoResultante(saldoAcumulado)
                     .saldoHistorico(m.getSaldoHistorico()) // TAREA 4
-                    .documentoRef(m.getObservacion()) // Usamos observación como referencia por ahora
+                    .documentoRef(m.getDocumentoRef()) // <-- CORRECCIÓN: Usar getDocumentoRef
                     .usuario(m.getUsuarioResponsable())
                     .nombreProducto(m.getLote().getProducto().getNombreComercial())
                     .codigoBarras(m.getLote().getProducto().getCodigoBarras())
@@ -92,7 +92,7 @@ public class MovimientoService {
                 // lista paginada global
                 .saldoResultante(m.getLote().getCantidadActual())
                 .saldoHistorico(m.getSaldoHistorico()) // TAREA 4
-                .documentoRef(m.getObservacion())
+                .documentoRef(m.getDocumentoRef()) // <-- CORRECCIÓN: Usar getDocumentoRef
                 .detalle(m.getObservacion())
                 .lote(m.getLote().getNumeroLote())
                 .costoUnitario(m.getLote().getCostoCompra())

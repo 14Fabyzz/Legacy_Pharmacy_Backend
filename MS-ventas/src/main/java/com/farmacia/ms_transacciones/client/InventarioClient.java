@@ -42,20 +42,21 @@ public class InventarioClient {
         }
     }
 
-    // --- MÉTODO ACTUALIZADO: Recibe sucursalId y TipoVenta ---
+    // --- MÉTODO ACTUALIZADO: Recibe sucursalId, TipoVenta y documentoRef ---
     public void registrarSalida(Integer productoId, Integer cantidad, Integer sucursalId,
-            com.farmacia.ms_transacciones.enums.TipoVenta tipoVenta) {
+            com.farmacia.ms_transacciones.enums.TipoVenta tipoVenta, String documentoRef) {
         try {
 
             String url = inventarioBaseUrl + "/productos/" + productoId + "/descontar";
 
-            // Convertir TipoVenta a JSON
+            // Convertir TipoVenta y documentoRef a JSON
             String tipoVentaJson = (tipoVenta != null) ? "\"" + tipoVenta.name() + "\"" : "null";
+            String docRefJson = (documentoRef != null) ? "\"" + documentoRef + "\"" : "null";
 
-            // Enviamos el TipoVenta en el JSON (inventory-service usa enum)
+            // Enviamos el TipoVenta y documentoRef en el JSON
             String jsonBody = String.format(
-                    "{\"cantidad\": %d, \"motivo\": \"VENTA_SUCURSAL_%d\", \"sucursalId\": %d, \"tipoVenta\": %s}",
-                    cantidad, sucursalId, sucursalId, tipoVentaJson);
+                    "{\"cantidad\": %d, \"motivo\": \"VENTA_SUCURSAL_%d\", \"sucursalId\": %d, \"tipoVenta\": %s, \"documentoRef\": %s}",
+                    cantidad, sucursalId, sucursalId, tipoVentaJson, docRefJson);
 
             System.out.println("VENTA-CLIENTE: Enviando POST a Inventario: URL=" + url + ", Body=" + jsonBody);
 
@@ -71,15 +72,17 @@ public class InventarioClient {
 
     // --- MÉTODO RENOMBRADO: registrarDevolucion ---
     public void registrarDevolucion(Integer productoId, Integer cantidad,
-            com.farmacia.ms_transacciones.enums.TipoVenta tipoVenta, String destinoProducto) {
+            com.farmacia.ms_transacciones.enums.TipoVenta tipoVenta, String destinoProducto, String documentoRef) {
         try {
             // NOTA: La ruta cambió a .../productos/{id}/devolver
             String url = inventarioBaseUrl + "/productos/" + productoId + "/devolver";
             String tipoVentaJson = (tipoVenta != null) ? "\"" + tipoVenta.name() + "\"" : "null";
             String destinoProductoJson = (destinoProducto != null) ? "\"" + destinoProducto + "\"" : "null";
+            String docRefJson = (documentoRef != null) ? "\"" + documentoRef + "\"" : "null";
+
             String jsonBody = String.format(
-                    "{\"cantidad\": %d, \"motivo\": \"DEVOLUCION_CLIENTE\", \"tipoVenta\": %s, \"destinoProducto\": %s}",
-                    cantidad, tipoVentaJson, destinoProductoJson);
+                    "{\"cantidad\": %d, \"motivo\": \"DEVOLUCION_CLIENTE\", \"tipoVenta\": %s, \"destinoProducto\": %s, \"documentoRef\": %s}",
+                    cantidad, tipoVentaJson, destinoProductoJson, docRefJson);
 
             HttpEntity<String> entity = new HttpEntity<>(jsonBody, getHeaders());
             ResponseEntity<Void> response = restTemplate.exchange(url, HttpMethod.POST, entity, Void.class);
