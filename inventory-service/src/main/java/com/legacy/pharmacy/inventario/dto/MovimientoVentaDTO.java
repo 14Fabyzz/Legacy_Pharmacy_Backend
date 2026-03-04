@@ -10,4 +10,5 @@ public class MovimientoVentaDTO {
     private String motivo; // Ventas enviará "VENTA" o "DEVOLUCION"
     private TipoVenta tipoVenta;
     private String destinoProducto; // BODEGA, MERMA, CUARENTENA
+    private String documentoRef; // Added for invoice/transaction ID
 }

@@ -47,7 +47,7 @@ public class IntegracionVentasController {
     @PostMapping("/salida")
     public ResponseEntity<?> registrarVenta(@RequestBody MovimientoVentaDTO dto) {
         try {
-            inventarioService.descontarInventarioVenta(dto.getProductoId(), dto.getCantidad());
+            inventarioService.descontarInventarioVenta(dto.getProductoId(), dto.getCantidad(), dto.getDocumentoRef());
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -62,7 +62,8 @@ public class IntegracionVentasController {
                     dto.getProductoId(),
                     dto.getCantidad(),
                     dto.getTipoVenta(),
-                    dto.getDestinoProducto());
+                    dto.getDestinoProducto(),
+                    dto.getDocumentoRef());
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));

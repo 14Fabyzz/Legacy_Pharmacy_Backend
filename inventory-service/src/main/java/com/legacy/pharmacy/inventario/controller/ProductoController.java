@@ -194,8 +194,8 @@ public class ProductoController {
                 productoId,
                 request.cantidad(),
                 request.motivo(),
-                request.tipoVenta() // Pass the Enum directly
-        );
+                request.tipoVenta(), // Pass the Enum directly
+                request.documentoRef());
 
         return ResponseEntity.ok(Map.of(
                 "mensaje", "Inventario descontado exitosamente",
@@ -217,7 +217,8 @@ public class ProductoController {
                 request.cantidad(),
                 request.motivo(),
                 request.tipoVenta(),
-                request.destinoProducto());
+                request.destinoProducto(),
+                request.documentoRef());
 
         return ResponseEntity.ok(Map.of(
                 "mensaje", "Inventario devuelto exitosamente",
@@ -227,10 +228,10 @@ public class ProductoController {
 
     // DTOs
     public record DescontarRequest(Integer cantidad, String motivo,
-            com.legacy.pharmacy.inventario.enums.TipoVenta tipoVenta) {
+            com.legacy.pharmacy.inventario.enums.TipoVenta tipoVenta, String documentoRef) {
     }
 
     public record DevolverRequest(Integer cantidad, String motivo,
-            com.legacy.pharmacy.inventario.enums.TipoVenta tipoVenta, String destinoProducto) {
+            com.legacy.pharmacy.inventario.enums.TipoVenta tipoVenta, String destinoProducto, String documentoRef) {
     }
 }

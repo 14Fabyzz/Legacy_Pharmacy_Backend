@@ -45,6 +45,12 @@ public class InventarioService {
 
         @Transactional
         public Map<String, Object> registrarEntrada(EntradaMercanciaDTO entrada, String usuarioResponsable) {
+                // TAREA 3: Validación Dura de Auditoría para Entradas
+                if (entrada.getDocumentoRef() == null || entrada.getDocumentoRef().isBlank()) {
+                        throw new IllegalArgumentException(
+                                        "Error de Auditoría: Toda Entrada o Ajuste debe especificar un número de documento, factura o acta.");
+                }
+
                 // 1. Validar producto y obtener datos de conversión
                 Producto producto = productoRepository.findById(entrada.getProductoId())
                                 .orElseThrow(() -> new RuntimeException(
@@ -135,7 +141,7 @@ public class InventarioService {
                 // la "foto" lógica es que este lote nace con 'cantidadReal'.
                 int saldoFoto = cantidadReal;
 
-                String sqlMov = "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                String sqlMov = "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones, documento_ref) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
                 jdbcTemplate.update(sqlMov,
                                 loteId,
                                 "ENTRADA",
@@ -143,7 +149,8 @@ public class InventarioService {
                                 saldoFoto, // saldo_historico
                                 usuarioResponsable != null ? usuarioResponsable : "SISTEMA",
                                 entrada.getSucursalId(),
-                                entrada.getObservaciones());
+                                entrada.getObservaciones(),
+                                entrada.getDocumentoRef());
 
                 return java.util.Map.of("estado", "OK", "mensaje", "Entrada registrada (Direct JDBC)");
         }
@@ -170,6 +177,13 @@ public class InventarioService {
         // --- MÉTODO DE SALIDA ---
         @Transactional
         public List<Map<String, Object>> registrarSalida(com.legacy.pharmacy.inventario.dto.SalidaMercanciaDTO salida) {
+                // Validación de Auditoría para Salidas (Ventas o similares que llaman este
+                // método directamente)
+                if (salida.getDocumentoRef() == null || salida.getDocumentoRef().isBlank()) {
+                        throw new IllegalArgumentException(
+                                        "Error de Auditoría: Toda Salida (Venta) debe especificar un número de factura o documento.");
+                }
+
                 // 1. Obtener producto para factores de conversión
                 Producto producto = productoRepository.findById(salida.getProductoId())
                                 .orElseThrow(() -> new RuntimeException(
@@ -234,7 +248,7 @@ public class InventarioService {
 
                         if (filasAfectadas > 0) {
                                 // Éxito: Registro Movimiento
-                                String sqlMov = "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                                String sqlMov = "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones, documento_ref) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
                                 // TAREA 3: Snapshot Saldo Historico (Salida)
                                 // La cantidad actual del lote (antes del update) era
@@ -256,7 +270,8 @@ public class InventarioService {
                                                 salida.getUsuarioResponsable() != null ? salida.getUsuarioResponsable()
                                                                 : "VENDEDOR",
                                                 salida.getSucursalId(),
-                                                salida.getObservaciones());
+                                                salida.getObservaciones(),
+                                                salida.getDocumentoRef());
 
                                 cantidadPendiente -= cantidadADescontar;
 
@@ -388,7 +403,13 @@ public class InventarioService {
          */
         @Transactional
         public void descontarInventario(Integer productoId, Integer cantidad, String motivo,
-                        com.legacy.pharmacy.inventario.enums.TipoVenta tipoVenta) {
+                        com.legacy.pharmacy.inventario.enums.TipoVenta tipoVenta, String documentoRef) {
+
+                if (documentoRef == null || documentoRef.isBlank()) {
+                        throw new IllegalArgumentException(
+                                        "Error de Auditoría: Toda Salida (Venta) debe especificar un número de factura o ID transaccional.");
+                }
+
                 log.info("DIAGNOSTICO: Iniciando descuento. ProductoId={}, Cantidad={}, TipoVenta={}, Motivo={}",
                                 productoId, cantidad, tipoVenta, motivo);
 
@@ -469,8 +490,9 @@ public class InventarioService {
                                 int saldoFoto = lote.getCantidadActual() - aDescontar;
 
                                 jdbcTemplate.update(
-                                                "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                                                lote.getId(), "SALIDA", -aDescontar, saldoFoto, username, 1, motivo);
+                                                "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones, documento_ref) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                                                lote.getId(), "SALIDA", -aDescontar, saldoFoto, username, 1, motivo,
+                                                documentoRef);
 
                                 pendiente -= aDescontar;
 
@@ -498,8 +520,10 @@ public class InventarioService {
         // UNIDAD)
         @Transactional
         public void descontarInventario(Integer productoId, Integer cantidad, String motivo) {
+                // Legacy fallback call expects some document_ref.
+                // Using "SISTEMA-LEGACY" or similar for internal legacy calls.
                 descontarInventario(productoId, cantidad, motivo,
-                                com.legacy.pharmacy.inventario.enums.TipoVenta.UNIDAD);
+                                com.legacy.pharmacy.inventario.enums.TipoVenta.UNIDAD, "SISTEMA-LEGACY");
         }
 
         /**
@@ -514,7 +538,14 @@ public class InventarioService {
          */
         @Transactional
         public void devolverInventario(Integer productoId, Integer cantidad, String motivo,
-                        com.legacy.pharmacy.inventario.enums.TipoVenta tipoVenta, String destinoProducto) {
+                        com.legacy.pharmacy.inventario.enums.TipoVenta tipoVenta, String destinoProducto,
+                        String documentoRef) {
+
+                if (documentoRef == null || documentoRef.isBlank()) {
+                        throw new IllegalArgumentException(
+                                        "Error de Auditoría: Toda Devolución o Ajuste debe especificar un número de documento o factura.");
+                }
+
                 log.info("Devolviendo {} unidades (Tipo:{}) del producto {} - Motivo: {} - Destino: {} - Usuario: {}",
                                 cantidad, tipoVenta, productoId, motivo, destinoProducto, UserContext.getUsername());
 
@@ -578,28 +609,29 @@ public class InventarioService {
                         }
 
                         jdbcTemplate.update(
-                                        "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones) "
+                                        "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones, documento_ref) "
                                                         +
-                                                        "VALUES (?, 'DEVOLUCION', ?, ?, ?, 1, ?)",
+                                                        "VALUES (?, 'DEVOLUCION', ?, ?, ?, 1, ?, ?)",
                                         loteId,
                                         cantidadReal, // Cantidad positiva ya en unidades
                                         saldoFoto,
                                         username != null ? username : "SISTEMA",
-                                        obsDev);
+                                        obsDev,
+                                        documentoRef);
 
-                        // Si el destino NO es inventario disponible, retirarlo como MERMA/CUARENTENA
                         if (destinoProducto != null && (destinoProducto.equalsIgnoreCase("MERMA")
                                         || destinoProducto.equalsIgnoreCase("CUARENTENA"))) {
                                 int saldoDespuesAjuste = saldoFoto - cantidadReal;
                                 jdbcTemplate.update(
-                                                "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones) "
+                                                "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones, documento_ref) "
                                                                 +
-                                                                "VALUES (?, 'AJUSTE_NEGATIVO', ?, ?, ?, 1, ?)",
+                                                                "VALUES (?, 'AJUSTE_NEGATIVO', ?, ?, ?, 1, ?, ?)",
                                                 loteId,
                                                 -cantidadReal, // Movimiento negativo
                                                 saldoDespuesAjuste,
                                                 username != null ? username : "SISTEMA",
-                                                "Traslado automático a " + destinoProducto + " tras devolución");
+                                                "Traslado automático a " + destinoProducto + " tras devolución",
+                                                documentoRef);
                         }
 
                         log.info("Inventario devuelto exitosamente: producto={}, unidades={}, lote={}",
@@ -625,7 +657,7 @@ public class InventarioService {
 
         // 2. Descontar Inventario (Lógica FIFO/FEFO automática)
         @Transactional
-        public void descontarInventarioVenta(Integer productoId, Integer cantidad) {
+        public void descontarInventarioVenta(Integer productoId, Integer cantidad, String documentoRef) {
                 // Verificar stock primero
                 Integer stock = consultarStockActual(productoId);
                 if (stock < cantidad) {
@@ -634,15 +666,21 @@ public class InventarioService {
 
                 // Reutilizamos el método robusto que acabamos de crear
                 // "VENTA_EXTERNA" será el motivo
-                // Reutilizamos el método robusto que acabamos de crear
-                // "VENTA_EXTERNA" será el motivo
                 descontarInventario(productoId, cantidad, "VENTA_EXTERNA",
-                                com.legacy.pharmacy.inventario.enums.TipoVenta.UNIDAD);
+                                com.legacy.pharmacy.inventario.enums.TipoVenta.UNIDAD, documentoRef);
         }
 
         @Transactional
         public void reponerInventarioDevolucion(Integer productoId, Integer cantidad,
-                        com.legacy.pharmacy.inventario.enums.TipoVenta tipoVenta, String destinoProducto) {
+                        com.legacy.pharmacy.inventario.enums.TipoVenta tipoVenta, String destinoProducto,
+                        String documentoRef) {
+                // TAREA 3: Validación dura (Devoluciones se consideran ajustes de entrada real
+                // o traslado)
+                if (documentoRef == null || documentoRef.isBlank()) {
+                        throw new IllegalArgumentException(
+                                        "Error de Auditoría: Toda Entrada o Ajuste debe especificar un número de documento, factura o acta.");
+                }
+
                 // Obtenemos producto para el factor de conversión
                 Producto producto = productoRepository.findById(productoId)
                                 .orElseThrow(() -> new RuntimeException("Producto no encontrado: " + productoId));
@@ -687,20 +725,21 @@ public class InventarioService {
                                 obs += " | Destino: " + destinoProducto;
                         }
 
-                        String sqlInsert = "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones) "
+                        String sqlInsert = "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones, documento_ref) "
                                         +
-                                        "VALUES (?, 'DEVOLUCION', ?, ?, 'MS-VENTAS', 1, ?)";
+                                        "VALUES (?, 'DEVOLUCION', ?, ?, 'MS-VENTAS', 1, ?, ?)";
 
-                        jdbcTemplate.update(sqlInsert, loteId, cantidadReal, saldoFoto, obs);
+                        jdbcTemplate.update(sqlInsert, loteId, cantidadReal, saldoFoto, obs, documentoRef);
 
                         if (destinoProducto != null && (destinoProducto.equalsIgnoreCase("MERMA")
                                         || destinoProducto.equalsIgnoreCase("CUARENTENA"))) {
                                 int saldoDespuesAjuste = saldoFoto - cantidadReal;
                                 jdbcTemplate.update(
-                                                "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones) "
-                                                                + "VALUES (?, 'AJUSTE_NEGATIVO', ?, ?, 'MS-VENTAS', 1, ?)",
+                                                "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones, documento_ref) "
+                                                                + "VALUES (?, 'AJUSTE_NEGATIVO', ?, ?, 'MS-VENTAS', 1, ?, ?)",
                                                 loteId, -cantidadReal, saldoDespuesAjuste,
-                                                "Traslado automático a " + destinoProducto + " tras devolución");
+                                                "Traslado automático a " + destinoProducto + " tras devolución",
+                                                documentoRef);
                         }
 
                 } catch (Exception e) {
