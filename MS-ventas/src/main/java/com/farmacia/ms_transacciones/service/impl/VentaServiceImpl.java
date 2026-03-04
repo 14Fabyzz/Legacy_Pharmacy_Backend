@@ -306,7 +306,26 @@ public class VentaServiceImpl implements VentaService {
             }
         }
 
+        // -------------------------------------------------------------
+        // --- APLICAR REDONDEO AL PESO (SOLO EFECTIVO) ---
+        BigDecimal ajusteRedondeo = BigDecimal.ZERO;
+
+        if (com.farmacia.ms_transacciones.enums.MetodoPago.EFECTIVO.equals(datosVenta.getMetodoPago())) {
+            BigDecimal factorRedondeo = new BigDecimal("50");
+            BigDecimal totalRedondeado = total.divide(factorRedondeo, 0, java.math.RoundingMode.FLOOR)
+                    .multiply(factorRedondeo);
+
+            // Calcular el delta para el asiento contable (TotalCobrado -
+            // SumatoriaProductos)
+            ajusteRedondeo = totalRedondeado.subtract(total);
+
+            // Sobreescribir el total con el valor redondeado que entregará el cliente
+            total = totalRedondeado;
+        }
+        venta.setAjusteRedondeo(ajusteRedondeo);
+        venta.setTotalIva(totalIva); // <-- CORRECCIÓN: Persistir el IVA en la entidad
         venta.setTotal(total);
+        // -------------------------------------------------------------
 
         // --- LÓGICA DE PAGO Y CAMBIO ---
         if (com.farmacia.ms_transacciones.enums.MetodoPago.EFECTIVO.equals(venta.getMetodoPago())) {
@@ -371,6 +390,8 @@ public class VentaServiceImpl implements VentaService {
         } else {
             dto.setTotalIva(BigDecimal.ZERO);
         }
+
+        dto.setAjusteRedondeo(v.getAjusteRedondeo());
 
         // Nuevos campos
         dto.setMetodoPago(v.getMetodoPago());
@@ -515,9 +536,6 @@ public class VentaServiceImpl implements VentaService {
         }
 
         // 4. ACTUALIZAR TOTALES Y ESTADO
-        devolucion.setTotalDevuelto(montoTotalDevuelto);
-        devolucionRepository.save(devolucion);
-
         boolean todosDevueltos = true;
         for (DetalleVenta d : venta.getDetalles()) {
             int qty = d.getCantidad();
@@ -528,6 +546,28 @@ public class VentaServiceImpl implements VentaService {
                 break;
             }
         }
+
+        // --- LÓGICA DE REGRESIÓN DE AJUSTE REDONDEO ---
+        // Para evitar descuadrar la caja: si con esta transacción se devuelve el 100%
+        // de la factura
+        // (ya sea de golpe o sumado a devoluciones anteriores), el sistema debe
+        // regresar
+        // el diferencial generado por el redondeo en su momento.
+        if (todosDevueltos && venta.getAjusteRedondeo() != null
+                && venta.getAjusteRedondeo().compareTo(BigDecimal.ZERO) != 0) {
+            System.out.println(
+                    "VENTA-DEVOLUCION: Aplicando ajuste de redondeo histórico de la factura a la devolución final: "
+                            + venta.getAjusteRedondeo());
+            montoTotalDevuelto = montoTotalDevuelto.add(venta.getAjusteRedondeo());
+        }
+
+        // Validar negativos imprevistos
+        if (montoTotalDevuelto.compareTo(BigDecimal.ZERO) < 0) {
+            montoTotalDevuelto = BigDecimal.ZERO;
+        }
+
+        devolucion.setTotalDevuelto(montoTotalDevuelto);
+        devolucionRepository.save(devolucion);
 
         venta.setEstado(todosDevueltos ? "DEVUELTA" : "PARCIALMENTE_DEVUELTA");
         ventaRepository.save(venta);

@@ -8,7 +8,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "ventas")
+@Table(name = "ventas", indexes = {
+        @Index(name = "idx_venta_turno", columnList = "turno_id"),
+        @Index(name = "idx_venta_cliente", columnList = "cliente_id"),
+        @Index(name = "idx_venta_fecha", columnList = "fechaVenta"),
+        @Index(name = "idx_venta_factura", columnList = "numeroFactura", unique = true)
+})
 public class Venta {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -29,6 +34,11 @@ public class Venta {
     private BigDecimal montoRecibido;
     private BigDecimal cambio;
 
+    // --- DATOS DE REDONDEO ---
+    @Column(precision = 10, scale = 2)
+    private BigDecimal ajusteRedondeo;
+    // -------------------------
+
     // --- DATOS DE PAGO ---
     @Enumerated(EnumType.STRING)
     private com.farmacia.ms_transacciones.enums.MetodoPago metodoPago; // 'EFECTIVO', 'TARJETA', 'TRANSFERENCIA'
@@ -37,11 +47,11 @@ public class Venta {
 
     private String estado;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cliente_id")
     private Cliente cliente;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "turno_id")
     @JsonIgnoreProperties("ventas")
     private TurnoCaja turno;
@@ -176,5 +186,13 @@ public class Venta {
 
     public void setDetalles(List<DetalleVenta> detalles) {
         this.detalles = detalles;
+    }
+
+    public BigDecimal getAjusteRedondeo() {
+        return ajusteRedondeo;
+    }
+
+    public void setAjusteRedondeo(BigDecimal ajusteRedondeo) {
+        this.ajusteRedondeo = ajusteRedondeo;
     }
 }

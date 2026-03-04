@@ -6,7 +6,10 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "detalle_ventas")
+@Table(name = "detalle_ventas", indexes = {
+        @Index(name = "idx_detalleventa_venta", columnList = "venta_id"),
+        @Index(name = "idx_detalleventa_producto", columnList = "productoId")
+})
 public class DetalleVenta {
 
     @Id
@@ -30,7 +33,7 @@ public class DetalleVenta {
     @Column(name = "es_venta_por_caja")
     private Boolean esVentaPorCaja; // true = Caja, false = Unidad
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "venta_id")
     @JsonIgnore // Rompe el bucle infinito JSON
     private Venta venta;

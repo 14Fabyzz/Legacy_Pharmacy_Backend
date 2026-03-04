@@ -14,6 +14,7 @@ public class VentaResponseDTO {
     private java.math.BigDecimal montoRecibido;
     private java.math.BigDecimal cambio; // La devuelta
     private java.math.BigDecimal totalIva; // Impuesto calculado
+    private java.math.BigDecimal ajusteRedondeo;
 
     private String vendedorNombre;
     private Integer sucursalId;
@@ -143,5 +144,13 @@ public class VentaResponseDTO {
 
     public void setResumenProductos(List<String> resumenProductos) {
         this.resumenProductos = resumenProductos;
+    }
+
+    public BigDecimal getAjusteRedondeo() {
+        return ajusteRedondeo;
+    }
+
+    public void setAjusteRedondeo(BigDecimal ajusteRedondeo) {
+        this.ajusteRedondeo = ajusteRedondeo;
     }
 }

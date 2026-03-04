@@ -3,7 +3,10 @@ package com.farmacia.ms_transacciones.model;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "clientes")
+@Table(name = "clientes", indexes = {
+        @Index(name = "idx_cliente_identificacion", columnList = "numeroIdentificacion", unique = true),
+        @Index(name = "idx_cliente_nombre", columnList = "nombre, apellido")
+})
 public class Cliente {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
