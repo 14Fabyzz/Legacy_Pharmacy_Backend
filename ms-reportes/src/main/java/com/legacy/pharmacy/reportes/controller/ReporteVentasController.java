@@ -24,6 +24,7 @@ import java.time.LocalDate;
  * &periodicidad=MENSUAL
  * &sucursalId=1 (opcional)
  */
+@CrossOrigin(origins = {"http://localhost:4200", "http://localhost:80"})
 @RestController
 @RequestMapping("/ventas")
 public class ReporteVentasController {
