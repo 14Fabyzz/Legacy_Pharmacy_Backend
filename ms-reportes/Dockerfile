@@ -9,7 +9,7 @@ COPY src ./src
 RUN mvn clean package -DskipTests
 
 # Etapa 2: Imagen de ejecución (Runtime)
-FROM amazoncorretto:21-alpine
+FROM amazoncorretto:21
 WORKDIR /app
 # Copiamos el JAR generado en la etapa anterior
 COPY --from=build /app/target/*.jar app.jar

@@ -99,6 +99,7 @@ services:
       - AIVEN_USER=${AIVEN_USER}
       - AIVEN_PG_PASSWORD=${AIVEN_PG_PASSWORD}
       - JWT_SECRET=${JWT_SECRET}
+      - MS_REPORTES_GEMINI_API_KEY=${MS_REPORTES_GEMINI_API_KEY}
     networks:
       - pharmacy-network
 

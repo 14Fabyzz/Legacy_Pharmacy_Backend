@@ -121,6 +121,7 @@ spring:
           predicates:
             - Path=/api/v1/reportes/**
           filters:
+            - RewritePath=/api/v1/reportes/(?<segment>.*), /api/v1/reportes/${segment}
             - AuthenticationFilter
 
 # =============================================================================

@@ -2,6 +2,7 @@ package com.legacy.pharmacy.reportes.controller;
 
 import com.legacy.pharmacy.reportes.config.UserContext;
 import com.legacy.pharmacy.reportes.dto.ReporteVentasConsolidadasDTO;
+import com.legacy.pharmacy.reportes.dto.ResumenInteligenteResponseDTO;
 import com.legacy.pharmacy.reportes.enums.Periodicidad;
 import com.legacy.pharmacy.reportes.exception.BusinessException;
 import com.legacy.pharmacy.reportes.service.ReporteVentasService;
@@ -27,73 +28,95 @@ import java.time.LocalDate;
 @RequestMapping("/ventas")
 public class ReporteVentasController {
 
-    private static final Logger log = LoggerFactory.getLogger(ReporteVentasController.class);
+        private static final Logger log = LoggerFactory.getLogger(ReporteVentasController.class);
 
-    private final ReporteVentasService reporteVentasService;
+        private final ReporteVentasService reporteVentasService;
 
-    public ReporteVentasController(ReporteVentasService reporteVentasService) {
-        this.reporteVentasService = reporteVentasService;
-    }
-
-    @GetMapping("/consolidado")
-    public ResponseEntity<ReporteVentasConsolidadasDTO> obtenerReporteConsolidado(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
-            @RequestParam Periodicidad periodicidad,
-            @RequestParam(required = false) Integer sucursalId) {
-
-        // Verificar que el usuario sea ADMIN/ADMINISTRADOR
-        if (!UserContext.isAdmin()) {
-            throw new BusinessException(
-                    "Acceso denegado: solo usuarios con rol ADMINISTRADOR pueden generar reportes");
+        public ReporteVentasController(ReporteVentasService reporteVentasService) {
+                this.reporteVentasService = reporteVentasService;
         }
 
-        log.info("Solicitud de reporte consolidado: {} a {}, periodicidad={}, sucursal={}, usuario={}",
-                fechaInicio, fechaFin, periodicidad, sucursalId, UserContext.getUsername());
+        @GetMapping("/consolidado")
+        public ResponseEntity<ReporteVentasConsolidadasDTO> obtenerReporteConsolidado(
+                        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
+                        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
+                        @RequestParam Periodicidad periodicidad,
+                        @RequestParam(required = false) Integer sucursalId) {
 
-        ReporteVentasConsolidadasDTO reporte = reporteVentasService.generarReporteConsolidado(
-                fechaInicio, fechaFin, periodicidad, sucursalId);
+                // Verificar que el usuario sea ADMIN/ADMINISTRADOR
+                if (!UserContext.isAdmin()) {
+                        throw new BusinessException(
+                                        "Acceso denegado: solo usuarios con rol ADMINISTRADOR pueden generar reportes");
+                }
 
-        return ResponseEntity.ok(reporte);
-    }
+                log.info("Solicitud de reporte consolidado: {} a {}, periodicidad={}, sucursal={}, usuario={}",
+                                fechaInicio, fechaFin, periodicidad, sucursalId, UserContext.getUsername());
 
-    @GetMapping("/top-rotacion")
-    public ResponseEntity<java.util.List<com.legacy.pharmacy.reportes.dto.TopProductoResponseDTO>> obtenerTopRotacion(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
-            @RequestParam(required = false, defaultValue = "10") Integer limite) {
+                ReporteVentasConsolidadasDTO reporte = reporteVentasService.generarReporteConsolidado(
+                                fechaInicio, fechaFin, periodicidad, sucursalId);
 
-        // Verificar que el usuario sea ADMIN/ADMINISTRADOR
-        if (!UserContext.isAdmin()) {
-            throw new BusinessException(
-                    "Acceso denegado: solo usuarios con rol ADMINISTRADOR pueden consultar el ranking");
+                return ResponseEntity.ok(reporte);
         }
 
-        log.info("Solicitud de reporte Top {} rotación: {} a {}, usuario={}",
-                limite, fechaInicio, fechaFin, UserContext.getUsername());
+        @GetMapping("/top-rotacion")
+        public ResponseEntity<java.util.List<com.legacy.pharmacy.reportes.dto.TopProductoResponseDTO>> obtenerTopRotacion(
+                        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
+                        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
+                        @RequestParam(required = false, defaultValue = "10") Integer limite) {
 
-        var reporte = reporteVentasService.obtenerTopRotacion(fechaInicio, fechaFin, limite);
+                // Verificar que el usuario sea ADMIN/ADMINISTRADOR
+                if (!UserContext.isAdmin()) {
+                        throw new BusinessException(
+                                        "Acceso denegado: solo usuarios con rol ADMINISTRADOR pueden consultar el ranking");
+                }
 
-        return ResponseEntity.ok(reporte);
-    }
+                log.info("Solicitud de reporte Top {} rotación: {} a {}, usuario={}",
+                                limite, fechaInicio, fechaFin, UserContext.getUsername());
 
-    @GetMapping("/consolidado-pagos")
-    public ResponseEntity<com.legacy.pharmacy.reportes.dto.ConsolidadoPagosResponseDTO> obtenerConsolidadoPagos(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
-            @RequestParam(required = false) Integer sucursalId) {
+                var reporte = reporteVentasService.obtenerTopRotacion(fechaInicio, fechaFin, limite);
 
-        // Verificar que el usuario sea ADMIN/ADMINISTRADOR
-        if (!UserContext.isAdmin()) {
-            throw new BusinessException(
-                    "Acceso denegado: solo usuarios con rol ADMINISTRADOR pueden generar reportes");
+                return ResponseEntity.ok(reporte);
         }
 
-        log.info("Solicitud de reporte consolidado de pagos: {} a {}, sucursal={}, usuario={}",
-                fechaInicio, fechaFin, sucursalId, UserContext.getUsername());
+        @GetMapping("/consolidado-pagos")
+        public ResponseEntity<com.legacy.pharmacy.reportes.dto.ConsolidadoPagosResponseDTO> obtenerConsolidadoPagos(
+                        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
+                        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
+                        @RequestParam(required = false) Integer sucursalId) {
 
-        var reporte = reporteVentasService.generarConsolidadoPagos(fechaInicio, fechaFin, sucursalId);
+                // Verificar que el usuario sea ADMIN/ADMINISTRADOR
+                if (!UserContext.isAdmin()) {
+                        throw new BusinessException(
+                                        "Acceso denegado: solo usuarios con rol ADMINISTRADOR pueden generar reportes");
+                }
 
-        return ResponseEntity.ok(reporte);
-    }
+                log.info("Solicitud de reporte consolidado de pagos: {} a {}, sucursal={}, usuario={}",
+                                fechaInicio, fechaFin, sucursalId, UserContext.getUsername());
+
+                var reporte = reporteVentasService.generarConsolidadoPagos(fechaInicio, fechaFin, sucursalId);
+
+                return ResponseEntity.ok(reporte);
+        }
+
+        @GetMapping("/resumen-inteligente")
+        public ResponseEntity<ResumenInteligenteResponseDTO> generarResumenInteligente(
+                        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
+                        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
+                        @RequestParam Periodicidad periodicidad,
+                        @RequestParam(required = false) Integer sucursalId) {
+
+                // Verificar que el usuario sea ADMIN/ADMINISTRADOR
+                if (!UserContext.isAdmin()) {
+                        throw new BusinessException(
+                                        "Acceso denegado: solo usuarios con rol ADMINISTRADOR pueden generar resúmenes con IA");
+                }
+
+                log.info("Solicitud de resumen inteligente de ventas: {} a {}, periodicidad={}, sucursal={}, usuario={}",
+                                fechaInicio, fechaFin, periodicidad, sucursalId, UserContext.getUsername());
+
+                ResumenInteligenteResponseDTO resumen = reporteVentasService.generarResumenEjecutivo(
+                                fechaInicio, fechaFin, periodicidad, sucursalId);
+
+                return ResponseEntity.ok(resumen);
+        }
 }
