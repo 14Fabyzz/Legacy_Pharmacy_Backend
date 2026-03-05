@@ -165,6 +165,14 @@ public class ReporteVentasService {
         prompt.append("Subtotal Neto: $").append(reporteBase.getSubtotalNeto()).append("\n");
         prompt.append("Cantidad de Ventas: ").append(reporteBase.getCantidadVentas()).append("\n\n");
 
+        prompt.append("Desglose de ingresos por periodo (Agrupación ").append(periodicidad).append("):\n");
+        for (PeriodoVentaDTO p : reporteBase.getPeriodos()) {
+            prompt.append("- Periodo ").append(p.getPeriodo())
+                    .append(": Ingresos $").append(p.getTotalIngresos())
+                    .append(" (").append(p.getCantidadVentas()).append(" ventas)\n");
+        }
+        prompt.append("\n");
+
         prompt.append("Top 5 productos más vendidos en el mismo periodo:\n");
         for (TopProductoResponseDTO prod : topProductos) {
             prompt.append("- ").append(prod.getNombreProducto())
