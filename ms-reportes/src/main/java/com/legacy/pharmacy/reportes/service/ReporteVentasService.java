@@ -181,13 +181,15 @@ public class ReporteVentasService {
         }
 
         prompt.append(
-                "\nPor favor, redacta un análisis de 3 párrafos destacando los hallazgos más importantes, el comportamiento de los ingresos y una recomendación comercial breve basada en estos datos.");
+                "\nPor favor, redacta un análisis ejecutivo directo y altamente escaneable. Usa la siguiente estructura obligatoria: 1. Un breve párrafo introductorio. 2. Un subtítulo '### Hallazgos Clave' seguido de una lista de viñetas con los 3 datos más impactantes. 3. Un subtítulo '### Recomendación Comercial' seguido de una acción estratégica clara. Sé conciso y no uses texto de relleno.");
 
         // 4. Invocar a Gemini (forma sincrónica vía RestClient)
         String respuestaIA = geminiClientService.generateContentSync(prompt.toString());
 
         return ResumenInteligenteResponseDTO.builder()
                 .resumenGenerado(respuestaIA)
+                .reporteBase(reporteBase)
+                .topProductos(topProductos)
                 .build();
     }
 

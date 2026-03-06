@@ -28,3 +28,4 @@ logs/
 .env.example
 scripts/
 .agent/
+node_modules
