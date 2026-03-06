@@ -2,6 +2,7 @@ package com.legacy.pharmacy.reportes.service;
 
 import com.legacy.pharmacy.reportes.dto.PeriodoVentaDTO;
 import com.legacy.pharmacy.reportes.dto.ReporteVentasConsolidadasDTO;
+import com.legacy.pharmacy.reportes.dto.ResumenInteligenteResponseDTO;
 import com.legacy.pharmacy.reportes.dto.TopProductoResponseDTO;
 import com.legacy.pharmacy.reportes.enums.Periodicidad;
 import com.legacy.pharmacy.reportes.exception.BusinessException;
@@ -30,9 +31,12 @@ public class ReporteVentasService {
     private static final Logger log = LoggerFactory.getLogger(ReporteVentasService.class);
 
     private final VentaReporteRepository ventaReporteRepository;
+    private final GeminiClientService geminiClientService;
 
-    public ReporteVentasService(VentaReporteRepository ventaReporteRepository) {
+    public ReporteVentasService(VentaReporteRepository ventaReporteRepository,
+            GeminiClientService geminiClientService) {
         this.ventaReporteRepository = ventaReporteRepository;
+        this.geminiClientService = geminiClientService;
     }
 
     /**
@@ -126,6 +130,66 @@ public class ReporteVentasService {
                 .totalDescuentos(totalDescuentos)
                 .cantidadVentas(cantidadVentas)
                 .periodos(periodos)
+                .build();
+    }
+
+    /**
+     * Genera un resumen narrativo de las ventas utilizando IA (Google Gemini).
+     * 
+     * @param fechaInicio  Fecha inicial
+     * @param fechaFin     Fecha final
+     * @param periodicidad Periodicidad del reporte base a analizar
+     * @param sucursalId   Opcional
+     * @return El resumen ejecutivo generado por la IA
+     */
+    public ResumenInteligenteResponseDTO generarResumenEjecutivo(
+            LocalDate fechaInicio,
+            LocalDate fechaFin,
+            Periodicidad periodicidad,
+            Integer sucursalId) {
+
+        // 1. Obtener la data dura (Ventas Consolidadas)
+        ReporteVentasConsolidadasDTO reporteBase = generarReporteConsolidado(
+                fechaInicio, fechaFin, periodicidad, sucursalId);
+
+        // 2. Obtener el top de productos (ej. top 5 para dar contexto extra)
+        List<TopProductoResponseDTO> topProductos = obtenerTopRotacion(fechaInicio, fechaFin, 5);
+
+        // 3. Construir el Prompt
+        StringBuilder prompt = new StringBuilder();
+        prompt.append(
+                "Actúa como un analista financiero experto de una cadena de farmacias y elabora un resumen ejecutivo narrativo.\n");
+        prompt.append("A continuación te presento los datos de ventas consolidadas del ").append(fechaInicio)
+                .append(" al ").append(fechaFin).append(".\n");
+        prompt.append("Total Ingresos: $").append(reporteBase.getTotalIngresos()).append("\n");
+        prompt.append("Subtotal Neto: $").append(reporteBase.getSubtotalNeto()).append("\n");
+        prompt.append("Cantidad de Ventas: ").append(reporteBase.getCantidadVentas()).append("\n\n");
+
+        prompt.append("Desglose de ingresos por periodo (Agrupación ").append(periodicidad).append("):\n");
+        for (PeriodoVentaDTO p : reporteBase.getPeriodos()) {
+            prompt.append("- Periodo ").append(p.getPeriodo())
+                    .append(": Ingresos $").append(p.getTotalIngresos())
+                    .append(" (").append(p.getCantidadVentas()).append(" ventas)\n");
+        }
+        prompt.append("\n");
+
+        prompt.append("Top 5 productos más vendidos en el mismo periodo:\n");
+        for (TopProductoResponseDTO prod : topProductos) {
+            prompt.append("- ").append(prod.getNombreProducto())
+                    .append(" (Cantidad: ").append(prod.getTotalVendido())
+                    .append(", Ingresos generados: $").append(prod.getIngresoGenerado()).append(")\n");
+        }
+
+        prompt.append(
+                "\nPor favor, redacta un análisis ejecutivo directo y altamente escaneable. Usa la siguiente estructura obligatoria: 1. Un breve párrafo introductorio. 2. Un subtítulo '### Hallazgos Clave' seguido de una lista de viñetas con los 3 datos más impactantes. 3. Un subtítulo '### Recomendación Comercial' seguido de una acción estratégica clara. Sé conciso y no uses texto de relleno.");
+
+        // 4. Invocar a Gemini (forma sincrónica vía RestClient)
+        String respuestaIA = geminiClientService.generateContentSync(prompt.toString());
+
+        return ResumenInteligenteResponseDTO.builder()
+                .resumenGenerado(respuestaIA)
+                .reporteBase(reporteBase)
+                .topProductos(topProductos)
                 .build();
     }
 
