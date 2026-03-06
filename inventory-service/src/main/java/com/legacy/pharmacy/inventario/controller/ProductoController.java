@@ -226,6 +226,23 @@ public class ProductoController {
                 "cantidad", request.cantidad()));
     }
 
+    /**
+     * Devolver inventario en LOTE (Batch) (cuando se anula una venta con múltiples
+     * ítems)
+     */
+    @PostMapping("/productos/devolver/batch")
+    public ResponseEntity<?> devolverInventarioBatch(
+            @RequestBody com.legacy.pharmacy.inventario.dto.BatchDevolucionRequestDTO request) {
+
+        log.info("CONTROLLER: Recibida peticion POST /devolver/batch con {} items", request.getItems().size());
+
+        inventarioService.procesarDevolucionBatch(request);
+
+        return ResponseEntity.ok(Map.of(
+                "mensaje", "Lote de inventario devuelto exitosamente",
+                "cantidadItemsProcesados", request.getItems().size()));
+    }
+
     // DTOs
     public record DescontarRequest(Integer cantidad, String motivo,
             com.legacy.pharmacy.inventario.enums.TipoVenta tipoVenta, String documentoRef) {

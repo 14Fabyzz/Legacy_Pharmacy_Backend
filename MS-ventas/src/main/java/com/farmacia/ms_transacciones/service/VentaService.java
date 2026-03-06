@@ -15,4 +15,8 @@ public interface VentaService {
     VentaResponseDTO obtenerVentaPorId(Long id);
 
     VentaResponseDTO procesarDevolucion(Long idVenta, com.farmacia.ms_transacciones.dto.DevolucionRequestDTO solicitud);
+
+    VentaResponseDTO editarVenta(Long idVenta, com.farmacia.ms_transacciones.dto.EditarVentaDTO solicitud);
+
+    java.util.List<com.farmacia.ms_transacciones.dto.BitacoraVentaDTO> obtenerBitacoraPorTurno(Long turnoId);
 }

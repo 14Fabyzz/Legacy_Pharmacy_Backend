@@ -643,6 +643,135 @@ public class InventarioService {
                 }
         }
 
+        /**
+         * Procesar Devolución Masiva (LOTE/BATCH)
+         * Reemplaza las N llamadas síncronas de MS-Ventas reduciendo la latencia de
+         * red.
+         */
+        @Transactional
+        public void procesarDevolucionBatch(com.legacy.pharmacy.inventario.dto.BatchDevolucionRequestDTO request) {
+                if (request.getDocumentoRef() == null || request.getDocumentoRef().isBlank()) {
+                        throw new IllegalArgumentException(
+                                        "Error de Auditoría: El Batch de Devolución debe especificar un número de documento.");
+                }
+
+                log.info("Procesando lote de devoluciones. Ref: {} - Items: {}", request.getDocumentoRef(),
+                                request.getItems().size());
+
+                Long userId = UserContext.getUserId();
+                String username = UserContext.getUsername();
+                if (userId == null) {
+                        username = "SISTEMA";
+                }
+
+                for (com.legacy.pharmacy.inventario.dto.BatchItemDevolucionDTO item : request.getItems()) {
+                        Integer productoId = item.getProductoId();
+                        Integer cantidad = item.getCantidad();
+                        com.legacy.pharmacy.inventario.enums.TipoVenta tipoVenta = item.getTipoVenta();
+                        String destinoProducto = item.getDestinoProducto();
+                        String motivo = item.getMotivo();
+
+                        // 1. Validar Producto
+                        Producto producto = productoRepository.findById(productoId)
+                                        .orElseThrow(() -> new RuntimeException(
+                                                        "Producto no encontrado en Batch: " + productoId));
+
+                        // 2. Calcular cantidad real (Conversión de unidades)
+                        int cantidadReal = cantidad;
+                        if (tipoVenta != null) {
+                                switch (tipoVenta) {
+                                        case CAJA:
+                                                if (producto.getUnidadesPorCaja() != null
+                                                                && producto.getUnidadesPorCaja() > 0) {
+                                                        cantidadReal = cantidad * producto.getUnidadesPorCaja();
+                                                }
+                                                break;
+                                        case BLISTER:
+                                                if (producto.getUnidadesPorBlister() != null
+                                                                && producto.getUnidadesPorBlister() > 0) {
+                                                        cantidadReal = cantidad * producto.getUnidadesPorBlister();
+                                                }
+                                                break;
+                                        case UNIDAD:
+                                        default:
+                                                break;
+                                }
+                        }
+
+                        // 3. Buscar el Lote objetivo para la devolución
+                        Integer loteId;
+                        if (item.getLoteId() != null) {
+                                loteId = item.getLoteId().intValue();
+                        } else {
+                                try {
+                                        loteId = jdbcTemplate.queryForObject(
+                                                        "SELECT id FROM lotes WHERE producto_id = ? ORDER BY created_at DESC LIMIT 1",
+                                                        Integer.class, productoId);
+                                } catch (Exception e) {
+                                        throw new RuntimeException(
+                                                        "No existe un lote para devolver inventario del producto: "
+                                                                        + productoId);
+                                }
+                        }
+
+                        // 4. Actualizar estado del inventario dependiendo del DESTINO
+                        Integer cantidadActual = jdbcTemplate.queryForObject(
+                                        "SELECT cantidad_actual FROM lotes WHERE id = ?", Integer.class, loteId);
+                        int saldoFoto = (cantidadActual != null ? cantidadActual : 0) + cantidadReal;
+
+                        String obsBase = motivo != null ? motivo : "Devolución Batch";
+
+                        if (destinoProducto == null || destinoProducto.equalsIgnoreCase("STOCK")
+                                        || destinoProducto.equalsIgnoreCase("INVENTARIO_DISPONIBLE")) {
+                                // Mismo flujo que el anterior (Suma stock disponible)
+                                jdbcTemplate.update(
+                                                "UPDATE lotes SET cantidad_actual = cantidad_actual + ? WHERE id = ?",
+                                                cantidadReal, loteId);
+
+                                jdbcTemplate.update(
+                                                "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones, documento_ref) "
+                                                                +
+                                                                "VALUES (?, 'DEVOLUCION', ?, ?, ?, 1, ?, ?)",
+                                                loteId, cantidadReal, saldoFoto, username,
+                                                obsBase + " | Destino: STOCK", request.getDocumentoRef());
+
+                        } else if (destinoProducto.equalsIgnoreCase("MERMA")) {
+                                // No suma stock disponible, suma directo a la columna 'cantidad_merma'
+                                jdbcTemplate.update(
+                                                "UPDATE lotes SET cantidad_merma = COALESCE(cantidad_merma, 0) + ? WHERE id = ?",
+                                                cantidadReal, loteId);
+
+                                // Movimiento directo a merma. El stock de venta NO fue afectado.
+                                jdbcTemplate.update(
+                                                "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones, documento_ref) "
+                                                                +
+                                                                "VALUES (?, 'DEVOLUCION_DIRECTA_MERMA', ?, ?, ?, 1, ?, ?)",
+                                                loteId, cantidadReal, (cantidadActual != null ? cantidadActual : 0),
+                                                username, obsBase + " | Destino: MERMA", request.getDocumentoRef());
+
+                        } else if (destinoProducto.equalsIgnoreCase("CUARENTENA")) {
+                                // No suma stock disponible, suma directo a la columna 'cantidad_cuarentena'
+                                jdbcTemplate.update(
+                                                "UPDATE lotes SET cantidad_cuarentena = COALESCE(cantidad_cuarentena, 0) + ? WHERE id = ?",
+                                                cantidadReal, loteId);
+
+                                jdbcTemplate.update(
+                                                "INSERT INTO movimientos (lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, sucursal_id, observaciones, documento_ref) "
+                                                                +
+                                                                "VALUES (?, 'DEVOLUCION_DIRECTA_CUARENTENA', ?, ?, ?, 1, ?, ?)",
+                                                loteId, cantidadReal, (cantidadActual != null ? cantidadActual : 0),
+                                                username, obsBase + " | Destino: CUARENTENA",
+                                                request.getDocumentoRef());
+
+                        } else {
+                                throw new RuntimeException("Destino de producto no válido: " + destinoProducto);
+                        }
+
+                        log.info("Batch: Producto {} (Lote {}) sumó {} a destino {}", productoId, loteId, cantidadReal,
+                                        destinoProducto);
+                }
+        }
+
         // ==========================================
         // LÓGICA EXCLUSIVA PARA INTEGRACIÓN CON VENTAS
         // ==========================================

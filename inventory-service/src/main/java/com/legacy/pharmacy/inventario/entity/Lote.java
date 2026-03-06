@@ -43,6 +43,12 @@ public class Lote {
     @Column(name = "costo_compra", nullable = false)
     private BigDecimal costoCompra;
 
+    @Column(name = "cantidad_merma")
+    private Integer cantidadMerma = 0;
+
+    @Column(name = "cantidad_cuarentena")
+    private Integer cantidadCuarentena = 0;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

@@ -4,7 +4,11 @@ import java.util.List;
 
 public class DevolucionRequestDTO {
 
+    @jakarta.validation.constraints.NotBlank(message = "El motivo de la anulación es obligatorio")
     private String motivo;
+
+    private String destino; // Destino general para la anulación total
+
     private List<ItemDevolucionDTO> items; // Si es null o vacío, se asume devolución total.
 
     public String getMotivo() {
@@ -13,6 +17,14 @@ public class DevolucionRequestDTO {
 
     public void setMotivo(String motivo) {
         this.motivo = motivo;
+    }
+
+    public String getDestino() {
+        return destino;
+    }
+
+    public void setDestino(String destino) {
+        this.destino = destino;
     }
 
     public List<ItemDevolucionDTO> getItems() {

@@ -6,11 +6,14 @@ import com.farmacia.ms_transacciones.dto.CrearVentaDTO;
 import com.farmacia.ms_transacciones.dto.ItemVentaDTO;
 import com.farmacia.ms_transacciones.dto.ProductoInventarioDTO;
 import com.farmacia.ms_transacciones.dto.VentaResponseDTO;
+import com.farmacia.ms_transacciones.enums.TipoEventoAuditoria;
 import com.farmacia.ms_transacciones.enums.TipoVenta;
+import com.farmacia.ms_transacciones.model.BitacoraVenta;
 import com.farmacia.ms_transacciones.model.Cliente;
 import com.farmacia.ms_transacciones.model.DetalleVenta;
 import com.farmacia.ms_transacciones.model.TurnoCaja;
 import com.farmacia.ms_transacciones.model.Venta;
+import com.farmacia.ms_transacciones.repository.BitacoraVentaRepository;
 import com.farmacia.ms_transacciones.repository.ClienteRepository;
 import com.farmacia.ms_transacciones.repository.DetalleVentaRepository;
 import com.farmacia.ms_transacciones.repository.TurnoCajaRepository;
@@ -46,6 +49,9 @@ public class VentaServiceImpl implements VentaService {
 
     @Autowired
     private com.farmacia.ms_transacciones.repository.DetalleDevolucionRepository detalleDevolucionRepository;
+
+    @Autowired
+    private BitacoraVentaRepository bitacoraVentaRepository;
 
     // ID del Cliente Genérico (Mostrador) - NO permitido para medicamentos
     // controlados
@@ -493,6 +499,9 @@ public class VentaServiceImpl implements VentaService {
         BigDecimal montoTotalDevuelto = BigDecimal.ZERO;
         boolean requestVacio = (solicitud.getItems() == null || solicitud.getItems().isEmpty());
 
+        // 1. Declarar la 'canasta' recolectora
+        java.util.List<com.farmacia.ms_transacciones.dto.BatchItemDevolucionDTO> itemsParaInventario = new java.util.ArrayList<>();
+
         if (requestVacio) {
             // Devolver todo lo que falta por devolver de TODOS los ítems de la Venta
             for (DetalleVenta det : venta.getDetalles()) {
@@ -500,9 +509,27 @@ public class VentaServiceImpl implements VentaService {
                 int devueltoHistorico = (cantYaDevuelta != null) ? cantYaDevuelta : 0;
                 int disponibleParaDevolver = det.getCantidad() - devueltoHistorico;
 
+                // Definir el destino por defecto si no viene a nivel DTO general
+                String destinoFinal = (solicitud.getDestino() != null && !solicitud.getDestino().isEmpty())
+                        ? solicitud.getDestino()
+                        : "INVENTARIO_DISPONIBLE";
+
                 if (disponibleParaDevolver > 0) {
+                    // Guardado Local
                     montoTotalDevuelto = montoTotalDevuelto.add(
-                            crearDetalleDevolucion(devolucion, det, disponibleParaDevolver, null, null, null));
+                            crearDetalleDevolucionLocal(devolucion, det, disponibleParaDevolver, null, destinoFinal,
+                                    null));
+
+                    // Llenar el Batch
+                    com.farmacia.ms_transacciones.dto.BatchItemDevolucionDTO batchItem = new com.farmacia.ms_transacciones.dto.BatchItemDevolucionDTO();
+                    batchItem.setProductoId(det.getProductoId());
+                    batchItem.setCantidad(disponibleParaDevolver);
+                    batchItem.setTipoVenta(det.getTipoVenta());
+                    batchItem.setDestinoProducto(destinoFinal);
+                    batchItem.setMotivo(solicitud.getMotivo() != null ? solicitud.getMotivo()
+                            : "Devolución a solicitud del cliente");
+                    batchItem.setLoteId(null);
+                    itemsParaInventario.add(batchItem);
                 }
             }
         } else {
@@ -525,15 +552,37 @@ public class VentaServiceImpl implements VentaService {
                 }
 
                 if (itemReq.getCantidad() > 0) {
+                    // Guardado Local
                     montoTotalDevuelto = montoTotalDevuelto.add(
-                            crearDetalleDevolucion(devolucion, det, itemReq.getCantidad(), itemReq.getMotivoDetalle(),
+                            crearDetalleDevolucionLocal(devolucion, det, itemReq.getCantidad(),
+                                    itemReq.getMotivoDetalle(),
                                     itemReq.getDestinoProducto(), itemReq.getLoteId()));
+
+                    // Llenar el Batch
+                    com.farmacia.ms_transacciones.dto.BatchItemDevolucionDTO batchItem = new com.farmacia.ms_transacciones.dto.BatchItemDevolucionDTO();
+                    batchItem.setProductoId(det.getProductoId());
+                    batchItem.setCantidad(itemReq.getCantidad());
+                    batchItem.setTipoVenta(det.getTipoVenta());
+                    batchItem.setDestinoProducto(itemReq.getDestinoProducto());
+                    batchItem.setMotivo(itemReq.getMotivoDetalle());
+                    batchItem.setLoteId(itemReq.getLoteId());
+                    itemsParaInventario.add(batchItem);
                 }
             }
         }
 
         if (montoTotalDevuelto.compareTo(BigDecimal.ZERO) == 0) {
             throw new RuntimeException("No hay ítems válidos para devolver.");
+        }
+
+        // 2. Llamada Batch de red FUERA del bucle
+        if (!itemsParaInventario.isEmpty()) {
+            com.farmacia.ms_transacciones.dto.BatchDevolucionRequestDTO batchRequest = new com.farmacia.ms_transacciones.dto.BatchDevolucionRequestDTO();
+            batchRequest.setDocumentoRef("DEV-" + devolucion.getId() + "-FAC-" + venta.getNumeroFactura());
+            batchRequest.setItems(itemsParaInventario);
+
+            // Un solo viaje por red
+            inventarioClient.registrarDevolucionBatch(batchRequest);
         }
 
         // 4. ACTUALIZAR TOTALES Y ESTADO
@@ -593,11 +642,264 @@ public class VentaServiceImpl implements VentaService {
         turnoActual.setTotalEgresos(nuevoTotalEgresos);
         turnoCajaRepository.save(turnoActual);
 
+        // 7. REGISTRAR EVENTO EN BITÁCORA DE AUDITORÍA
+        BitacoraVenta bitacora = new BitacoraVenta();
+        bitacora.setVentaId(idVenta);
+        bitacora.setTurnoId(turnoActual.getId());
+        bitacora.setUsuarioId(String.valueOf(UserContext.getUserId()));
+        bitacora.setMotivo(solicitud.getMotivo() != null && !solicitud.getMotivo().isEmpty() ? solicitud.getMotivo()
+                : "Devolución a solicitud del cliente");
+        bitacora.setTipoEvento(
+                requestVacio ? TipoEventoAuditoria.ANULACION_TOTAL : TipoEventoAuditoria.DEVOLUCION_PARCIAL);
+        bitacora.setFechaEvento(LocalDateTime.now());
+
+        // Construir JSON simple
+        String jsonPayload;
+        if (requestVacio) {
+            jsonPayload = "{\"anulacionTotal\": true, \"montoReembolsado\": " + montoTotalDevuelto.toString() + "}";
+        } else {
+            java.util.List<Integer> productosDevueltos = solicitud.getItems().stream()
+                    .map(com.farmacia.ms_transacciones.dto.ItemDevolucionDTO::getProductoId)
+                    .collect(Collectors.toList());
+            jsonPayload = "{\"anulacionTotal\": false, \"montoReembolsado\": " + montoTotalDevuelto.toString()
+                    + ", \"productosDevueltos\": " + productosDevueltos.toString() + "}";
+        }
+        bitacora.setDetallesCambiosJson(jsonPayload);
+
+        bitacoraVentaRepository.save(bitacora);
+
         System.out.println("VENTA-DEVOLUCION: Operación Completa. Mapeando ResponseDTO dinámico.");
         return mapToDTO(venta, null);
     }
 
-    private BigDecimal crearDetalleDevolucion(
+    @Override
+    @Transactional
+    public VentaResponseDTO editarVenta(Long idVenta, com.farmacia.ms_transacciones.dto.EditarVentaDTO solicitud) {
+        System.out.println("VENTA-EDICION: Iniciando edición de Venta #" + idVenta);
+
+        // 1. OBTENER VENTA Y VALIDACIONES
+        Venta venta = ventaRepository.findById(idVenta)
+                .orElseThrow(() -> new RuntimeException("No se encontró la venta con ID: " + idVenta));
+
+        if ("ANULADA".equals(venta.getEstado()) || "DEVUELTA".equals(venta.getEstado())) {
+            throw new RuntimeException("No se puede editar una venta que está " + venta.getEstado());
+        }
+
+        TurnoCaja turnoActual = turnoCajaRepository.findByUsuarioIdAndEstado(
+                String.valueOf(UserContext.getUserId()), "ABIERTO")
+                .orElseThrow(() -> new RuntimeException("ERROR: Debes abrir caja para editar ventas."));
+
+        BigDecimal totalAntiguo = venta.getTotal();
+
+        // 2. CONSTRUIR MAPAS Y ACUMULADORES
+        java.util.Map<Integer, DetalleVenta> antiguos = venta.getDetalles().stream()
+                .collect(Collectors.toMap(DetalleVenta::getProductoId, d -> d));
+
+        java.util.Map<Integer, ItemVentaDTO> nuevos = solicitud.getItemsFinales().stream()
+                .collect(Collectors.toMap(ItemVentaDTO::getProductoId, i -> i));
+
+        BigDecimal nuevoSubtotalGlobal = BigDecimal.ZERO;
+        java.util.List<DetalleVenta> detallesParaConservar = new java.util.ArrayList<>();
+        java.util.List<String> logsEdicion = new java.util.ArrayList<>();
+
+        // 3. CALCULO DE DELTAS (INVENTARIO Y FINANCIERO BASADO EN HISTÓRICO)
+
+        // A. Elementos Eliminados (se devuelven al inventario)
+        for (DetalleVenta antiguo : venta.getDetalles()) {
+            if (!nuevos.containsKey(antiguo.getProductoId())) {
+                try {
+                    System.out.println("VENTA-EDICION: Devolviendo producto eliminado " + antiguo.getProductoNombre());
+                    inventarioClient.registrarDevolucion(
+                            antiguo.getProductoId(),
+                            antiguo.getCantidad(),
+                            antiguo.getTipoVenta(),
+                            "INVENTARIO_DISPONIBLE",
+                            "EDICION_VENTA_ELIMINADO_" + venta.getId());
+                } catch (Exception e) {
+                    System.err.println("Error notificando MS-Inventario para devolución: " + e.getMessage());
+                }
+                detalleVentaRepository.delete(antiguo);
+                logsEdicion.add("{'accion': 'ELIMINADO', 'productoId': " + antiguo.getProductoId() + ", 'cant': "
+                        + antiguo.getCantidad() + "}");
+            }
+        }
+
+        // B. Elementos de la nueva solicitud
+        for (ItemVentaDTO nuevoReq : solicitud.getItemsFinales()) {
+            Integer prodId = nuevoReq.getProductoId();
+
+            if (antiguos.containsKey(prodId)) {
+                DetalleVenta detAntiguo = antiguos.get(prodId);
+                int cantAntigua = detAntiguo.getCantidad();
+                int cantNueva = nuevoReq.getCantidad();
+
+                if (cantNueva < cantAntigua) {
+                    // Devolución parcial al inventario
+                    int delta = cantAntigua - cantNueva;
+                    try {
+                        inventarioClient.registrarDevolucion(
+                                prodId, delta, detAntiguo.getTipoVenta(), "INVENTARIO_DISPONIBLE",
+                                "EDICION_VENTA_REDUCCION_" + venta.getId());
+                    } catch (Exception e) {
+                        System.err.println("Error notificando inventario (devolucion) en edición: " + e.getMessage());
+                    }
+                } else if (cantNueva > cantAntigua) {
+                    // Salida adicional de inventario
+                    int delta = cantNueva - cantAntigua;
+                    try {
+                        inventarioClient.registrarSalida(
+                                prodId, delta, venta.getSucursalId(), detAntiguo.getTipoVenta(),
+                                "EDICION_VENTA_AUMENTO_" + venta.getId());
+                    } catch (Exception e) {
+                        System.err.println("Error notificando inventario (salida) en edición: " + e.getMessage());
+                        throw new RuntimeException("Stock insuficiente en MS-Inventario para realizar el aumento.");
+                    }
+                }
+
+                if (cantNueva != cantAntigua) {
+                    logsEdicion.add("{'accion': 'MODIFICADO', 'productoId': " + prodId + ", 'de': " + cantAntigua
+                            + ", 'a': " + cantNueva + "}");
+                }
+
+                // Delta Financiero Strict (MANTENIENDO PRECIO Y LÓGICA ORIGINAL)
+                BigDecimal precioUnitarioHistorico = detAntiguo.getPrecioUnitario();
+                BigDecimal nuevoSubtotalItem = precioUnitarioHistorico.multiply(new BigDecimal(cantNueva));
+
+                detAntiguo.setCantidad(cantNueva);
+                detAntiguo.setSubtotal(nuevoSubtotalItem);
+
+                nuevoSubtotalGlobal = nuevoSubtotalGlobal.add(nuevoSubtotalItem);
+                detallesParaConservar.add(detAntiguo);
+
+            } else {
+                // Producto Nuevo agregado durante la edición
+                // 1. Validar en el Inventario (se necesita consultar el MS-Inventario para
+                // precios y tipo)
+                ProductoInventarioDTO prod = inventarioClient.obtenerProducto(prodId);
+                if (prod.getStockActual() < nuevoReq.getCantidad()) {
+                    throw new RuntimeException(
+                            "Stock insuficiente para agregar nuevo producto: " + prod.getNombreComercial());
+                }
+
+                // Tratar de determinar TipoVenta (fallback a UNIDAD si no viene)
+                TipoVenta tipo = nuevoReq.getTipoVenta() != null ? nuevoReq.getTipoVenta() : TipoVenta.UNIDAD;
+
+                inventarioClient.registrarSalida(
+                        prodId, nuevoReq.getCantidad(), venta.getSucursalId(), tipo,
+                        "EDICION_VENTA_NUEVO_" + venta.getId());
+
+                BigDecimal precioUnidad = prod.getPrecioVentaUnidad(); // Simplicacion, asume precio unitario flat.
+                BigDecimal sub = precioUnidad.multiply(new BigDecimal(nuevoReq.getCantidad()));
+
+                DetalleVenta nuevoDetalle = new DetalleVenta();
+                nuevoDetalle.setVenta(venta);
+                nuevoDetalle.setProductoId(prodId);
+                nuevoDetalle.setProductoNombre(prod.getNombreComercial());
+                nuevoDetalle.setCantidad(nuevoReq.getCantidad());
+                nuevoDetalle.setPrecioUnitario(precioUnidad);
+                nuevoDetalle.setDescuento(BigDecimal.ZERO);
+                nuevoDetalle.setTipoVenta(tipo);
+                nuevoDetalle.setEsVentaPorCaja(tipo == TipoVenta.CAJA);
+                nuevoDetalle.setSubtotal(sub);
+
+                detalleVentaRepository.save(nuevoDetalle);
+
+                nuevoSubtotalGlobal = nuevoSubtotalGlobal.add(sub);
+                detallesParaConservar.add(nuevoDetalle);
+
+                logsEdicion.add("{'accion': 'NUEVO_AGREGADO', 'productoId': " + prodId + ", 'cant': "
+                        + nuevoReq.getCantidad() + "}");
+            }
+        }
+
+        // Reemplazar los detalles en la colección de la venta y re-simular el IVA
+        // pro-rata
+        venta.getDetalles().clear();
+        venta.getDetalles().addAll(detallesParaConservar);
+
+        // IVA simplificado proporcional basado en el nuevo subtotal y el histórico
+        BigDecimal nuevoTotalIva = BigDecimal.ZERO;
+        if (venta.getTotalIva() != null && venta.getTotalIva().compareTo(BigDecimal.ZERO) > 0
+                && totalAntiguo.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal factorIva = venta.getTotalIva().divide(totalAntiguo, 6, java.math.RoundingMode.HALF_UP);
+            nuevoTotalIva = nuevoSubtotalGlobal.multiply(factorIva).setScale(2, java.math.RoundingMode.HALF_UP);
+        }
+
+        // 4. RECÁLCULO DE CAJA (Ajuste al Peso en Efectivo)
+        BigDecimal totalFactura = nuevoSubtotalGlobal;
+        BigDecimal ajusteRedondeo = BigDecimal.ZERO;
+
+        if (com.farmacia.ms_transacciones.enums.MetodoPago.EFECTIVO.equals(venta.getMetodoPago())) {
+            BigDecimal factorRedondeo = new BigDecimal("50");
+            BigDecimal totalRedondeado = totalFactura.divide(factorRedondeo, 0, java.math.RoundingMode.FLOOR)
+                    .multiply(factorRedondeo);
+            ajusteRedondeo = totalRedondeado.subtract(totalFactura);
+            totalFactura = totalRedondeado;
+        }
+
+        venta.setAjusteRedondeo(ajusteRedondeo);
+        venta.setTotal(totalFactura);
+        venta.setTotalIva(nuevoTotalIva);
+
+        if (detallesParaConservar.isEmpty()) {
+            venta.setEstado("ANULADA"); // Si se editaron dejando 0 items.
+        }
+
+        // 5. MOVIMIENTOS Y DELTA DE CAJA
+        BigDecimal deltaFinanciero = totalFactura.subtract(totalAntiguo);
+
+        if (deltaFinanciero.compareTo(BigDecimal.ZERO) != 0) {
+            com.farmacia.ms_transacciones.model.MovimientoCaja mov = new com.farmacia.ms_transacciones.model.MovimientoCaja();
+            mov.setTurno(turnoActual);
+            mov.setFecha(LocalDateTime.now());
+            mov.setReferencia("EDICIN VTA #" + idVenta);
+            mov.setMonto(deltaFinanciero.abs());
+
+            if (deltaFinanciero.compareTo(BigDecimal.ZERO) < 0) {
+                mov.setTipo("DEVOLUCION_VENTA");
+                mov.setDescripcion("Devolución por Edición de Venta. Motivo: " + solicitud.getMotivo());
+                turnoActual.setTotalEgresos(
+                        (turnoActual.getTotalEgresos() != null ? turnoActual.getTotalEgresos() : BigDecimal.ZERO)
+                                .add(deltaFinanciero.abs()));
+                turnoActual.setTotalVentasTeorico(
+                        (turnoActual.getTotalVentasTeorico() != null ? turnoActual.getTotalVentasTeorico()
+                                : BigDecimal.ZERO)
+                                .subtract(deltaFinanciero.abs()));
+            } else {
+                mov.setTipo("INGRESO_VENTA");
+                mov.setDescripcion("Cobro adicional por Edición de Venta. Motivo: " + solicitud.getMotivo());
+                turnoActual.setTotalVentasTeorico(
+                        (turnoActual.getTotalVentasTeorico() != null ? turnoActual.getTotalVentasTeorico()
+                                : BigDecimal.ZERO)
+                                .add(deltaFinanciero));
+            }
+            movimientoCajaRepository.save(mov);
+            turnoCajaRepository.save(turnoActual);
+        }
+
+        // 6. REGISTRO EN BITÁCORA
+        BitacoraVenta bitacora = new BitacoraVenta();
+        bitacora.setVentaId(idVenta);
+        bitacora.setTurnoId(turnoActual.getId());
+        bitacora.setUsuarioId(String.valueOf(UserContext.getUserId()));
+        bitacora.setMotivo(solicitud.getMotivo());
+        bitacora.setTipoEvento(TipoEventoAuditoria.EDICION_VENTA);
+        bitacora.setFechaEvento(LocalDateTime.now());
+
+        String jsonPayload = String.format(
+                "{\"deltaFinanciero\": %s, \"nuevoTotal\": %s, \"itemsModificados\": [%s]}",
+                deltaFinanciero.toString(),
+                totalFactura.toString(),
+                String.join(",", logsEdicion).replace("'", "\""));
+        bitacora.setDetallesCambiosJson(jsonPayload);
+        bitacoraVentaRepository.save(bitacora);
+
+        ventaRepository.save(venta);
+
+        return mapToDTO(venta, nuevoTotalIva);
+    }
+
+    private BigDecimal crearDetalleDevolucionLocal(
             com.farmacia.ms_transacciones.model.Devolucion devolucion, DetalleVenta detOriginal,
             int cantidadDevolver, String motivo, String destino, Long loteId) {
 
@@ -618,21 +920,25 @@ public class VentaServiceImpl implements VentaService {
 
         detalleDevolucionRepository.save(detDev);
 
-        // Notificar Módulo Inventarios
-        try {
-            System.out.println("INVENTARIO_CLIENT: Notificando devolución. ProdId: " + detOriginal.getProductoId()
-                    + " Cant: " + cantidadDevolver + " Tipo: " + detOriginal.getTipoVenta() + " Destino: " + destino);
-
-            // Usamos el ID del reembolso de esta devolución, o el número original
-            String refDevolucion = "DEV-" + devolucion.getId() + "-FAC-" + devolucion.getVenta().getNumeroFactura();
-
-            inventarioClient.registrarDevolucion(detOriginal.getProductoId(), cantidadDevolver,
-                    detOriginal.getTipoVenta(), destino, refDevolucion);
-        } catch (Exception e) {
-            throw new RuntimeException("Error notificando MS-Inventario para el ítem " + detOriginal.getProductoNombre()
-                    + " : " + e.getMessage());
-        }
-
         return subtotalRembolso;
+    }
+
+    @Override
+    public java.util.List<com.farmacia.ms_transacciones.dto.BitacoraVentaDTO> obtenerBitacoraPorTurno(Long turnoId) {
+        System.out.println("VENTA-AUDITORIA: Consultando bitácora para el turno " + turnoId);
+        java.util.List<BitacoraVenta> eventos = bitacoraVentaRepository.findByTurnoIdOrderByFechaEventoDesc(turnoId);
+
+        return eventos.stream().map(b -> {
+            com.farmacia.ms_transacciones.dto.BitacoraVentaDTO dto = new com.farmacia.ms_transacciones.dto.BitacoraVentaDTO();
+            dto.setId(b.getId());
+            dto.setVentaId(b.getVentaId());
+            dto.setTurnoId(b.getTurnoId());
+            dto.setUsuarioId(b.getUsuarioId());
+            dto.setTipoEvento(b.getTipoEvento() != null ? b.getTipoEvento().name() : null);
+            dto.setFechaEvento(b.getFechaEvento());
+            dto.setMotivo(b.getMotivo());
+            dto.setDetallesCambiosJson(b.getDetallesCambiosJson());
+            return dto;
+        }).collect(Collectors.toList());
     }
 }

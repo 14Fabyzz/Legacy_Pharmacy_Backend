@@ -94,4 +94,23 @@ public class InventarioClient {
             throw new RuntimeException("Error al devolver stock: " + e.getMessage());
         }
     }
+
+    // --- NUEVO MÉTODO BATCH: registrarDevolucionBatch ---
+    public void registrarDevolucionBatch(com.farmacia.ms_transacciones.dto.BatchDevolucionRequestDTO requestBody) {
+        try {
+            System.out.println("INVENTARIO_CLIENT: Enviando Batch de Devoluciones. DocRef: "
+                    + requestBody.getDocumentoRef() + " Items: " + requestBody.getItems().size());
+            String url = inventarioBaseUrl + "/productos/devolver/batch";
+
+            HttpEntity<com.farmacia.ms_transacciones.dto.BatchDevolucionRequestDTO> entity = new HttpEntity<>(
+                    requestBody, getHeaders());
+            ResponseEntity<Void> response = restTemplate.exchange(url, HttpMethod.POST, entity, Void.class);
+
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                throw new RuntimeException("El Inventario rechazó la devolución en lote (batch)");
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Error al devolver stock al Inventario (Batch): " + e.getMessage());
+        }
+    }
 }
