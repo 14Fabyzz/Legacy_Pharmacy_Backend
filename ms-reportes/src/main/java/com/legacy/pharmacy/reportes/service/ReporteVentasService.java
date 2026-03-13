@@ -181,7 +181,7 @@ public class ReporteVentasService {
         }
 
         prompt.append(
-                "\nPor favor, redacta un análisis ejecutivo directo y altamente escaneable. Usa la siguiente estructura obligatoria: 1. Un breve párrafo introductorio. 2. Un subtítulo '### Hallazgos Clave' seguido de una lista de viñetas con los 3 datos más impactantes. 3. Un subtítulo '### Recomendación Comercial' seguido de una acción estratégica clara. Sé conciso y no uses texto de relleno.");
+                "\nPor favor, redacta un análisis ejecutivo directo y altamente escaneable. Usa la siguiente estructura obligatoria: 1. Un subtítulo en negritas (**Introducción**) seguido de un párrafo introductorio. 2. Un subtítulo en negritas (**Hallazgos Clave**) seguido de una lista de viñetas con los 3 datos más impactantes. 3. Un subtítulo en negritas (**Recomendación Comercial**) seguido de una acción estratégica clara. IMPORTANTE: No uses símbolos de hashtag (###) para los subtítulos, usa únicamente doble asterisco (**) para ponerlos en negrita. Sé conciso y no uses texto de relleno.");
 
         // 4. Invocar a Gemini (forma sincrónica vía RestClient)
         String respuestaIA = geminiClientService.generateContentSync(prompt.toString());
