@@ -10,8 +10,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class LoginRequestDTO {
 
-    @NotBlank(message = "El login es obligatorio")
-    private String login;
+    /**
+     * Puede ser el nombre de usuario (login) o el correo electrónico.
+     * El sistema resuelve automáticamente cuál usar.
+     */
+    @NotBlank(message = "El usuario o email es obligatorio")
+    private String identifier;
 
     @NotBlank(message = "La contraseña es obligatoria")
     private String password;
