@@ -53,7 +53,6 @@ public class Usuario {
 
     @Builder.Default
     @Column(name = "intentos_fallidos")
-    @Builder.Default
     private Integer intentosFallidos = 0;
 
     @Column(name = "fecha_bloqueo")
