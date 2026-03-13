@@ -9,7 +9,6 @@ import com.legacy.usuarios.repository.UsuarioRepository;
 import com.legacy.usuarios.util.PasswordUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -22,66 +21,48 @@ public class AuthService {
     private final AuditoriaService auditoriaService;
 
     /**
-     * Autenticar usuario y generar token JWT (RF24.1)
+     * Autenticar usuario y generar token JWT.
+     * Acepta como identificador el login (nombre de usuario) O el email.
+     * La detección es automática: si el valor contiene '@' se busca por email.
      */
-    // OPTIMIZACIÓN APM: Se eliminó @Transactional del método login().
-    // La transacción ya no es necesaria aquí porque auditoriaService es ahora
-    // @Async
-    // (su propia transacción). Mantener @Transactional abriría una conexión de BD
-    // durante todo el tiempo del hash BCrypt (~80ms) + el viaje async a Aiven.
+    // OPTIMIZACIÓN APM: Sin @Transactional. La auditoría es @Async (transacción propia).
+    // Mantener @Transactional abriría conexión durante todo el hash BCrypt (~80ms).
     public LoginResponseDTO login(LoginRequestDTO request, String ipOrigen, String userAgent) {
-        // OPTIMIZACIÓN APM: JOIN FETCH → usuario + rol en UN SOLO query a la BD remota
-        Usuario usuario = usuarioRepository.findByLoginWithRol(request.getLogin())
-                .orElseThrow(() -> {
-                    // Registrar intento fallido en auditoría
-                    auditoriaService.registrarLoginFallido(
-                            request.getLogin(),
-                            ipOrigen,
-                            userAgent,
-                            "Usuario no encontrado");
-                    return new UnauthorizedException("Credenciales inválidas");
-                });
+
+        String identifier = request.getIdentifier();
+
+        // --- Resolución dual: email vs login ---
+        // Si el identifier contiene '@', asumimos que es un email.
+        Usuario usuario = esEmail(identifier)
+                ? resolverPorEmail(identifier, ipOrigen, userAgent)
+                : resolverPorLogin(identifier, ipOrigen, userAgent);
 
         // Verificar estado del usuario
         if (usuario.getEstado() == EstadoUsuario.BLOQUEADO) {
             auditoriaService.registrarLoginFallido(
-                    request.getLogin(),
-                    ipOrigen,
-                    userAgent,
-                    "Cuenta bloqueada");
+                    usuario.getLogin(), ipOrigen, userAgent, "Cuenta bloqueada");
             throw new UnauthorizedException("Cuenta bloqueada. Contacte al administrador");
         }
 
         if (usuario.getEstado() == EstadoUsuario.INACTIVO) {
             auditoriaService.registrarLoginFallido(
-                    request.getLogin(),
-                    ipOrigen,
-                    userAgent,
-                    "Cuenta inactiva");
+                    usuario.getLogin(), ipOrigen, userAgent, "Cuenta inactiva");
             throw new UnauthorizedException("Cuenta inactiva");
         }
 
         // Verificar contraseña
         if (!passwordUtil.matches(request.getPassword(), usuario.getPasswordHash())) {
-            // Incrementar intentos fallidos
-            usuarioService.registrarIntentoFallido(request.getLogin());
-
+            usuarioService.registrarIntentoFallido(usuario.getLogin());
             auditoriaService.registrarLoginFallido(
-                    request.getLogin(),
-                    ipOrigen,
-                    userAgent,
-                    "Contraseña incorrecta");
-
+                    usuario.getLogin(), ipOrigen, userAgent, "Contraseña incorrecta");
             throw new UnauthorizedException("Credenciales inválidas");
         }
 
-        // Login exitoso - Resetear intentos fallidos
-        usuarioService.resetearIntentosFallidos(request.getLogin());
+        // Login exitoso — resetear intentos fallidos y actualizar último acceso
+        usuarioService.resetearIntentosFallidos(usuario.getLogin());
+        usuarioService.actualizarUltimoAcceso(usuario.getLogin());
 
-        // Actualizar último acceso
-        usuarioService.actualizarUltimoAcceso(request.getLogin());
-
-        // Generar token JWT
+        // Generar token JWT (siempre usando el login como subject)
         String token = jwtService.generateToken(
                 usuario.getLogin(),
                 usuario.getId(),
@@ -90,7 +71,6 @@ public class AuthService {
         // Registrar login exitoso en auditoría
         auditoriaService.registrarLoginExitoso(usuario, ipOrigen, userAgent);
 
-        // Construir respuesta
         return LoginResponseDTO.builder()
                 .token(token)
                 .tipo("Bearer")
@@ -102,13 +82,46 @@ public class AuthService {
                 .build();
     }
 
+    // -------------------------------------------------------------------------
+    // Métodos privados de resolución
+    // -------------------------------------------------------------------------
+
+    /** Detecta si el identificador es un email por la presencia de '@'. */
+    private boolean esEmail(String identifier) {
+        return identifier != null && identifier.contains("@");
+    }
+
+    /** Busca el usuario por email con JOIN FETCH de rol (1 query). */
+    private Usuario resolverPorEmail(String email, String ipOrigen, String userAgent) {
+        return usuarioRepository.findByEmailWithRol(email)
+                .orElseThrow(() -> {
+                    auditoriaService.registrarLoginFallido(
+                            email, ipOrigen, userAgent, "Email no encontrado");
+                    return new UnauthorizedException("Credenciales inválidas");
+                });
+    }
+
+    /** Busca el usuario por login con JOIN FETCH de rol (1 query). */
+    private Usuario resolverPorLogin(String login, String ipOrigen, String userAgent) {
+        return usuarioRepository.findByLoginWithRol(login)
+                .orElseThrow(() -> {
+                    auditoriaService.registrarLoginFallido(
+                            login, ipOrigen, userAgent, "Usuario no encontrado");
+                    return new UnauthorizedException("Credenciales inválidas");
+                });
+    }
+
+    // -------------------------------------------------------------------------
+    // Logout y validación de token
+    // -------------------------------------------------------------------------
+
     /**
      * Logout (opcional - para auditoría)
      */
     public void logout(String login) {
-        usuarioRepository.findByLoginWithRol(login).ifPresent(usuario -> {
-            auditoriaService.registrarLogout(usuario);
-        });
+        usuarioRepository.findByLoginWithRol(login).ifPresent(usuario ->
+                auditoriaService.registrarLogout(usuario)
+        );
     }
 
     /**
@@ -122,4 +135,4 @@ public class AuthService {
             return false;
         }
     }
-}
+}

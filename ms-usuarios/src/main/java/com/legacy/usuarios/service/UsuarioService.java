@@ -85,16 +85,23 @@ public class UsuarioService {
             throw new BusinessException("Ya existe un usuario con la cédula: " + dto.getCedula());
         }
 
+        // El email debe ser único en todo el sistema
+        if (usuarioRepository.existsByEmail(dto.getEmail())) {
+            throw new BusinessException("Ya existe un usuario registrado con el email: " + dto.getEmail());
+        }
+
         // Validar que el rol exista
         Rol rol = rolRepository.findById(dto.getRolId())
                 .orElseThrow(() -> new NotFoundException("Rol no encontrado con ID: " + dto.getRolId()));
 
-        // Crear usuario
+        // Crear usuario con todos los campos, incluyendo email y telefono
         Usuario usuario = Usuario.builder()
                 .nombreCompleto(dto.getNombreCompleto())
                 .cedula(dto.getCedula())
                 .login(dto.getLogin())
                 .passwordHash(passwordUtil.encodePassword(dto.getPassword()))
+                .email(dto.getEmail())
+                .telefono(dto.getTelefono())
                 .rol(rol)
                 .sucursalId(dto.getSucursalId())
                 .estado(EstadoUsuario.ACTIVO)
@@ -123,6 +130,21 @@ public class UsuarioService {
         // Actualizar nombre si viene
         if (dto.getNombreCompleto() != null && !dto.getNombreCompleto().isBlank()) {
             usuario.setNombreCompleto(dto.getNombreCompleto());
+        }
+
+        // Actualizar email si viene: verificar que no esté en uso por OTRO usuario
+        if (dto.getEmail() != null && !dto.getEmail().isBlank()) {
+            usuarioRepository.findByEmail(dto.getEmail())
+                    .filter(existente -> !existente.getId().equals(id))
+                    .ifPresent(existente -> {
+                        throw new BusinessException("El email " + dto.getEmail() + " ya está registrado por otro usuario");
+                    });
+            usuario.setEmail(dto.getEmail());
+        }
+
+        // Actualizar teléfono si viene
+        if (dto.getTelefono() != null && !dto.getTelefono().isBlank()) {
+            usuario.setTelefono(dto.getTelefono());
         }
 
         // Actualizar rol si viene
@@ -299,6 +321,8 @@ public class UsuarioService {
                 .nombreCompleto(usuario.getNombreCompleto())
                 .cedula(usuario.getCedula())
                 .login(usuario.getLogin())
+                .email(usuario.getEmail())
+                .telefono(usuario.getTelefono())
                 .rolId(usuario.getRol().getId())
                 .rolNombre(usuario.getRol().getNombre())
                 .sucursalId(usuario.getSucursalId())
