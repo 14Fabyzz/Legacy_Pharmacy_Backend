@@ -16,8 +16,4 @@ public class ResumenInteligenteResponseDTO {
     private GestionInventarioMetricasDTO metricasInventario;
     
     private VentasClientesMetricasDTO metricasVentas;
-    
-    private EficienciaOperativaMetricasDTO metricasOperativas;
-
 }
-

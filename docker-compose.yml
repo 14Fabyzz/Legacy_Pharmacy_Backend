@@ -100,6 +100,8 @@ services:
       - AIVEN_PG_PASSWORD=${AIVEN_PG_PASSWORD}
       - JWT_SECRET=${JWT_SECRET}
       - MS_REPORTES_GEMINI_API_KEY=${MS_REPORTES_GEMINI_API_KEY}
+      - URI_VENTAS=http://ms-ventas:8083
+      - URI_INVENTARIO=http://ms-inventario:8081
     networks:
       - pharmacy-network
 

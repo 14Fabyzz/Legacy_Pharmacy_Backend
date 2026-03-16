@@ -35,4 +35,9 @@ public interface MovimientoRepository extends JpaRepository<Movimiento, Long> {
     // Consulta para la bitácora global (Limitada por Pageable)
     @Query("SELECT m FROM Movimiento m ORDER BY m.fechaMovimiento DESC")
     List<Movimiento> findRecent(org.springframework.data.domain.Pageable pageable);
+
+    List<Movimiento> findByFechaMovimientoBetweenAndTipoMovimiento(
+            java.time.LocalDateTime inicio, 
+            java.time.LocalDateTime fin, 
+            com.legacy.pharmacy.inventario.entity.TipoMovimiento tipo);
 }

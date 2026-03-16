@@ -18,7 +18,7 @@ public class VentasClient {
     private final RestClient restClient;
 
     public VentasClient(RestClient.Builder restClientBuilder, 
-                        @Value("${ms.ventas.url:http://localhost:8081}") String baseUrl) {
+                        @Value("${ms.ventas.url:http://localhost:8083}") String baseUrl) {
         this.restClient = restClientBuilder.baseUrl(baseUrl).build();
     }
 
@@ -33,6 +33,9 @@ public class VentasClient {
                             .queryParam("fin", fin)
                             .queryParam("sucursalId", sucursalId)
                             .build())
+                    .header("X-User-Id", com.legacy.pharmacy.reportes.config.UserContext.getUserId() != null ? String.valueOf(com.legacy.pharmacy.reportes.config.UserContext.getUserId()) : "1")
+                    .header("X-Username", com.legacy.pharmacy.reportes.config.UserContext.getUsername() != null ? com.legacy.pharmacy.reportes.config.UserContext.getUsername() : "System")
+                    .header("X-User-Role", com.legacy.pharmacy.reportes.config.UserContext.getUserRole() != null ? com.legacy.pharmacy.reportes.config.UserContext.getUserRole() : "ADMIN")
                     .retrieve()
                     .onStatus(HttpStatusCode::isError, (request, response) -> {
                         log.error("Error al consultar MS-Ventas: status {}", response.getStatusCode());

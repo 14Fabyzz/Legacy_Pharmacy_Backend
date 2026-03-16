@@ -1,11 +1,9 @@
 package com.legacy.pharmacy.reportes.service;
 
-import com.legacy.pharmacy.reportes.dto.EficienciaOperativaMetricasDTO;
 import com.legacy.pharmacy.reportes.dto.GestionInventarioMetricasDTO;
 import com.legacy.pharmacy.reportes.dto.ResumenInteligenteResponseDTO;
 import com.legacy.pharmacy.reportes.dto.VentasClientesMetricasDTO;
 import com.legacy.pharmacy.reportes.service.metricas.CalculadorInventarioService;
-import com.legacy.pharmacy.reportes.service.metricas.CalculadorOperativoService;
 import com.legacy.pharmacy.reportes.service.metricas.CalculadorVentasService;
 import org.springframework.stereotype.Service;
 
@@ -16,24 +14,20 @@ public class ResumenInteligenteService {
 
     private final CalculadorInventarioService calculadorInventarioService;
     private final CalculadorVentasService calculadorVentasService;
-    private final CalculadorOperativoService calculadorOperativoService;
     private final GeminiClientService geminiClientService;
 
     public ResumenInteligenteService(CalculadorInventarioService calculadorInventarioService,
                                      CalculadorVentasService calculadorVentasService,
-                                     CalculadorOperativoService calculadorOperativoService,
                                      GeminiClientService geminiClientService) {
         this.calculadorInventarioService = calculadorInventarioService;
         this.calculadorVentasService = calculadorVentasService;
-        this.calculadorOperativoService = calculadorOperativoService;
         this.geminiClientService = geminiClientService;
     }
 
     public ResumenInteligenteResponseDTO generarResumen(LocalDate inicio, LocalDate fin, Integer sucursalId) {
-        // Ejecutar los 3 calculadores
+        // Ejecutar los 2 calculadores
         GestionInventarioMetricasDTO inventario = calculadorInventarioService.calcularPulso(inicio, fin, sucursalId);
         VentasClientesMetricasDTO ventas = calculadorVentasService.calcularMotor(inicio, fin, sucursalId);
-        EficienciaOperativaMetricasDTO operativas = calculadorOperativoService.calcularSalud(inicio, fin, sucursalId);
 
         // Construir el prompt para Gemini
         StringBuilder prompt = new StringBuilder();
@@ -49,15 +43,9 @@ public class ResumenInteligenteService {
         prompt.append("Sección 2 (El Motor - Ventas y Clientes):\n")
               .append("- Ticket Promedio: ").append(ventas.getTicketPromedio()).append("\n")
               .append("- Artículos por Ticket (UPT): ").append(ventas.getUnitsPerTransactionUpt()).append("\n")
-              .append("- Tasa de Conversión (%): ").append(ventas.getTasaConversion()).append("\n")
               .append("- Margen de Utilidad Bruta (%): ").append(ventas.getMargenUtilidadBruta()).append("\n\n");
 
-        prompt.append("Sección 3 (La Salud - Eficiencia):\n")
-              .append("- Ventas por Metro Cuadrado: ").append(operativas.getVentasPorMetroCuadrado()).append("\n")
-              .append("- Merma (%): ").append(operativas.getPorcentajeMerma()).append("\n")
-              .append("- Punto de Equilibrio: ").append(operativas.getPuntoEquilibrio()).append("\n\n");
-
-        prompt.append("Instrucción de Salida (Estricta): \"Analiza las correlaciones entre estas métricas (ej. cómo el tráfico y la conversión afectan el WOS y el punto de equilibrio). ")
+        prompt.append("Instrucción de Salida (Estricta): \"Analiza las correlaciones entre estas métricas. ")
               .append("Tu respuesta debe ser altamente escaneable y utilizar obligatoriamente esta estructura: ")
               .append("1. Un breve párrafo introductorio de diagnóstico. ")
               .append("2. Un subtítulo formateado estrictamente en negrilla y subrayado como <u><b>Hallazgos Clave</b></u> seguido de 3 viñetas con los datos combinados más impactantes o preocupantes. ")
@@ -72,7 +60,6 @@ public class ResumenInteligenteService {
                 .resumenGenerado(resumenTexto)
                 .metricasInventario(inventario)
                 .metricasVentas(ventas)
-                .metricasOperativas(operativas)
                 .build();
     }
 }

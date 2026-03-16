@@ -22,53 +22,37 @@ public class CalculadorInventarioService {
 
     public GestionInventarioMetricasDTO calcularPulso(LocalDate inicio, LocalDate fin, Integer sucursalId) {
         try {
-            // Este método en el futuro llamará a recolectarMapearDatosAsincronamente
-            // Pero por ahora asumimos que los datos están disponibles (mock) a través de una llamada sincrónica o join
-            // o simplemente usamos un mock temporal para que compile y cuadre la lógica, hasta ajustar la orquestación.
-            // Para poder compilar la lógica matemática, instancio DTOs vacíos:
-            VentasRawDTO ventas = VentasRawDTO.builder()
-                    .totalIngresos(BigDecimal.ZERO)
-                    .costoMercanciaVendidaCogs(BigDecimal.ZERO)
-                    .numeroTransacciones(0)
-                    .unidadesVendidas(0L)
-                    .build();
-
-            InventarioRawDTO inventario = InventarioRawDTO.builder()
-                    .valorInventarioActual(BigDecimal.ZERO)
-                    .inventarioPromedio(BigDecimal.ZERO)
-                    .unidadesRecibidas(0L)
-                    .valorInventarioTeorico(BigDecimal.ZERO)
-                    .valorInventarioFisico(BigDecimal.ZERO)
-                    .build();
+            VentasRawDTO ventas = recolectorDatosService.obtenerVentasSincrono(inicio, fin, sucursalId);
+            InventarioRawDTO inventario = recolectorDatosService.obtenerInventarioSincrono(inicio, fin, sucursalId);
 
             BigDecimal cogs = ventas.getCostoMercanciaVendidaCogs();
             BigDecimal invPromedio = inventario.getInventarioPromedio();
             BigDecimal totalIngresos = ventas.getTotalIngresos();
             
             // IRI = cogs / inventarioPromedio
-            BigDecimal iri = safeDivide(cogs, invPromedio);
+            BigDecimal iri = dividirSeguro(cogs, invPromedio);
             
             // Margen Bruto Monetario = totalIngresos - cogs
             BigDecimal margenBrutoMonetario = totalIngresos.subtract(cogs);
             
             // GMROI = Margen Bruto Monetario / inventarioPromedio
-            BigDecimal gmroi = safeDivide(margenBrutoMonetario, invPromedio);
+            BigDecimal gmroi = dividirSeguro(margenBrutoMonetario, invPromedio);
             
             // Sell-Through = (unidadesVendidas / unidadesRecibidas) * 100
             BigDecimal unidadesVendidas = BigDecimal.valueOf(ventas.getUnidadesVendidas());
             BigDecimal unidadesRecibidas = BigDecimal.valueOf(inventario.getUnidadesRecibidas());
-            BigDecimal sellThrough = safeDivide(unidadesVendidas, unidadesRecibidas).multiply(BigDecimal.valueOf(100));
+            BigDecimal sellThrough = dividirSeguro(unidadesVendidas, unidadesRecibidas).multiply(BigDecimal.valueOf(100));
             
             // Semanas del periodo = Días entre inicio y fin divididos por 7 (mínimo 1)
             long dias = Math.max(1, ChronoUnit.DAYS.between(inicio, fin));
             BigDecimal semanas = BigDecimal.valueOf(Math.max(1, dias / 7.0));
             
             // Promedio Ventas Semanales = unidadesVendidas / Semanas del periodo
-            BigDecimal promVentasSemanales = safeDivide(unidadesVendidas, semanas);
+            BigDecimal promVentasSemanales = dividirSeguro(unidadesVendidas, semanas);
             
             // WOS = valorInventarioActual / Promedio Ventas Semanales
             BigDecimal valorInventarioActual = inventario.getValorInventarioActual();
-            BigDecimal wos = safeDivide(valorInventarioActual, promVentasSemanales);
+            BigDecimal wos = dividirSeguro(valorInventarioActual, promVentasSemanales);
 
             return GestionInventarioMetricasDTO.builder()
                     .rotacionInventarioIri(iri.setScale(2, RoundingMode.HALF_UP))
@@ -86,10 +70,10 @@ public class CalculadorInventarioService {
         }
     }
 
-    private BigDecimal safeDivide(BigDecimal dividend, BigDecimal divisor) {
+    private BigDecimal dividirSeguro(BigDecimal dividendo, BigDecimal divisor) {
         if (divisor == null || divisor.compareTo(BigDecimal.ZERO) == 0) {
             return BigDecimal.ZERO;
         }
-        return dividend.divide(divisor, 4, RoundingMode.HALF_UP);
+        return dividendo.divide(divisor, 2, java.math.RoundingMode.HALF_UP);
     }
 }

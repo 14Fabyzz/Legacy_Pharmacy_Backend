@@ -27,15 +27,8 @@ public class CalculadorOperativoService {
 
     public EficienciaOperativaMetricasDTO calcularSalud(LocalDate inicio, LocalDate fin, Integer sucursalId) {
         try {
-            VentasRawDTO ventas = VentasRawDTO.builder()
-                    .totalIngresos(BigDecimal.ZERO)
-                    .costoMercanciaVendidaCogs(BigDecimal.ZERO)
-                    .build();
-
-            InventarioRawDTO inventario = InventarioRawDTO.builder()
-                    .valorInventarioTeorico(BigDecimal.ZERO)
-                    .valorInventarioFisico(BigDecimal.ZERO)
-                    .build();
+            VentasRawDTO ventas = recolectorDatosService.obtenerVentasSincrono(inicio, fin, sucursalId);
+            InventarioRawDTO inventario = recolectorDatosService.obtenerInventarioSincrono(inicio, fin, sucursalId);
 
             Optional<ParametrosOperativos> opParametros = sucursalId != null 
                     ? parametrosOperativosRepository.findBySucursalId(sucursalId) 
@@ -50,17 +43,17 @@ public class CalculadorOperativoService {
             BigDecimal valorInventarioFisico = inventario.getValorInventarioFisico();
 
             // Ventas por m2 = totalIngresos / metrosCuadrados
-            BigDecimal ventasPorM2 = safeDivide(totalIngresos, metrosCuadrados);
+            BigDecimal ventasPorM2 = dividirSeguro(totalIngresos, metrosCuadrados);
 
             // Merma % = (valorInventarioTeorico - valorInventarioFisico) / totalIngresos * 100
             BigDecimal diferenciaInventario = valorInventarioTeorico.subtract(valorInventarioFisico);
-            BigDecimal mermaPorcentaje = safeDivide(diferenciaInventario, totalIngresos).multiply(BigDecimal.valueOf(100));
+            BigDecimal mermaPorcentaje = dividirSeguro(diferenciaInventario, totalIngresos).multiply(BigDecimal.valueOf(100));
 
             // Margen Contribucion % = ((totalIngresos - cogs) / totalIngresos)
-            BigDecimal margenContrPorcentaje = safeDivide(totalIngresos.subtract(cogs), totalIngresos);
+            BigDecimal margenContrPorcentaje = dividirSeguro(totalIngresos.subtract(cogs), totalIngresos);
 
             // Punto de Equilibrio = costosFijosMensuales / Margen Contribucion % (expresado en decimal)
-            BigDecimal puntoEquilibrio = safeDivide(costosFijosMensuales, margenContrPorcentaje);
+            BigDecimal puntoEquilibrio = dividirSeguro(costosFijosMensuales, margenContrPorcentaje);
 
             return EficienciaOperativaMetricasDTO.builder()
                     .ventasPorMetroCuadrado(ventasPorM2.setScale(2, RoundingMode.HALF_UP))
@@ -76,10 +69,10 @@ public class CalculadorOperativoService {
         }
     }
 
-    private BigDecimal safeDivide(BigDecimal dividend, BigDecimal divisor) {
+    private BigDecimal dividirSeguro(BigDecimal dividendo, BigDecimal divisor) {
         if (divisor == null || divisor.compareTo(BigDecimal.ZERO) == 0) {
             return BigDecimal.ZERO;
         }
-        return dividend.divide(divisor, 4, RoundingMode.HALF_UP);
+        return dividendo.divide(divisor, 2, java.math.RoundingMode.HALF_UP);
     }
 }

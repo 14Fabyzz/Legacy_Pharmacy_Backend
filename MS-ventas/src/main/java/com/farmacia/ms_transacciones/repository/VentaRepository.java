@@ -11,6 +11,9 @@ public interface VentaRepository extends JpaRepository<Venta, Long> {
     @EntityGraph(attributePaths = { "cliente", "turno", "detalles" })
     List<Venta> findByTurnoId(Long turnoId);
 
+    @EntityGraph(attributePaths = { "detalles" })
+    List<Venta> findByFechaVentaBetween(java.time.LocalDateTime inicio, java.time.LocalDateTime fin);
+
     @Override
     @EntityGraph(attributePaths = { "cliente", "turno", "detalles" })
     List<Venta> findAll();

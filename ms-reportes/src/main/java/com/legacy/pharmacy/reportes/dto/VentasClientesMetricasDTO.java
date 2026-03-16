@@ -13,6 +13,5 @@ import java.math.BigDecimal;
 public class VentasClientesMetricasDTO {
     private BigDecimal ticketPromedio;
     private BigDecimal unitsPerTransactionUpt;
-    private BigDecimal tasaConversion;
     private BigDecimal margenUtilidadBruta;
 }
