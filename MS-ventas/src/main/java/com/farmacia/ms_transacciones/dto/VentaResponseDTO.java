@@ -23,6 +23,7 @@ public class VentaResponseDTO {
 
     private String estado;
     private Long clienteId;
+    private String clienteNombre; // <-- NUEVO: Para enviar el nombre del cliente real al frontend
     private List<ItemVentaDTO> items;
     private List<String> resumenProductos;
 
@@ -128,6 +129,14 @@ public class VentaResponseDTO {
 
     public void setClienteId(Long clienteId) {
         this.clienteId = clienteId;
+    }
+
+    public String getClienteNombre() {
+        return clienteNombre;
+    }
+
+    public void setClienteNombre(String clienteNombre) {
+        this.clienteNombre = clienteNombre;
     }
 
     public List<ItemVentaDTO> getItems() {
