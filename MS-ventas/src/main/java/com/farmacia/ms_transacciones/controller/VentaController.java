@@ -46,4 +46,10 @@ public class VentaController {
         System.out.println("CONTROLLER-VENTAS: Recibida peticion POST /api/v1/ventas/" + id + "/devolucion");
         return ResponseEntity.ok(ventaService.procesarDevolucion(id, solicitud));
     }
+
+    @GetMapping("/semanales")
+    public ResponseEntity<java.util.List<java.math.BigDecimal>> obtenerVentasSemanales() {
+        System.out.println("CONTROLLER-VENTAS: Recibida peticion GET /api/v1/ventas/semanales");
+        return ResponseEntity.ok(ventaService.obtenerVentasSemanales());
+    }
 }

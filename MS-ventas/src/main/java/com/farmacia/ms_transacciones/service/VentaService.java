@@ -19,4 +19,6 @@ public interface VentaService {
     VentaResponseDTO editarVenta(Long idVenta, com.farmacia.ms_transacciones.dto.EditarVentaDTO solicitud);
 
     java.util.List<com.farmacia.ms_transacciones.dto.BitacoraVentaDTO> obtenerBitacoraPorTurno(Long turnoId);
+
+    java.util.List<java.math.BigDecimal> obtenerVentasSemanales();
 }

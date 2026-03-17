@@ -946,4 +946,31 @@ public class VentaServiceImpl implements VentaService {
             return dto;
         }).collect(Collectors.toList());
     }
+
+    @Override
+    public java.util.List<java.math.BigDecimal> obtenerVentasSemanales() {
+        System.out.println("VENTA-REPORTE: Consultando ventas semanales");
+        
+        java.time.LocalDate hoy = java.time.LocalDate.now();
+        java.time.LocalDate lunes = hoy.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
+        java.time.LocalDate domingo = hoy.with(java.time.temporal.TemporalAdjusters.nextOrSame(java.time.DayOfWeek.SUNDAY));
+        
+        java.time.LocalDateTime inicioSemana = lunes.atStartOfDay();
+        java.time.LocalDateTime finSemana = domingo.atTime(java.time.LocalTime.MAX);
+        
+        java.util.List<Venta> ventasSemana = ventaRepository.findByFechaVentaBetween(inicioSemana, finSemana);
+        
+        java.math.BigDecimal[] totalesPorDia = new java.math.BigDecimal[7];
+        java.util.Arrays.fill(totalesPorDia, java.math.BigDecimal.ZERO);
+        
+        for (Venta v : ventasSemana) {
+            if (!"ANULADA".equals(v.getEstado())) {
+                int diaSemana = v.getFechaVenta().getDayOfWeek().getValue();
+                int indice = diaSemana - 1;
+                totalesPorDia[indice] = totalesPorDia[indice].add(v.getTotal());
+            }
+        }
+        
+        return java.util.Arrays.asList(totalesPorDia);
+    }
 }
