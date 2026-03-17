@@ -4,18 +4,15 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class DetalleReferenciaPagoDTO {
-    private Long idVenta;
-    private String referenciaPago;
-    private BigDecimal monto;
-    private LocalDateTime fechaVenta;
-    private String metodoPago;
+public class GestionInventarioMetricasDTO {
+    private BigDecimal rotacionInventarioIri;
+    private BigDecimal gmroi;
+    private BigDecimal sellThroughRate;
+    private BigDecimal weeksOfSupplyWos;
 }
