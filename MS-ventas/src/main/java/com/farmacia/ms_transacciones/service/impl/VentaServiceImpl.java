@@ -97,11 +97,12 @@ public class VentaServiceImpl implements VentaService {
         }
 
         // Cliente
-        if (datosVenta.getClienteId() != null) {
-            Cliente cliente = clienteRepository.findById(datosVenta.getClienteId())
-                    .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
-            venta.setCliente(cliente);
-        }
+        Long clienteRecepcionado = datosVenta.getClienteId();
+        Long clienteIdFinal = (clienteRecepcionado != null) ? clienteRecepcionado : 1L;
+
+        Cliente cliente = clienteRepository.findById(clienteIdFinal)
+                .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
+        venta.setCliente(cliente);
 
         venta = ventaRepository.save(venta);
 
@@ -406,8 +407,12 @@ public class VentaServiceImpl implements VentaService {
         dto.setVendedorNombre(v.getVendedorNombre());
         dto.setSucursalId(v.getSucursalId());
 
-        if (v.getCliente() != null)
+        if (v.getCliente() != null) {
             dto.setClienteId(v.getCliente().getId());
+            dto.setClienteNombre(v.getCliente().getNombre());
+        } else {
+            dto.setClienteNombre("Consumidor Final");
+        }
 
         // Mapeo de items y construir resumenProductos
         if (v.getDetalles() != null) {
