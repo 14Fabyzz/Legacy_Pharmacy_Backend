@@ -116,3 +116,5 @@ frontend-pharmacy:
       - "80:80"
     networks:
       - pharmacy-network
+    depends_on:
+      - gateway-service
