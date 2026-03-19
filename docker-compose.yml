@@ -108,3 +108,11 @@ services:
 networks:
   pharmacy-network:
     driver: bridge
+
+frontend-pharmacy:
+    build: ../Legacy-Pharmacy
+    container_name: pharmacy-frontend
+    ports:
+      - "80:80"
+    networks:
+      - pharmacy-network
