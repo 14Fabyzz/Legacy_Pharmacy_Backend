@@ -104,12 +104,8 @@ services:
       - URI_INVENTARIO=http://ms-inventario:8081
     networks:
       - pharmacy-network
-
-networks:
-  pharmacy-network:
-    driver: bridge
-
-frontend-pharmacy:
+    
+  frontend-pharmacy:
     build: ../Legacy-Pharmacy
     container_name: pharmacy-frontend
     ports:
@@ -118,3 +114,8 @@ frontend-pharmacy:
       - pharmacy-network
     depends_on:
       - gateway-service
+
+networks:
+  pharmacy-network:
+    driver: bridge
+
