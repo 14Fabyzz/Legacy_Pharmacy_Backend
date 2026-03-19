@@ -37,3 +37,7 @@ build/
 
 # Ignorar generador de tokens local
 src/main/java/com/farmacia/ms_transacciones/security/GeneradorTokenDocker.java
+
+### Environment ###
+.env
+
