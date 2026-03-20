@@ -16,7 +16,12 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 
-@CrossOrigin(origins = {"http://localhost:4200", "http://localhost:80"})
+@CrossOrigin(origins = {
+    "http://localhost:4200", 
+    "http://localhost:80", 
+    "https://regensaludpos.com", 
+    "http://regensaludpos.com"
+})
 @RestController
 @RequestMapping("/metricas")
 public class MetricasNegocioController {
