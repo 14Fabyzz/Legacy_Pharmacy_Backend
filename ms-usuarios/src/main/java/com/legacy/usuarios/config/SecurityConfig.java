@@ -38,11 +38,15 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
 
                         // 2. CORRECCIÓN: Permitir explícitamente la ruta real de tu AuthController
-                        .requestMatchers("/api/auth/login", "/api/auth/logout").permitAll()
+                        .requestMatchers(
+                                        "/api/auth/login",
+                                        "/api/auth/logout",
+                                        "/api/usuarios/login",
+                                        "/api/usuarios/logout"
+                        ).permitAll()
 
                         // Esta línea también sirve de respaldo, está bien dejarla
                         .requestMatchers("/api/auth/**").permitAll()
-
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/error").permitAll()
 
