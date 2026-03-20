@@ -110,6 +110,7 @@ services:
     container_name: pharmacy-frontend
     ports:
       - "80:80"
+      - "443:443" # Abrimos el puerto de seguridad
     networks:
       - pharmacy-network
     depends_on:
@@ -118,9 +119,6 @@ services:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
       # ESTO ES LO NUEVO: Conectamos los certificados
       - /etc/letsencrypt:/etc/letsencrypt:ro 
-    ports:
-      - "80:80"
-      - "443:443" # Abrimos el puerto de seguridad
 
 networks:
   pharmacy-network:
