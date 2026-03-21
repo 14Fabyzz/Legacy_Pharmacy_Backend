@@ -87,7 +87,12 @@ class MCPAgent:
         """Carga los nombres de productos al iniciar para hacer búsquedas difusas rápidas."""
         print("🧠 Cargando catálogo de productos para Corrección Ortográfica (RAG)...")
         try:
-            results = self.tools["database"].execute("SELECT DISTINCT nombre_comercial FROM v_stock_productos")
+            # En modo 'multi' la tool de inventario se llama 'inventario_db'; en otros modos 'database'
+            inventory_tool = self.tools.get("inventario_db") or self.tools.get("database")
+            if not inventory_tool:
+                print("⚠️ No se encontró herramienta de inventario para cargar el catálogo.")
+                return
+            results = inventory_tool.execute("SELECT DISTINCT nombre_comercial FROM v_stock_productos")
             if results and "error" not in results[0]:
                 self.product_names = [row['nombre_comercial'] for row in results if row['nombre_comercial']]
                 print(f"✅ Catálogo cargado: {len(self.product_names)} productos en memoria.")
