@@ -12,6 +12,7 @@ from decimal import Decimal
 from datetime import date, datetime, timedelta
 import hashlib
 import difflib
+import re
 
 
 class CustomDecimalEncoder(json.JSONEncoder):
@@ -110,6 +111,15 @@ class MCPAgent:
 
         # --- VERIFICAR CACHÉ PRIMERO ---
         normalized_q = " ".join(question.lower().split())
+
+        # --- CAPA 1: ZERO-LATENCY GREETINGS ---
+        greetings_pattern = r'^(hola|buenos d[íi]as|buenas|buenas tardes|buenas noches|gracias|muchas gracias|adi[óo]s|chau|hasta luego|qu[ée] tal)$'
+        if re.match(greetings_pattern, normalized_q.replace("?", "").replace("!", "").replace(",", "").strip()):
+            print("⚡ [ZERO-LATENCY] Saludo conversacional detectado. Omitiendo LLM.")
+            response_text = "¡Hola! ¿Cómo estás? Soy FarmaChat, el asistente inteligente de Regen Salud POS. ¿En qué te puedo ayudar hoy con tus datos de Ventas o Inventario?"
+            self._add_to_context("assistant", response_text)
+            return response_text
+
         q_hash = hashlib.md5(normalized_q.encode('utf-8')).hexdigest()
 
         if q_hash in self.query_cache:
@@ -132,6 +142,9 @@ class MCPAgent:
 
             if sql == "NO_QUERY":
                 response_text = "No puedo responder esa pregunta con los datos disponibles."
+            elif sql.startswith("CHAT:"):
+                print("💬 [FAST-ROUTING] Respuesta conversacional generada por el LLM.")
+                response_text = sql.replace("CHAT:", "").strip()
             else:
                 print(f"📊 SQL (Intento 1): {sql}")
 
@@ -210,7 +223,7 @@ class MCPAgent:
     def _generate_sql(self, question: str) -> str:
         """Genera una consulta SQL a partir de la pregunta del usuario."""
         if self.db_type == 'multi':
-            schema = ("=== BASES DE DATOS DE FARMASYNC ===\n\n" +
+            schema = ("=== BASES DE DATOS DE REGEN SALUD POS ===\n\n" +
                       self.tools["inventario_db"].get_schema() + "\n" +
                       self.tools["ventas_db"].get_schema())
         else:
@@ -219,7 +232,7 @@ class MCPAgent:
         db_hint = "MULTI-DATASOURCE (MySQL + PostgreSQL)" if self.db_type == 'multi' else "MySQL"
 
         system_instruction = f"""
-Eres un asistente experto en BI y SQL para "Farmasync POS" usando {db_hint}.
+Eres un asistente experto en BI y SQL para "Regen Salud POS" usando {db_hint}.
 Tu trabajo es generar consultas SQL precisas para responder preguntas.
 Tienes acceso a DOS BASES DE DATOS FÍSICAMENTE SEPARADAS. No puedes hacer `JOIN` cruzados.
 
@@ -247,6 +260,12 @@ REGLAS EXPERTAS (PRIORIDAD ALTA):
 7. **SEGURIDAD Y PRIVACIDAD DE DATOS (CRÍTICO):**
    - NUNCA selecciones contraseñas, hashes, tokens JWT, o pines de seguridad.
    - Si el usuario pide "toda la información de los usuarios", NO uses `SELECT *`.
+
+8. **CONVERSACIÓN CASUAL (FAST-ROUTING):**
+   - Si el usuario hace una pregunta conversacional ("cómo estás", "¿qué sabes hacer?"), te saluda o agradece, y la pregunta NO requiere extraer datos de las bases de datos:
+   - NO intentes hacer una consulta SQL forzada.
+   - En su lugar, responde comenzando ESTRICTAMENTE con la etiqueta `CHAT:` seguida de tu respuesta conversacional amigable.
+   - Ejemplo salida: `CHAT: ¡Hola! Soy FarmaChat, el asistente de Regen Salud POS. Puedo ayudarte consultando el stock interno y las ventas.`
 """
 
         # --- LÓGICA RAG: Búsqueda Difusa de Productos ---
@@ -271,6 +290,13 @@ REGLAS EXPERTAS (PRIORIDAD ALTA):
 Pregunta del usuario: {question}
 
 Genera SOLO la consulta SQL (sin explicaciones ni formato markdown).
+
+REGLA ANTI-NULL (MUY IMPORTANTE):
+- Si la consulta busca stock o cantidad de un producto con WHERE/LIKE y el producto puede no existir, usa COALESCE para evitar NULL.
+- Ejemplo correcto: SELECT COALESCE(SUM(stock_actual), 0) as stock_total FROM ...
+- Si el resultado es 0 o la tabla está vacía, el código Python mostrará un mensaje amigable.
+- Nunca hagas que la consulta devuelva una fila con valor NULL cuando la intención es contar o sumar.
+
 Si no se puede responder, devuelve: NO_QUERY
 """
 
@@ -310,8 +336,8 @@ Si no se puede responder, devuelve: NO_QUERY
 
     def _generate_response(self, question: str, sql: str, results: List[Dict]) -> str:
         """
-        Genera respuesta. Intercepta INSERT/UPDATE para pedir confirmación.
-        Decide si la respuesta es texto, tabla o gráfico.
+        Genera respuesta usando heurística local en Python (sin llamar a Gemini).
+        Esto elimina el segundo round-trip a la IA ahorrando 2-4s por consulta.
         """
         sql_upper = sql.strip().upper()
         if sql_upper.startswith("INSERT") or sql_upper.startswith("UPDATE"):
@@ -323,34 +349,57 @@ Si no se puede responder, devuelve: NO_QUERY
             }
             return json.dumps(confirm_data)
 
-        results_str = json.dumps(results, cls=CustomDecimalEncoder)
+        if not results:
+            return "No se encontraron resultados para tu consulta."
 
-        if len(results_str) > 3000:
-            results_str = results_str[:3000] + "... (resultados truncados)"
+        # --- HEURÍSTICA LOCAL DE FORMATO (0ms, sin Gemini) ---
+        q_lower = question.lower()
 
-        prompt = f"""El usuario preguntó: {question}
-Se ejecutó: {sql}
-Resultados: {results_str}
+        # Caso 1: Un solo resultado con un solo valor numérico → Texto plano
+        if len(results) == 1 and len(results[0]) == 1:
+            key, val = list(results[0].items())[0]
+            if val is None:
+                return "No se encontró información sobre ese producto en el sistema. Es posible que no exista en el inventario o no haya registros disponibles."
+            if val == 0 or val == Decimal('0'):
+                return "No hay existencias disponibles de ese producto. El inventario actual es de **0 unidades**."
+            return f"El resultado de tu consulta es: **{val}**"
 
-Eres un asistente de análisis de datos. Analiza la PREGUNTA y los RESULTADOS y decide la mejor forma de presentarlos.
+        # Detectar si hay columnas de tipo temporal/categórico y numérico para gráfico
+        time_keys = {'fecha', 'mes', 'dia', 'semana', 'año', 'anio', 'periodo', 'date', 'month', 'day', 'hora', 'tipo', 'estado', 'categoria', 'categoria_nombre', 'nombre_comercial'}
+        keys = list(results[0].keys()) if results else []
+        label_key = next((k for k in keys if k.lower() in time_keys), None)
+        numeric_key = next(
+            (k for k in keys if k != label_key and isinstance(results[0][k], (int, float, Decimal))),
+            None
+        )
 
-REGLAS DE DECISIÓN:
+        # Caso 2: Múltiples filas con eje categórico/temporal y un valor numérico → Gráfico de barras
+        is_chart_question = any(w in q_lower for w in ['reporte', 'análisis', 'analisis', 'ventas por', 'por mes', 'por día', 'por dia', 'histórico', 'historico', 'tendencia', 'distribución', 'distribucion', 'grafico', 'gráfico'])
+        if len(results) > 1 and label_key and numeric_key and is_chart_question:
+            title = f"Reporte: {question[:60]}"
+            chart_data = {
+                "type": "chart",
+                "chart_type": "bar",
+                "title": title,
+                "content": json.loads(json.dumps(results, cls=CustomDecimalEncoder)),
+                "label_key": label_key,
+                "data_key": numeric_key
+            }
+            return json.dumps(chart_data)
 
-1. **RESPUESTA TIPO 'chart' (Gráfico):**
-   * Cuándo usarlo: Si la PREGUNTA pide "reporte", "análisis", etc., y los RESULTADOS son una agregación.
-   * Formato: {{"type": "chart", "chart_type": "bar", "title": "...", "content": [resultados], "label_key": "columna_X", "data_key": "columna_Y"}}
+        # Caso 3: Múltiples filas con múltiples columnas → Tabla
+        if len(results) > 1 or (len(results) == 1 and len(results[0]) > 1):
+            title = f"Resultados: {question[:60]}"
+            table_data = {
+                "type": "table",
+                "title": title,
+                "content": json.loads(json.dumps(results, cls=CustomDecimalEncoder))
+            }
+            return json.dumps(table_data)
 
-2. **RESPUESTA TIPO 'table' (Tabla):**
-   * Cuándo usarlo: Si la PREGUNTA pide "listar", "mostrar todos", etc.
-   * Formato: {{"type": "table", "title": "...", "content": [resultados]}}
-
-3. **RESPUESTA TIPO 'text' (Texto Plano):**
-   * Cuándo usarlo: Para todo lo demás (datos únicos, conteos totales, sin resultados).
-
-INSTRUCCIÓN FINAL: Responde SOLAMENTE con el formato JSON (para 'chart' o 'table') o con el texto plano (para 'text').
-"""
-
-        return self.model.ask(prompt, self.context)
+        # Caso 4: Fallback → Texto plano con los datos
+        results_str = json.dumps(results, cls=CustomDecimalEncoder, ensure_ascii=False, indent=2)
+        return f"Aquí están los resultados:\n{results_str}"
 
     def _add_to_context(self, role: str, content: str):
         """Añade un mensaje al historial de conversación."""

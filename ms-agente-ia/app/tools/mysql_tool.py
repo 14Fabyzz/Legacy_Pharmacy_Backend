@@ -30,6 +30,7 @@ class MySQLTool:
         }
         self.conn = None
         self.cursor = None
+        self._cached_schema: str = ""  # <-- Schema Cache en memoria
         self._connect()
 
     def _connect(self):
@@ -60,7 +61,9 @@ class MySQLTool:
             self._connect()
 
     def get_schema(self) -> str:
-        """Obtiene el esquema de todas las tablas."""
+        """Obtiene el esquema de todas las tablas. Usa caché en memoria para evitar consultas repetitivas a Aiven."""
+        if self._cached_schema:
+            return self._cached_schema
         try:
             self._ensure_connection()
             self.cursor.execute("SHOW TABLES")
@@ -103,6 +106,7 @@ class MySQLTool:
                 count = self.cursor.fetchone()['count']
                 schema += f"  Total de registros: {count}\n\n"
 
+            self._cached_schema = schema  # Almacenar en caché
             return schema
         except mysql.connector.Error as e:
             return f"Error al obtener esquema: {e}"

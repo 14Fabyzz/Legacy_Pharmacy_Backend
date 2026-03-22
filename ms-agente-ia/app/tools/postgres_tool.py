@@ -1,5 +1,5 @@
 """
-Herramienta para conectarse a la base de datos de Ventas (PostgreSQL) de Farmasync.
+Herramienta para conectarse a la base de datos de Ventas (PostgreSQL) de Regen Salud POS.
 """
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -21,6 +21,7 @@ class PostgresTool:
         }
         self.conn = None
         self.cursor = None
+        self._cached_schema: str = ""  # <-- Schema Cache en memoria
 
         # Filtro de Seguridad Anti-Hackeo (DML/DDL Block)
         self.forbidden_words = re.compile(
@@ -54,7 +55,9 @@ class PostgresTool:
             self._connect()
 
     def get_schema(self) -> str:
-        """Obtiene el esquema de las tablas necesarias para el Agente."""
+        """Obtiene el esquema de las tablas necesarias. Usa caché en memoria para evitar consultas repetitivas a Aiven."""
+        if self._cached_schema:
+            return self._cached_schema
         try:
             self._ensure_connection()
             self.cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema='public';")
@@ -85,6 +88,7 @@ class PostgresTool:
                 count = self.cursor.fetchone()['count']
                 schema += f"  Total estim. registros: {count}\n\n"
 
+            self._cached_schema = schema  # Almacenar en caché
             return schema
         except psycopg2.Error as e:
             return f"Error al obtener esquema PostgreSQL: {e}"
