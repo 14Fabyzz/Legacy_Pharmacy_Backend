@@ -1,0 +1,16 @@
+# Entornos Virtuales
+venv/
+env/
+.venv/
+
+# Python
+__pycache__/
+*.pyc
+
+# Variables de Entorno (SECRETS)
+.env
+.env.*
+
+# Logs y pruebas
+test_output*.txt
+test_run.py

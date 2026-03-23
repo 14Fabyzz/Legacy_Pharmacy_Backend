@@ -9,7 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/caja")
+@RequestMapping("/api/v1/ventas/caja")
+@CrossOrigin(origins = "*", allowedHeaders = "*", maxAge = 3600)
 public class TurnoCajaController {
 
     @Autowired
@@ -28,5 +29,10 @@ public class TurnoCajaController {
     @GetMapping("/estado")
     public ResponseEntity<TurnoCaja> verificarEstado() {
         return ResponseEntity.ok(turnoCajaService.obtenerTurnoAbiertoActual());
+    }
+
+    @GetMapping("/turno-activo")
+    public ResponseEntity<TurnoCaja> obtenerTurnoActivoGlobal() {
+        return ResponseEntity.ok(turnoCajaService.obtenerTurnoAbiertoGlobal());
     }
 }

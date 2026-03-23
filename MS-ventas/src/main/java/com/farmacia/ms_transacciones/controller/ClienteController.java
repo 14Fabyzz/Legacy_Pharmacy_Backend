@@ -8,9 +8,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
-@RequestMapping("/clientes") // Ruta base actualizada
+@RequestMapping("/api/v1/ventas/clientes")
+@CrossOrigin(origins = "*", allowedHeaders = "*", maxAge = 3600)
 public class ClienteController {
 
     @Autowired
@@ -29,5 +31,26 @@ public class ClienteController {
     @GetMapping("/buscar-nombre")
     public ResponseEntity<List<Cliente>> buscarPorNombre(@RequestParam String q) {
         return ResponseEntity.ok(clienteService.buscarPorNombre(q));
+    }
+
+    @GetMapping
+    public ResponseEntity<List<ClienteDTO>> listarActivos() {
+        return ResponseEntity.ok(clienteService.listarClientesActivos());
+    }
+
+    @GetMapping("/buscar")
+    public ResponseEntity<List<ClienteDTO>> buscarDinamicamente(@RequestParam String termino) {
+        return ResponseEntity.ok(clienteService.buscarClientesDinamicamente(termino));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ClienteDTO> actualizarCliente(@PathVariable Long id, @RequestBody ClienteDTO cliente) {
+        return ResponseEntity.ok(clienteService.actualizarCliente(id, cliente));
+    }
+
+    @PatchMapping("/{id}/estado")
+    public ResponseEntity<Map<String, String>> desactivarCliente(@PathVariable Long id) {
+        clienteService.desactivarCliente(id);
+        return ResponseEntity.ok(Map.of("mensaje", "Cliente desactivado correctamente"));
     }
 }

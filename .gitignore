@@ -26,3 +26,18 @@ logs/
 .env
 .env.bak
 .env.example
+scripts/
+.agent/
+node_modules
+
+# --- IGNORAR LOGS DE DEBUG --- 
+debug_logs.txt
+
+# Ignorar carpetas locales de scripts y agentes
+.agents/
+scripsDB/
+inventory-service/docs/
+debug_logs.txt
+
+inventory-service/src/main/resources/db/migration/*.sql
+

@@ -6,7 +6,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Data;
 import org.hibernate.annotations.Immutable;
-import java.time.LocalDate; // ⚠️ IMPORTANTE
+import java.time.LocalDate;
+// Removed unused import
+import jakarta.persistence.Transient;
 
 @Data
 @Entity
@@ -34,28 +36,58 @@ public class ProductoCard {
     @Column(name = "precio_venta_base")
     private Double precioVentaBase;
 
+    @Column(name = "precio_venta_total")
+    private Double precioVentaTotal; // NUEVO: PVP final con IVA
+
+    @Column(name = "precio_venta_unidad")
+    private Double precioVentaUnidad;
+
+    @Column(name = "precio_venta_blister")
+    private Double precioVentaBlister; // NUEVO: Precio por blister
+
+    @Column(name = "iva_porcentaje")
+    private Integer ivaPorcentaje; // NUEVO: Porcentaje de IVA
+
     @Column(name = "stock_total")
     private Integer stockTotal;
 
     @Column(name = "stock_minimo")
     private Integer stockMinimo;
 
-    // ✅ NUEVOS CAMPOS FRACCIONAMIENTO
+    // ✅ CAMPOS FRACCIONAMIENTO
     @Column(name = "es_fraccionable")
     private Boolean esFraccionable;
 
     @Column(name = "unidades_por_caja")
     private Integer unidadesPorCaja;
 
-    @Column(name = "precio_venta_unidad")
-    private Double precioVentaUnidad;
+    // ✅ CAMPOS DE SEGURIDAD FARMACÉUTICA
+    @Column(name = "refrigerado")
+    private Boolean refrigerado; // NUEVO: Requiere cadena de frío
+
+    @Column(name = "es_controlado")
+    private Boolean esControlado; // NUEVO: Requiere receta controlada
 
     // ✅ EL NUEVO CAMPO:
     @Column(name = "proximo_vencimiento")
     private LocalDate proximoVencimiento;
 
-    @Column(name = "nivel_stock")
+    // ✅ CÁLCULO DINÁMICO DE ESTADO
+    // Eliminamos el mapeo a la vista y usamos lógica Java
+    @Transient
     private String nivelStock;
+
+    public String getNivelStock() {
+        if (stockTotal == null)
+            return "SIN_STOCK";
+        if (stockTotal == 0)
+            return "AGOTADO";
+        if (stockMinimo != null && stockTotal <= stockMinimo)
+            return "CRITICO";
+        if (stockMinimo != null && stockTotal <= (stockMinimo + 5))
+            return "BAJO"; // Margen de alerta
+        return "OPTIMO";
+    }
 
     @Column(name = "laboratorio_nombre")
     private String laboratorio;
@@ -65,4 +97,8 @@ public class ProductoCard {
 
     @Column(name = "principio_activo_nombre")
     private String principioActivo;
+
+    // ✅ NUEVO CAMPO IMAGEN
+    @Column(name = "imagen_url")
+    private String imagenUrl;
 }

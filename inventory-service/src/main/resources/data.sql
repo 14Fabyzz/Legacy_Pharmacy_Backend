@@ -10,30 +10,30 @@
 
 INSERT IGNORE INTO `categorias` (`nombre`, `activa`) VALUES ('GENERAL', 1);
 
-INSERT IGNORE INTO `laboratorios` (`nombre`, `activo`) VALUES ('GENERICO', 1);
-INSERT IGNORE INTO `laboratorios` (`nombre`, `activo`) VALUES ('AG', 1);
-INSERT IGNORE INTO `laboratorios` (`nombre`, `activo`) VALUES ('GENFAR', 1);
-INSERT IGNORE INTO `laboratorios` (`nombre`, `activo`) VALUES ('BAYER', 1);
-INSERT IGNORE INTO `laboratorios` (`nombre`, `activo`) VALUES ('OTC', 1);
-INSERT IGNORE INTO `laboratorios` (`nombre`, `activo`) VALUES ('OPHARM', 1);
-INSERT IGNORE INTO `laboratorios` (`nombre`, `activo`) VALUES ('ANGLOPHARMA', 1);
-INSERT IGNORE INTO `laboratorios` (`nombre`, `activo`) VALUES ('NACIONAL DE QUIMICOS', 1);
-INSERT IGNORE INTO `laboratorios` (`nombre`, `activo`) VALUES ('DROGA BLANCA', 1);
-INSERT IGNORE INTO `laboratorios` (`nombre`, `activo`) VALUES ('ECAR', 1);
-INSERT IGNORE INTO `laboratorios` (`nombre`, `activo`) VALUES ('LABQUIFAR', 1);
-INSERT IGNORE INTO `laboratorios` (`nombre`, `activo`) VALUES ('LAPROFF', 1);
-INSERT IGNORE INTO `laboratorios` (`nombre`, `activo`) VALUES ('COASPHARMA', 1);
-INSERT IGNORE INTO `laboratorios` (`nombre`, `activo`) VALUES ('MEMPHIS', 1);
-INSERT IGNORE INTO `laboratorios` (`nombre`, `activo`) VALUES ('CUIDADO DEL BEBE', 1);
-INSERT IGNORE INTO `laboratorios` (`nombre`, `activo`) VALUES ('HARTUNG', 1);
-INSERT IGNORE INTO `laboratorios` (`nombre`, `activo`) VALUES ('JUHNIOS', 1);
-INSERT IGNORE INTO `laboratorios` (`nombre`, `activo`) VALUES ('AFR SAS', 1);
-INSERT IGNORE INTO `laboratorios` (`nombre`, `activo`) VALUES ('ABBOTT', 1);
-INSERT IGNORE INTO `laboratorios` (`nombre`, `activo`) VALUES ('ALIKIN', 1);
-INSERT IGNORE INTO `laboratorios` (`nombre`, `activo`) VALUES ('TOP GLOVE', 1);
-INSERT IGNORE INTO `laboratorios` (`nombre`, `activo`) VALUES ('OSA', 1);
-INSERT IGNORE INTO `laboratorios` (`nombre`, `activo`) VALUES ('SIEGFRIED', 1);
-INSERT IGNORE INTO `laboratorios` (`nombre`, `activo`) VALUES ('NOVAMED', 1);
+INSERT INTO laboratorios (nombre, activo) SELECT 'GENERICO', 1 WHERE NOT EXISTS (SELECT 1 FROM laboratorios WHERE nombre = 'GENERICO');
+INSERT INTO laboratorios (nombre, activo) SELECT 'AG', 1 WHERE NOT EXISTS (SELECT 1 FROM laboratorios WHERE nombre = 'AG');
+INSERT INTO laboratorios (nombre, activo) SELECT 'GENFAR', 1 WHERE NOT EXISTS (SELECT 1 FROM laboratorios WHERE nombre = 'GENFAR');
+INSERT INTO laboratorios (nombre, activo) SELECT 'BAYER', 1 WHERE NOT EXISTS (SELECT 1 FROM laboratorios WHERE nombre = 'BAYER');
+INSERT INTO laboratorios (nombre, activo) SELECT 'OTC', 1 WHERE NOT EXISTS (SELECT 1 FROM laboratorios WHERE nombre = 'OTC');
+INSERT INTO laboratorios (nombre, activo) SELECT 'OPHARM', 1 WHERE NOT EXISTS (SELECT 1 FROM laboratorios WHERE nombre = 'OPHARM');
+INSERT INTO laboratorios (nombre, activo) SELECT 'ANGLOPHARMA', 1 WHERE NOT EXISTS (SELECT 1 FROM laboratorios WHERE nombre = 'ANGLOPHARMA');
+INSERT INTO laboratorios (nombre, activo) SELECT 'NACIONAL DE QUIMICOS', 1 WHERE NOT EXISTS (SELECT 1 FROM laboratorios WHERE nombre = 'NACIONAL DE QUIMICOS');
+INSERT INTO laboratorios (nombre, activo) SELECT 'DROGA BLANCA', 1 WHERE NOT EXISTS (SELECT 1 FROM laboratorios WHERE nombre = 'DROGA BLANCA');
+INSERT INTO laboratorios (nombre, activo) SELECT 'ECAR', 1 WHERE NOT EXISTS (SELECT 1 FROM laboratorios WHERE nombre = 'ECAR');
+INSERT INTO laboratorios (nombre, activo) SELECT 'LABQUIFAR', 1 WHERE NOT EXISTS (SELECT 1 FROM laboratorios WHERE nombre = 'LABQUIFAR');
+INSERT INTO laboratorios (nombre, activo) SELECT 'LAPROFF', 1 WHERE NOT EXISTS (SELECT 1 FROM laboratorios WHERE nombre = 'LAPROFF');
+INSERT INTO laboratorios (nombre, activo) SELECT 'COASPHARMA', 1 WHERE NOT EXISTS (SELECT 1 FROM laboratorios WHERE nombre = 'COASPHARMA');
+INSERT INTO laboratorios (nombre, activo) SELECT 'MEMPHIS', 1 WHERE NOT EXISTS (SELECT 1 FROM laboratorios WHERE nombre = 'MEMPHIS');
+INSERT INTO laboratorios (nombre, activo) SELECT 'CUIDADO DEL BEBE', 1 WHERE NOT EXISTS (SELECT 1 FROM laboratorios WHERE nombre = 'CUIDADO DEL BEBE');
+INSERT INTO laboratorios (nombre, activo) SELECT 'HARTUNG', 1 WHERE NOT EXISTS (SELECT 1 FROM laboratorios WHERE nombre = 'HARTUNG');
+INSERT INTO laboratorios (nombre, activo) SELECT 'JUHNIOS', 1 WHERE NOT EXISTS (SELECT 1 FROM laboratorios WHERE nombre = 'JUHNIOS');
+INSERT INTO laboratorios (nombre, activo) SELECT 'AFR SAS', 1 WHERE NOT EXISTS (SELECT 1 FROM laboratorios WHERE nombre = 'AFR SAS');
+INSERT INTO laboratorios (nombre, activo) SELECT 'ABBOTT', 1 WHERE NOT EXISTS (SELECT 1 FROM laboratorios WHERE nombre = 'ABBOTT');
+INSERT INTO laboratorios (nombre, activo) SELECT 'ALIKIN', 1 WHERE NOT EXISTS (SELECT 1 FROM laboratorios WHERE nombre = 'ALIKIN');
+INSERT INTO laboratorios (nombre, activo) SELECT 'TOP GLOVE', 1 WHERE NOT EXISTS (SELECT 1 FROM laboratorios WHERE nombre = 'TOP GLOVE');
+INSERT INTO laboratorios (nombre, activo) SELECT 'OSA', 1 WHERE NOT EXISTS (SELECT 1 FROM laboratorios WHERE nombre = 'OSA');
+INSERT INTO laboratorios (nombre, activo) SELECT 'SIEGFRIED', 1 WHERE NOT EXISTS (SELECT 1 FROM laboratorios WHERE nombre = 'SIEGFRIED');
+INSERT INTO laboratorios (nombre, activo) SELECT 'NOVAMED', 1 WHERE NOT EXISTS (SELECT 1 FROM laboratorios WHERE nombre = 'NOVAMED');
 
 INSERT IGNORE INTO `principios_activos` (`nombre`) VALUES ('ACICLOVIR');
 INSERT IGNORE INTO `principios_activos` (`nombre`) VALUES ('ACETATO DE ALUMINIO');
@@ -300,62 +300,16 @@ INSERT IGNORE INTO `productos`
 VALUES 
 ('164', '.', 'Acetaminofen 500Mg Caja X 300 Tabletas Coaspharma', '500Mg', 'Caja', 'INVIMA 2022M-6655443', (SELECT id FROM laboratorios WHERE nombre = 'GENERICO' LIMIT 1), (SELECT id FROM categorias WHERE nombre = 'GENERAL' LIMIT 1), (SELECT id FROM principios_activos WHERE nombre = 'ACETAMINOFEN' LIMIT 1), 14.0, 28.0, 0.0, 100.0, 25, 0, 0, 'Activo');
 
--- -----------------------------------------------------------------------------
--- 3. INSERTAR LOTES SIMULADOS (Para pruebas de Vencimiento)
--- -----------------------------------------------------------------------------
--- Se crean lotes para cada producto con fechas variadas:
--- VENCIDO (2024), POR VENCER (2026), VIGENTE (2027)
-
--- Lote 1: Vencido (Hace 1 año)
-INSERT IGNORE INTO `lotes` (`producto_id`, `numero_lote`, `fecha_vencimiento`, `cantidad_actual`, `costo_compra`) 
-SELECT id, CONCAT('L-EXP-', id), DATE_SUB(CURDATE(), INTERVAL 1 YEAR), 5, precio_compra_referencia FROM productos WHERE estado = 'Activo' LIMIT 10;
-
--- Lote 2: Por Vencer (En 3 meses - Alerta Amarilla)
-INSERT IGNORE INTO `lotes` (`producto_id`, `numero_lote`, `fecha_vencimiento`, `cantidad_actual`, `costo_compra`) 
-SELECT id, CONCAT('L-WARN-', id), DATE_ADD(CURDATE(), INTERVAL 3 MONTH), 20, precio_compra_referencia FROM productos WHERE estado = 'Activo' LIMIT 10 OFFSET 10;
-
--- Lote 3: Vigente (En 2 años - Alerta Verde)
-INSERT IGNORE INTO `lotes` (`producto_id`, `numero_lote`, `fecha_vencimiento`, `cantidad_actual`, `costo_compra`) 
-SELECT id, CONCAT('L-OK-', id), DATE_ADD(CURDATE(), INTERVAL 2 YEAR), 50, precio_compra_referencia FROM productos WHERE estado = 'Activo';
-
--- -----------------------------------------------------------------------------
--- 4. VISTA DE STOCK (Dashboard)
--- -----------------------------------------------------------------------------
--- Hibernate intenta crear una tabla para la entidad @Immutable "ProductoCard".
--- Borramos esa tabla vacia y creamos la vista real.
-
-DROP TABLE IF EXISTS `v_stock_productos`;
-
-CREATE OR REPLACE VIEW `v_stock_productos` AS
-SELECT
-    p.id AS producto_id,
-    p.codigo_interno,
-    p.codigo_barras,
-    p.nombre_comercial,
-    p.concentracion,
-    p.presentacion,
-    p.precio_venta_base,
-    p.stock_minimo,
-    p.es_fraccionable,          -- <--- NUEVO
-    p.unidades_por_caja,        -- <--- NUEVO
-    p.precio_venta_unidad,      -- <--- NUEVO
-    l.nombre AS laboratorio_nombre,
-    c.nombre AS categoria_nombre,
-    pa.nombre AS principio_activo_nombre,
-    COALESCE(SUM(lt.cantidad_actual), 0) AS stock_total,
-    MIN(lt.fecha_vencimiento) AS proximo_vencimiento,
-    CASE
-        WHEN COALESCE(SUM(lt.cantidad_actual), 0) = 0 THEN 'SIN_STOCK'
-        WHEN COALESCE(SUM(lt.cantidad_actual), 0) <= p.stock_minimo THEN 'BAJO'
-        ELSE 'OPTIMO'
-    END AS nivel_stock
-FROM productos p
-LEFT JOIN laboratorios l ON p.laboratorio_id = l.id
-LEFT JOIN categorias c ON p.categoria_id = c.id
-LEFT JOIN principios_activos pa ON p.principio_activo_id = pa.id
-LEFT JOIN lotes lt ON p.id = lt.producto_id AND lt.cantidad_actual > 0
-GROUP BY 
-    p.id, p.codigo_interno, p.codigo_barras, p.nombre_comercial, 
-    p.concentracion, p.presentacion, p.precio_venta_base, 
-    p.stock_minimo, p.es_fraccionable, p.unidades_por_caja, p.precio_venta_unidad,
-    l.nombre, c.nombre, pa.nombre;
+-- =============================================================================
+-- FIN DEL SCRIPT DE DATOS MAESTROS
+-- =============================================================================
+-- NOTA IMPORTANTE:
+-- Las secciones 3 (Lotes de prueba) y 4 (Vista SQL) han sido eliminadas de este
+-- archivo por razones de seguridad:
+--
+--   - Sección 3 contenía un 'DELETE FROM lotes' que destruía datos de producción.
+--   - La Vista SQL es gestionada por ViewInitializer.java en el arranque.
+--
+-- Para poblar lotes de prueba en un entorno de desarrollo, ejecutar manualmente:
+--   scripts/seed_lotes_test_MANUAL.sql
+-- =============================================================================

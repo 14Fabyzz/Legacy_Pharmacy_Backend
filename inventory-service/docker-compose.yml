@@ -5,31 +5,33 @@ services:
     container_name: db-inventory
     restart: always
     environment:
-      # Usamos el nombre de la base de datos de tu application.properties
       MYSQL_DATABASE: legacy03
       MYSQL_ROOT_PASSWORD: root_password
     ports:
       - "3307:3306" # Tu PC lo ve en 3307, Docker lo ve en 3306
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - inventory-net
 
-  # Contenedor del Microservicio de Inventario
+  # Microservicio de Inventario
   ms-inventory:
-    build: . # Construye usando el Dockerfile de esta carpeta
+    build: .
     container_name: ms-inventory
     ports:
       - "8081:8081"
     environment:
-      # URL corregida para hablar con el contenedor db-inventory
-      - SPRING_DATASOURCE_URL=jdbc:mysql://db-inventory:3306/legacy03?useSSL=false&serverTimezone=America/Bogota&allowPublicKeyRetrieval=true
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=root_password
-      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
-      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
-      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}_password
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      # Apunta al contenedor db-inventory (red interna Docker, NO localhost)
+      SPRING_DATASOURCE_URL: jdbc:mysql://db-inventory:3306/legacy03?useSSL=false&serverTimezone=America/Bogota&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root_password
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
     depends_on:
-      - db-inventory
+      db-inventory:
+        condition: service_healthy   # Espera a que MySQL esté listo de verdad
     networks:
       - inventory-net
 

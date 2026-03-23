@@ -34,14 +34,24 @@ public class Usuario {
     @Column(nullable = false, length = 255)
     private String passwordHash;
 
+    @Column(nullable = false, unique = true, length = 80)
+    private String email;
+
+    @Column(nullable = false, length = 13)
+    private String telefono;
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "rol_id", nullable = false)
     private Rol rol;
+
+    @Column(name = "sucursal_id")
+    private Long sucursalId;
 
     @Column(nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
     private EstadoUsuario estado;
 
+    @Builder.Default
     @Column(name = "intentos_fallidos")
     private Integer intentosFallidos = 0;
 

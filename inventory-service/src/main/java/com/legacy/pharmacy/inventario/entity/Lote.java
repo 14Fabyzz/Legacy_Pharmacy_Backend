@@ -23,10 +23,12 @@ public class Lote {
     private Integer id;
 
     // Relación: Un lote pertenece a un Producto
-    // @OnDelete(action = OnDeleteAction.CASCADE) ayuda a Hibernate a entender el ON DELETE CASCADE de SQL
+    // @OnDelete(action = OnDeleteAction.CASCADE) ayuda a Hibernate a entender el ON
+    // DELETE CASCADE de SQL
     @ManyToOne(fetch = FetchType.LAZY) // O puede que no tengas el fetch explícito, es LAZY por defecto
     @JoinColumn(name = "producto_id", nullable = false)
     @com.fasterxml.jackson.annotation.JsonIgnore // <--- AGREGA ESTA LÍNEA
+    @org.hibernate.annotations.NotFound(action = org.hibernate.annotations.NotFoundAction.IGNORE)
     private Producto producto;
 
     @Column(name = "numero_lote", nullable = false, length = 50)
@@ -40,6 +42,12 @@ public class Lote {
 
     @Column(name = "costo_compra", nullable = false)
     private BigDecimal costoCompra;
+
+    @Column(name = "cantidad_merma")
+    private Integer cantidadMerma = 0;
+
+    @Column(name = "cantidad_cuarentena")
+    private Integer cantidadCuarentena = 0;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

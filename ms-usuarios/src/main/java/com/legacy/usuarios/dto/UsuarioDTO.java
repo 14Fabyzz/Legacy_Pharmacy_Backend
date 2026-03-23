@@ -17,8 +17,11 @@ public class UsuarioDTO {
     private String nombreCompleto;
     private String cedula;
     private String login;
+    private String email;
+    private String telefono;
     private Long rolId;
     private String rolNombre;
+    private Long sucursalId;
     private EstadoUsuario estado;
     private Integer intentosFallidos;
     private LocalDateTime fechaBloqueo;

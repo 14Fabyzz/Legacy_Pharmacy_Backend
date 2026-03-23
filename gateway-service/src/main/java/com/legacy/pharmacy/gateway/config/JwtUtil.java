@@ -9,8 +9,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;  // ← AÑADIR IMPORT
+// Removed unused import
+import java.util.Base64; // ← AÑADIR IMPORT
 import java.util.Date;
 import java.util.function.Function;
 
@@ -27,7 +27,7 @@ public class JwtUtil {
 
     // ⭐ CAMBIO CRÍTICO: Decodificar Base64 igual que MS-Usuarios
     private SecretKey getSigningKey() {
-        byte[] keyBytes = Base64.getDecoder().decode(secret);  // ← DECODIFICAR BASE64
+        byte[] keyBytes = Base64.getDecoder().decode(secret); // ← DECODIFICAR BASE64
         return Keys.hmacShaKeyFor(keyBytes);
     }
 

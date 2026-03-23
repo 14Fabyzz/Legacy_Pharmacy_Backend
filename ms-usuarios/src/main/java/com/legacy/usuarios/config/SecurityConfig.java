@@ -38,11 +38,15 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
 
                         // 2. CORRECCIÓN: Permitir explícitamente la ruta real de tu AuthController
-                        .requestMatchers("/api/auth/login", "/api/auth/logout").permitAll()
+                        .requestMatchers(
+                                        "/api/auth/login",
+                                        "/api/auth/logout",
+                                        "/api/usuarios/login",
+                                        "/api/usuarios/logout"
+                        ).permitAll()
 
                         // Esta línea también sirve de respaldo, está bien dejarla
                         .requestMatchers("/api/auth/**").permitAll()
-
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/error").permitAll()
 
@@ -50,11 +54,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/roles/**").hasRole("ADMINISTRADOR")
                         .requestMatchers("/api/usuarios/**").authenticated()
 
-                        .anyRequest().authenticated()
-                )
+                        .anyRequest().authenticated())
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -76,6 +78,10 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        // OPTIMIZACIÓN APM: Strength=10 es el balance óptimo seguridad/velocidad.
+        // BCrypt strength 10 ≈ 80ms | strength 12 ≈ 300ms | strength 14 ≈ 1200ms (☠️)
+        // No subir de 11 en producción con BD remota (Aiven añade latencia de red
+        // extra).
+        return new BCryptPasswordEncoder(10);
     }
 }

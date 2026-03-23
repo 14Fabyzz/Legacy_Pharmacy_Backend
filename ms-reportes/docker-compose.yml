@@ -1,0 +1,21 @@
+services:
+  # Microservicio de Reportes (lectura de BD PostgreSQL de MS-ventas en Aiven)
+  ms-reportes:
+    build: .
+    container_name: ms-reportes
+    ports:
+      - "8084:8084"
+    env_file:
+      - ../.env
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://pg-2714c85d-hincapiemaya66-ca69.h.aivencloud.com:16558/defaultdb?sslmode=require
+      - AIVEN_USER=${AIVEN_USER}
+      - AIVEN_PG_PASSWORD=${AIVEN_PG_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - MS_REPORTES_GEMINI_API_KEY=${MS_REPORTES_GEMINI_API_KEY}
+    networks:
+      - reportes-net
+
+networks:
+  reportes-net:
+    driver: bridge

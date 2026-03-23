@@ -36,20 +36,29 @@ public class InventarioClient {
                     ProductoInventarioDTO.class);
             return res.getBody();
         } catch (Exception e) {
+            System.err.println("Error en obtenerProducto: " + e.getMessage());
+            e.printStackTrace();
             throw new RuntimeException("Error conectando a Inventario para producto ID: " + id);
         }
     }
 
-    // --- MÉTODO ACTUALIZADO: Recibe sucursalId ---
-    public void registrarSalida(Integer productoId, Integer cantidad, Integer sucursalId) {
+    // --- MÉTODO ACTUALIZADO: Recibe sucursalId, TipoVenta y documentoRef ---
+    public void registrarSalida(Integer productoId, Integer cantidad, Integer sucursalId,
+            com.farmacia.ms_transacciones.enums.TipoVenta tipoVenta, String documentoRef) {
         try {
 
             String url = inventarioBaseUrl + "/productos/" + productoId + "/descontar";
 
-            // Enviamos la sucursal en el JSON
+            // Convertir TipoVenta y documentoRef a JSON
+            String tipoVentaJson = (tipoVenta != null) ? "\"" + tipoVenta.name() + "\"" : "null";
+            String docRefJson = (documentoRef != null) ? "\"" + documentoRef + "\"" : "null";
+
+            // Enviamos el TipoVenta y documentoRef en el JSON
             String jsonBody = String.format(
-                    "{\"cantidad\": %d, \"motivo\": \"VENTA_SUCURSAL_%d\", \"sucursalId\": %d}",
-                    cantidad, sucursalId, sucursalId);
+                    "{\"cantidad\": %d, \"motivo\": \"VENTA_SUCURSAL_%d\", \"sucursalId\": %d, \"tipoVenta\": %s, \"documentoRef\": %s}",
+                    cantidad, sucursalId, sucursalId, tipoVentaJson, docRefJson);
+
+            System.out.println("VENTA-CLIENTE: Enviando POST a Inventario: URL=" + url + ", Body=" + jsonBody);
 
             HttpEntity<String> entity = new HttpEntity<>(jsonBody, getHeaders());
             ResponseEntity<Void> res = restTemplate.exchange(url, HttpMethod.POST, entity, Void.class);
@@ -62,11 +71,18 @@ public class InventarioClient {
     }
 
     // --- MÉTODO RENOMBRADO: registrarDevolucion ---
-    public void registrarDevolucion(Integer productoId, Integer cantidad) {
+    public void registrarDevolucion(Integer productoId, Integer cantidad,
+            com.farmacia.ms_transacciones.enums.TipoVenta tipoVenta, String destinoProducto, String documentoRef) {
         try {
             // NOTA: La ruta cambió a .../productos/{id}/devolver
             String url = inventarioBaseUrl + "/productos/" + productoId + "/devolver";
-            String jsonBody = String.format("{\"cantidad\": %d, \"motivo\": \"DEVOLUCION_CLIENTE\"}", cantidad);
+            String tipoVentaJson = (tipoVenta != null) ? "\"" + tipoVenta.name() + "\"" : "null";
+            String destinoProductoJson = (destinoProducto != null) ? "\"" + destinoProducto + "\"" : "null";
+            String docRefJson = (documentoRef != null) ? "\"" + documentoRef + "\"" : "null";
+
+            String jsonBody = String.format(
+                    "{\"cantidad\": %d, \"motivo\": \"DEVOLUCION_CLIENTE\", \"tipoVenta\": %s, \"destinoProducto\": %s, \"documentoRef\": %s}",
+                    cantidad, tipoVentaJson, destinoProductoJson, docRefJson);
 
             HttpEntity<String> entity = new HttpEntity<>(jsonBody, getHeaders());
             ResponseEntity<Void> response = restTemplate.exchange(url, HttpMethod.POST, entity, Void.class);
@@ -76,6 +92,25 @@ public class InventarioClient {
             }
         } catch (Exception e) {
             throw new RuntimeException("Error al devolver stock: " + e.getMessage());
+        }
+    }
+
+    // --- NUEVO MÉTODO BATCH: registrarDevolucionBatch ---
+    public void registrarDevolucionBatch(com.farmacia.ms_transacciones.dto.BatchDevolucionRequestDTO requestBody) {
+        try {
+            System.out.println("INVENTARIO_CLIENT: Enviando Batch de Devoluciones. DocRef: "
+                    + requestBody.getDocumentoRef() + " Items: " + requestBody.getItems().size());
+            String url = inventarioBaseUrl + "/productos/devolver/batch";
+
+            HttpEntity<com.farmacia.ms_transacciones.dto.BatchDevolucionRequestDTO> entity = new HttpEntity<>(
+                    requestBody, getHeaders());
+            ResponseEntity<Void> response = restTemplate.exchange(url, HttpMethod.POST, entity, Void.class);
+
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                throw new RuntimeException("El Inventario rechazó la devolución en lote (batch)");
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Error al devolver stock al Inventario (Batch): " + e.getMessage());
         }
     }
 }

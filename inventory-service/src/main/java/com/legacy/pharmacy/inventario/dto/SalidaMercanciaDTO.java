@@ -19,4 +19,13 @@ public class SalidaMercanciaDTO {
     private Integer ventaId; // Opcional, por si tienes un sistema de facturación
 
     private String observaciones;
+
+    @Deprecated
+    private Boolean esVentaPorCaja;
+
+    private String usuarioResponsable; // <-- Added for audit
+
+    private com.legacy.pharmacy.inventario.enums.TipoVenta tipoVenta;
+
+    private String documentoRef;
 }

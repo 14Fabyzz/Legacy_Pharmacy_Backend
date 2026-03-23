@@ -1,5 +1,6 @@
 package com.legacy.usuarios.dto;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -13,30 +14,37 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UsuarioCreateDTO {
 
-    @NotBlank(message = "El nombre completo es obligatorio")
-    @Size(max = 150, message = "El nombre no puede exceder 150 caracteres")
-    private String nombreCompleto;
+        @NotBlank(message = "El nombre completo es obligatorio")
+        @Size(max = 150, message = "El nombre no puede exceder 150 caracteres")
+        private String nombreCompleto;
 
-    @NotBlank(message = "La cédula es obligatoria")
-    @Pattern(regexp = "^[0-9]{6,20}$", message = "Cédula inválida")
-    private String cedula;
+        @NotBlank(message = "La cédula es obligatoria")
+        @Pattern(regexp = "^[0-9]{6,20}$", message = "Cédula inválida")
+        private String cedula;
 
-    @NotBlank(message = "El login es obligatorio")
-    @Size(min = 4, max = 50, message = "El login debe tener entre 4 y 50 caracteres")
-    @Pattern(
-            regexp = "^[a-zA-Z0-9._-]+$",
-            message = "Login solo puede contener letras, números, punto, guión y guión bajo"
-    )
-    private String login;
+        @NotBlank(message = "El login es obligatorio")
+        @Size(min = 4, max = 50, message = "El login debe tener entre 4 y 50 caracteres")
+        @Pattern(regexp = "^[a-zA-Z0-9._-]+$", message = "Login solo puede contener letras, números, punto, guión y guión bajo")
+        private String login;
 
-    @NotBlank(message = "La contraseña es obligatoria")
-    @Size(min = 8, message = "La contraseña debe tener al menos 8 caracteres")
-    @Pattern(
-            regexp = "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=!]).*$",
-            message = "La contraseña debe contener al menos: 1 mayúscula, 1 minúscula, 1 número y 1 carácter especial"
-    )
-    private String password;
+        @NotBlank(message = "La contraseña es obligatoria")
+        @Size(min = 8, message = "La contraseña debe tener al menos 8 caracteres")
+        @Pattern(regexp = "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=!]).*$", message = "La contraseña debe contener al menos: 1 mayúscula, 1 minúscula, 1 número y 1 carácter especial")
+        private String password;
 
-    @NotNull(message = "El rol es obligatorio")
-    private Long rolId;
+        @NotBlank(message = "El email es obligatorio")
+        @Email(message = "El formato del email no es válido")
+        @Size(max = 80, message = "El email no puede exceder 80 caracteres")
+        private String email;
+
+        @NotBlank(message = "El teléfono es obligatorio")
+        @Size(max = 13, message = "El teléfono no puede exceder 13 caracteres")
+        @Pattern(regexp = "^[+]?[0-9\\s\\-().]{7,13}$", message = "El teléfono solo puede contener números, espacios, +, -, (, )")
+        private String telefono;
+
+        @NotNull(message = "El rol es obligatorio")
+        private Long rolId;
+
+        @NotNull(message = "La sucursal es obligatoria")
+        private Long sucursalId;
 }

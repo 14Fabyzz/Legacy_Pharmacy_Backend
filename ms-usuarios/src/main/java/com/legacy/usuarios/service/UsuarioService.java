@@ -85,17 +85,25 @@ public class UsuarioService {
             throw new BusinessException("Ya existe un usuario con la cédula: " + dto.getCedula());
         }
 
+        // El email debe ser único en todo el sistema
+        if (usuarioRepository.existsByEmail(dto.getEmail())) {
+            throw new BusinessException("Ya existe un usuario registrado con el email: " + dto.getEmail());
+        }
+
         // Validar que el rol exista
         Rol rol = rolRepository.findById(dto.getRolId())
                 .orElseThrow(() -> new NotFoundException("Rol no encontrado con ID: " + dto.getRolId()));
 
-        // Crear usuario
+        // Crear usuario con todos los campos, incluyendo email y telefono
         Usuario usuario = Usuario.builder()
                 .nombreCompleto(dto.getNombreCompleto())
                 .cedula(dto.getCedula())
                 .login(dto.getLogin())
                 .passwordHash(passwordUtil.encodePassword(dto.getPassword()))
+                .email(dto.getEmail())
+                .telefono(dto.getTelefono())
                 .rol(rol)
+                .sucursalId(dto.getSucursalId())
                 .estado(EstadoUsuario.ACTIVO)
                 .intentosFallidos(0)
                 .build();
@@ -106,8 +114,7 @@ public class UsuarioService {
         auditoriaService.registrarEvento(
                 guardado,
                 "Usuario creado: " + guardado.getLogin(),
-                null
-        );
+                null);
 
         return convertirADTO(guardado);
     }
@@ -125,11 +132,36 @@ public class UsuarioService {
             usuario.setNombreCompleto(dto.getNombreCompleto());
         }
 
+        // Actualizar email si viene: verificar que no esté en uso por OTRO usuario
+        if (dto.getEmail() != null && !dto.getEmail().isBlank()) {
+            usuarioRepository.findByEmail(dto.getEmail())
+                    .filter(existente -> !existente.getId().equals(id))
+                    .ifPresent(existente -> {
+                        throw new BusinessException("El email " + dto.getEmail() + " ya está registrado por otro usuario");
+                    });
+            usuario.setEmail(dto.getEmail());
+        }
+
+        // Actualizar teléfono si viene
+        if (dto.getTelefono() != null && !dto.getTelefono().isBlank()) {
+            usuario.setTelefono(dto.getTelefono());
+        }
+
         // Actualizar rol si viene
         if (dto.getRolId() != null) {
             Rol rol = rolRepository.findById(dto.getRolId())
                     .orElseThrow(() -> new NotFoundException("Rol no encontrado con ID: " + dto.getRolId()));
             usuario.setRol(rol);
+        }
+
+        // Actualizar sucursal si viene
+        if (dto.getSucursalId() != null) {
+            usuario.setSucursalId(dto.getSucursalId());
+        }
+
+        // Actualizar contraseña si viene
+        if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
+            usuario.setPasswordHash(passwordUtil.encodePassword(dto.getPassword()));
         }
 
         // Actualizar estado si viene
@@ -149,8 +181,7 @@ public class UsuarioService {
         auditoriaService.registrarEvento(
                 actualizado,
                 "Usuario actualizado: " + actualizado.getLogin(),
-                null
-        );
+                null);
 
         return convertirADTO(actualizado);
     }
@@ -170,8 +201,35 @@ public class UsuarioService {
         auditoriaService.registrarEvento(
                 usuario,
                 "Usuario desactivado: " + usuario.getLogin(),
-                null
-        );
+                null);
+    }
+
+    /**
+     * Cambiar estado de usuario explícitamente (ACTIVO / INACTIVO / BLOQUEADO)
+     * Al reactivar (ACTIVO) se resetean los intentos fallidos y la fecha de
+     * bloqueo.
+     */
+    @Transactional
+    public UsuarioDTO cambiarEstado(Long id, EstadoUsuario nuevoEstado) {
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado con ID: " + id));
+
+        EstadoUsuario estadoAnterior = usuario.getEstado();
+        usuario.setEstado(nuevoEstado);
+
+        if (nuevoEstado == EstadoUsuario.ACTIVO) {
+            usuario.setIntentosFallidos(0);
+            usuario.setFechaBloqueo(null);
+        }
+
+        usuarioRepository.save(usuario);
+
+        auditoriaService.registrarEvento(
+                usuario,
+                "Estado de usuario cambió de " + estadoAnterior + " a " + nuevoEstado + ": " + usuario.getLogin(),
+                null);
+
+        return convertirADTO(usuario);
     }
 
     /**
@@ -195,8 +253,7 @@ public class UsuarioService {
         auditoriaService.registrarEvento(
                 usuario,
                 "Contraseña cambiada para usuario: " + usuario.getLogin(),
-                null
-        );
+                null);
     }
 
     /**
@@ -264,8 +321,11 @@ public class UsuarioService {
                 .nombreCompleto(usuario.getNombreCompleto())
                 .cedula(usuario.getCedula())
                 .login(usuario.getLogin())
+                .email(usuario.getEmail())
+                .telefono(usuario.getTelefono())
                 .rolId(usuario.getRol().getId())
                 .rolNombre(usuario.getRol().getNombre())
+                .sucursalId(usuario.getSucursalId())
                 .estado(usuario.getEstado())
                 .intentosFallidos(usuario.getIntentosFallidos())
                 .fechaBloqueo(usuario.getFechaBloqueo())

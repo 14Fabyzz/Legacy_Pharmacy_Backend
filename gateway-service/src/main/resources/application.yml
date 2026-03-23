@@ -11,14 +11,15 @@ spring:
         - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
       globalcors:
         cors-configurations:
-          '[/**]':
-            allowedOrigins: "http://localhost:4200"
+          "[/**]":
+            allowedOrigins: ["http://localhost:4200", "https://regensaludpos.com", "http://regensaludpos.com"]
             allowedMethods:
               - GET
               - POST
               - PUT
               - DELETE
               - OPTIONS
+              - PATCH
             allowedHeaders: "*"
             allowCredentials: true
 
@@ -41,7 +42,12 @@ spring:
             - Path=/api/usuarios/registro
             - Method=POST
           filters:
-            - RewritePath=/api/usuarios/registro, /api/auth/register # Ajusté esto asumiendo que tu back usa /auth/register
+            - RewritePath=/api/usuarios/registro, /api/usuarios
+
+        - id: auth-service
+          uri: ${URI_USUARIOS}
+          predicates:
+            - Path=/api/auth/**
 
         # =================================================================
         # RUTAS PROTEGIDAS
@@ -65,6 +71,14 @@ spring:
             - RewritePath=/api/inventario/(?<segment>.*), /api/v1/inventario/${segment}
             - AuthenticationFilter
 
+        # Microservicio de Roles
+        - id: roles-service
+          uri: ${URI_USUARIOS}
+          predicates:
+            - Path=/api/roles/**
+          filters:
+            - AuthenticationFilter
+
         # Microservicio de Usuarios (General)
         - id: usuarios-service
           uri: ${URI_USUARIOS}
@@ -75,13 +89,39 @@ spring:
             # La ruta entrante /api/usuarios se reenvía tal cual al microservicio
             - AuthenticationFilter
 
-        # Microservicio de Ventas
+        # Microservicio de Ventas (Soporte directo para /api/v1/ventas)
+        - id: ventas-service-v1
+          uri: ${URI_VENTAS}
+          predicates:
+            - Path=/api/v1/ventas/**
+          filters:
+            - AuthenticationFilter
+
+        # Microservicio de Ventas (Ruta antigua)
         - id: ventas-service
           uri: ${URI_VENTAS}
           predicates:
             - Path=/api/ventas/**
           filters:
             - RewritePath=/api/ventas/(?<segment>.*), /api/v1/ventas/${segment}
+            - AuthenticationFilter
+
+        # Microservicio de Agente IA
+        - id: agente-ia-service
+          uri: ${URI_AGENTE_IA:http://ms-agente-ia:8000}
+          predicates:
+            - Path=/api/v1/chatbot/**
+          filters:
+            - RewritePath=/api/v1/chatbot/(?<segment>.*), /$\{segment}
+            - AuthenticationFilter
+
+        # Microservicio de Reportes
+        - id: reportes-service
+          uri: ${URI_REPORTES:http://localhost:8084}
+          predicates:
+            - Path=/api/v1/reportes/**
+          filters:
+            - RewritePath=/api/v1/reportes/(?<segment>.*), /api/v1/reportes/${segment}
             - AuthenticationFilter
 
 # =============================================================================
