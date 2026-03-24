@@ -7,8 +7,11 @@ import java.util.List;
 public interface ProductoCardRepository extends JpaRepository<ProductoCard, Long> {
 
     // ❌ ANTES (Daba error porque no existe el campo "nombre"):
-    // List<ProductoCard> findByNombreContainingIgnoreCaseOrCodigoInternoContainingIgnoreCaseOrCodigoBarrasContainingIgnoreCase(String nombre, String codigoInterno, String codigoBarras);
+    // List<ProductoCard>
+    // findByNombreContainingIgnoreCaseOrCodigoInternoContainingIgnoreCaseOrCodigoBarrasContainingIgnoreCase(String
+    // nombre, String codigoInterno, String codigoBarras);
 
     // ✅ AHORA (Correcto, usa "NombreComercial"):
-    List<ProductoCard> findByNombreComercialContainingIgnoreCaseOrCodigoInternoContainingIgnoreCaseOrCodigoBarrasContainingIgnoreCase(String nombre, String codigoInterno, String codigoBarras);
+    List<ProductoCard> findByNombreComercialContainingIgnoreCaseOrCodigoInternoContainingIgnoreCaseOrCodigoBarrasContainingIgnoreCase(
+            String nombre, String codigoInterno, String codigoBarras);
 }

@@ -47,4 +47,29 @@ public class InventarioClient {
             throw new ExternalServiceException("El servicio de inventario no está disponible para el cálculo de métricas", e);
         }
     }
+
+    public java.util.List<Integer> obtenerIdsPorFiltros(Integer categoriaId, Integer laboratorioId) {
+        log.info("Solicitando IDs de productos para categoria {} y laboratorio {}", categoriaId, laboratorioId);
+        try {
+            return restClient.get()
+                    .uri(uriBuilder -> {
+                        uriBuilder.path("/api/v1/inventario/productos/filtro-ids");
+                        if (categoriaId != null) uriBuilder.queryParam("categoriaId", categoriaId);
+                        if (laboratorioId != null) uriBuilder.queryParam("laboratorioId", laboratorioId);
+                        return uriBuilder.build();
+                    })
+                    .header("X-User-Id", com.legacy.pharmacy.reportes.config.UserContext.getUserId() != null ? String.valueOf(com.legacy.pharmacy.reportes.config.UserContext.getUserId()) : "1")
+                    .header("X-Username", com.legacy.pharmacy.reportes.config.UserContext.getUsername() != null ? com.legacy.pharmacy.reportes.config.UserContext.getUsername() : "System")
+                    .header("X-User-Role", com.legacy.pharmacy.reportes.config.UserContext.getUserRole() != null ? com.legacy.pharmacy.reportes.config.UserContext.getUserRole() : "ADMIN")
+                    .retrieve()
+                    .onStatus(HttpStatusCode::isError, (request, response) -> {
+                        log.error("Error al consultar filtro-ids: status {}", response.getStatusCode());
+                        throw new ExternalServiceException("Error al obtener filtros desde ms-inventario");
+                    })
+                    .body(new org.springframework.core.ParameterizedTypeReference<java.util.List<Integer>>() {});
+        } catch (org.springframework.web.client.RestClientException e) {
+            log.error("Fallo de conexión crítico obteniendo filtro-ids", e);
+            throw new ExternalServiceException("El servicio de inventario no está disponible para filtrar productos", e);
+        }
+    }
 }

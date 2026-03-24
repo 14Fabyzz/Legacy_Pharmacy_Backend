@@ -77,7 +77,9 @@ public interface LoteRepository extends JpaRepository<Lote, Integer> {
                         "l.numeroLote AS lote, l.fechaVencimiento AS fecha, " +
                         "l.cantidadActual AS cantidad, p.imagenUrl AS imagenUrl " +
                         "FROM Lote l JOIN l.producto p " +
-                        "WHERE l.fechaVencimiento <= :limiteRojo AND l.cantidadActual > 0 " +
+                        "WHERE l.fechaVencimiento <= :limiteRojo " +
+                        "AND l.cantidadActual > 0 " +
+                        "AND l.estado != 'DADO_DE_BAJA' " +
                         "ORDER BY l.fechaVencimiento ASC")
         List<LoteAlertaDTO> findLotesSemaforoRojo(@Param("hoy") LocalDate hoy,
                         @Param("limiteRojo") LocalDate limiteRojo);
@@ -97,6 +99,7 @@ public interface LoteRepository extends JpaRepository<Lote, Integer> {
                         "WHERE l.fechaVencimiento > :limiteRojo " +
                         "AND l.fechaVencimiento <= :limiteAmarillo " +
                         "AND l.cantidadActual > 0 " +
+                        "AND l.estado != 'DADO_DE_BAJA' " +
                         "ORDER BY l.fechaVencimiento ASC")
         List<LoteAlertaDTO> findLotesSemaforoAmarillo(@Param("limiteRojo") LocalDate limiteRojo,
                         @Param("limiteAmarillo") LocalDate limiteAmarillo);
@@ -110,7 +113,9 @@ public interface LoteRepository extends JpaRepository<Lote, Integer> {
          * @param limiteAmarillo hoy.plusDays(180)
          */
         @Query("SELECT COUNT(l) FROM Lote l " +
-                        "WHERE l.fechaVencimiento > :limiteAmarillo AND l.cantidadActual > 0")
+                        "WHERE l.fechaVencimiento > :limiteAmarillo " +
+                        "AND l.cantidadActual > 0 " +
+                        "AND l.estado != 'DADO_DE_BAJA'")
         long countLotesSemaforoVerde(@Param("limiteAmarillo") LocalDate limiteAmarillo);
 
 }
