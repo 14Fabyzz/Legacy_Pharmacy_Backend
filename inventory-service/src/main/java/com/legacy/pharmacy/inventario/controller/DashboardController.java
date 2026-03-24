@@ -26,18 +26,19 @@ public class DashboardController {
     public ResponseEntity<List<ProductoCard>> obtenerTarjetas(@RequestParam(required = false) String busqueda) {
         if (busqueda != null && !busqueda.isEmpty()) {
             // ✅ Actualizamos la llamada al nuevo método
-            return ResponseEntity.ok(cardRepository.findByNombreComercialContainingIgnoreCaseOrCodigoInternoContainingIgnoreCaseOrCodigoBarrasContainingIgnoreCase(busqueda, busqueda, busqueda));
+            return ResponseEntity.ok(cardRepository
+                    .findByNombreComercialContainingIgnoreCaseOrCodigoInternoContainingIgnoreCaseOrCodigoBarrasContainingIgnoreCase(
+                            busqueda, busqueda, busqueda));
         }
         return ResponseEntity.ok(cardRepository.findAll());
     }
 
-    //ALERTA GLOBAL
+    // ALERTA GLOBAL
     // GET /api/v1/inventario/dashboard/alertas
     @GetMapping("/alertas")
     public ResponseEntity<DashboardAlertasDTO> obtenerAlertas() {
         return ResponseEntity.ok(
                 inventarioService.obtenerDashboardAlertas());
     }
-
 
 }
