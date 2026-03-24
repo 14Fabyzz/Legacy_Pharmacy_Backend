@@ -83,24 +83,26 @@ public class MovimientoService {
 
         // 2. Mapear a DTO (Esto disparará N+1 queries por los Lazy Loads, pero es
         // seguro en Transactional)
-        return movimientos.stream().map(m -> com.legacy.pharmacy.inventario.dto.MovimientoKardexDTO.builder()
+        return movimientos.stream().map(m -> {
+            boolean hasLote = m.getLote() != null;
+            boolean hasProducto = hasLote && m.getLote().getProducto() != null;
+            
+            return com.legacy.pharmacy.inventario.dto.MovimientoKardexDTO.builder()
                 .id(m.getId())
                 .fecha(m.getFechaMovimiento())
-                .tipo(m.getTipoMovimiento().name())
+                .tipo(m.getTipoMovimiento() != null ? m.getTipoMovimiento().name() : "N/A")
                 .cantidad(m.getCantidad())
-                // porque no podemos calcular el saldo histórico parcial eficientemente en una
-                // lista paginada global
-                .saldoResultante(m.getLote().getCantidadActual())
+                .saldoResultante(hasLote ? m.getLote().getCantidadActual() : 0)
                 .saldoHistorico(m.getSaldoHistorico()) // TAREA 4
                 .documentoRef(m.getDocumentoRef()) // <-- CORRECCIÓN: Usar getDocumentoRef
                 .detalle(m.getObservacion())
-                .lote(m.getLote().getNumeroLote())
-                .costoUnitario(m.getLote().getCostoCompra())
+                .lote(hasLote ? m.getLote().getNumeroLote() : "LOTE DESCONECTADO")
+                .costoUnitario(hasLote ? m.getLote().getCostoCompra() : null)
                 .usuario(m.getUsuarioResponsable())
-                .nombreProducto(m.getLote().getProducto() != null ? m.getLote().getProducto().getNombreComercial()
-                        : "PRODUCTO ELIMINADO (Lote ID: " + m.getLote().getId() + ")")
-                .codigoBarras(m.getLote().getProducto() != null ? m.getLote().getProducto().getCodigoBarras() : "N/A")
-                .build())
-                .collect(java.util.stream.Collectors.toList());
+                .nombreProducto(hasProducto ? m.getLote().getProducto().getNombreComercial()
+                        : (hasLote ? "PRODUCTO ELIMINADO (Lote ID: " + m.getLote().getId() + ")" : "PRODUCTO DESCONECTADO"))
+                .codigoBarras(hasProducto ? m.getLote().getProducto().getCodigoBarras() : "N/A")
+                .build();
+        }).collect(java.util.stream.Collectors.toList());
     }
 }

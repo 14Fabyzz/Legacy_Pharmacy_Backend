@@ -33,7 +33,7 @@ public interface MovimientoRepository extends JpaRepository<Movimiento, Long> {
     List<Movimiento> findByLote_Producto_IdOrderByFechaMovimientoAsc(@Param("productoId") Integer productoId);
 
     // Consulta para la bitácora global (Limitada por Pageable)
-    @Query("SELECT m FROM Movimiento m ORDER BY m.fechaMovimiento DESC")
+    @Query("SELECT m FROM Movimiento m LEFT JOIN FETCH m.lote l LEFT JOIN FETCH l.producto p ORDER BY m.fechaMovimiento DESC")
     List<Movimiento> findRecent(org.springframework.data.domain.Pageable pageable);
 
     List<Movimiento> findByFechaMovimientoBetweenAndTipoMovimiento(
