@@ -118,4 +118,51 @@ public interface VentaReporteRepository extends JpaRepository<Venta, Long> {
     List<java.util.Map<String, Object>> getComparativoMensual(@Param("inicio") LocalDateTime inicio,
                                                              @Param("fin") LocalDateTime fin,
                                                              @Param("sucursalId") Integer sucursalId);
+
+    // ==========================================
+    // QUERIES REPORTES RENDIMIENTO INVENTARIO
+    // ==========================================
+
+    @Query(value = "SELECT dv.producto_nombre as producto, " +
+            "COALESCE(dv.tipo_venta, 'UNIDAD') as presentacion, " +
+            "SUM(dv.cantidad) as unidades, SUM(dv.subtotal) as ventas " +
+            "FROM detalle_ventas dv " +
+            "INNER JOIN ventas v ON dv.venta_id = v.id " +
+            "WHERE v.fecha_venta BETWEEN :inicio AND :fin " +
+            "AND (:sucursalId IS NULL OR v.sucursal_id = :sucursalId) " +
+            "AND v.estado NOT IN ('ANULADA', 'DEVUELTA') " +
+            "AND (:filtrarIds = false OR dv.producto_id IN (:productIds)) " +
+            "GROUP BY dv.producto_id, dv.producto_nombre, dv.tipo_venta " +
+            "ORDER BY ventas DESC LIMIT 10", nativeQuery = true)
+    List<java.util.Map<String, Object>> getTop10Productos(@Param("inicio") LocalDateTime inicio,
+                                                         @Param("fin") LocalDateTime fin,
+                                                         @Param("sucursalId") Integer sucursalId,
+                                                         @Param("filtrarIds") boolean filtrarIds,
+                                                         @Param("productIds") List<Integer> productIds);
+
+    @Query(value = "SELECT dv.producto_nombre as producto, " +
+            "SUM(dv.cantidad) as unidades, SUM(dv.subtotal) as ventas " +
+            "FROM detalle_ventas dv " +
+            "INNER JOIN ventas v ON dv.venta_id = v.id " +
+            "WHERE v.fecha_venta BETWEEN :inicio AND :fin " +
+            "AND (:sucursalId IS NULL OR v.sucursal_id = :sucursalId) " +
+            "AND v.estado NOT IN ('ANULADA', 'DEVUELTA') " +
+            "GROUP BY dv.producto_id, dv.producto_nombre " +
+            "ORDER BY unidades ASC LIMIT 15", nativeQuery = true)
+    List<java.util.Map<String, Object>> getProductosBajaRotacion(@Param("inicio") LocalDateTime inicio,
+                                                                @Param("fin") LocalDateTime fin,
+                                                                @Param("sucursalId") Integer sucursalId);
+
+    @Query(value = "SELECT dv.producto_nombre as producto, " +
+            "SUM(dv.cantidad) as unidades, SUM(dv.subtotal) as ventas " +
+            "FROM detalle_ventas dv " +
+            "INNER JOIN ventas v ON dv.venta_id = v.id " +
+            "WHERE v.fecha_venta BETWEEN :inicio AND :fin " +
+            "AND (:sucursalId IS NULL OR v.sucursal_id = :sucursalId) " +
+            "AND v.estado NOT IN ('ANULADA', 'DEVUELTA') " +
+            "GROUP BY dv.producto_id, dv.producto_nombre " +
+            "ORDER BY producto ASC", nativeQuery = true)
+    List<java.util.Map<String, Object>> getComparativoProducto(@Param("inicio") LocalDateTime inicio,
+                                                              @Param("fin") LocalDateTime fin,
+                                                              @Param("sucursalId") Integer sucursalId);
 }

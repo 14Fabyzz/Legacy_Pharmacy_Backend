@@ -128,4 +128,34 @@ public class MetricasNegocioController {
             @RequestParam(required = false) Integer sucursalId) {
         return ResponseEntity.ok(reportesAnaliticosService.getComparativoMensual(fechaInicio, fechaFin, sucursalId));
     }
+
+    // ==========================================
+    // ENDPOINTS RENDIMIENTO INVENTARIO
+    // ==========================================
+
+    @GetMapping("/analitico/top-10-productos")
+    public ResponseEntity<List<Map<String, Object>>> getTop10Productos(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
+            @RequestParam(required = false) Integer sucursalId,
+            @RequestParam(required = false) Integer categoriaId,
+            @RequestParam(required = false) Integer laboratorioId) {
+        return ResponseEntity.ok(reportesAnaliticosService.getTop10Productos(fechaInicio, fechaFin, sucursalId, categoriaId, laboratorioId));
+    }
+
+    @GetMapping("/analitico/baja-rotacion")
+    public ResponseEntity<List<Map<String, Object>>> getBajaRotacion(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
+            @RequestParam(required = false) Integer sucursalId) {
+        return ResponseEntity.ok(reportesAnaliticosService.getProductosBajaRotacion(fechaInicio, fechaFin, sucursalId));
+    }
+
+    @GetMapping("/analitico/comparativo-producto")
+    public ResponseEntity<List<Map<String, Object>>> getComparativoProducto(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
+            @RequestParam(required = false) Integer sucursalId) {
+        return ResponseEntity.ok(reportesAnaliticosService.getComparativoProducto(fechaInicio, fechaFin, sucursalId));
+    }
 }
