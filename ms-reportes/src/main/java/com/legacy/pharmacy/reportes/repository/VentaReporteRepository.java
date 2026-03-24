@@ -1,5 +1,5 @@
 package com.legacy.pharmacy.reportes.repository;
-
+import java.util.List;
 import com.legacy.pharmacy.reportes.entity.Venta;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -62,4 +62,60 @@ public interface VentaReporteRepository extends JpaRepository<Venta, Long> {
     BigDecimal sumarSubtotalesDetalle(@Param("inicio") LocalDateTime inicio,
                                        @Param("fin") LocalDateTime fin,
                                        @Param("sucursalId") Integer sucursalId);
+
+    // ==========================================
+    // QUERIES REPORTES ANALITICOS
+    // ==========================================
+
+    @Query(value = "SELECT COALESCE(c.nombre || ' ' || c.apellido, c.nombre, 'Cliente Mostrador') as cliente, " +
+            "SUM(v.total) as total, COUNT(v.id) as transacciones " +
+            "FROM ventas v " +
+            "LEFT JOIN clientes c ON v.cliente_id = c.id " +
+            "WHERE v.fecha_venta BETWEEN :inicio AND :fin " +
+            "AND (:sucursalId IS NULL OR v.sucursal_id = :sucursalId) " +
+            "AND v.estado NOT IN ('ANULADA', 'DEVUELTA') " +
+            "GROUP BY c.id, c.nombre, c.apellido " +
+            "ORDER BY total DESC", nativeQuery = true)
+    List<java.util.Map<String, Object>> getVentasPorCliente(@Param("inicio") LocalDateTime inicio,
+                                                           @Param("fin") LocalDateTime fin,
+                                                           @Param("sucursalId") Integer sucursalId);
+
+    @Query(value = "SELECT COALESCE(c.nombre || ' ' || c.apellido, c.nombre, 'Cliente Mostrador') as cliente, " +
+            "dv.producto_nombre as producto, " +
+            "SUM(dv.cantidad) as unidades, SUM(dv.subtotal) as total " +
+            "FROM detalle_ventas dv " +
+            "INNER JOIN ventas v ON dv.venta_id = v.id " +
+            "LEFT JOIN clientes c ON v.cliente_id = c.id " +
+            "WHERE v.fecha_venta BETWEEN :inicio AND :fin " +
+            "AND (:sucursalId IS NULL OR v.sucursal_id = :sucursalId) " +
+            "AND v.estado NOT IN ('ANULADA', 'DEVUELTA') " +
+            "GROUP BY c.id, c.nombre, c.apellido, dv.producto_id, dv.producto_nombre " +
+            "ORDER BY total DESC", nativeQuery = true)
+    List<java.util.Map<String, Object>> getVentasClienteProducto(@Param("inicio") LocalDateTime inicio,
+                                                                @Param("fin") LocalDateTime fin,
+                                                                @Param("sucursalId") Integer sucursalId);
+
+    @Query(value = "SELECT CAST(v.fecha_venta AS DATE) as fecha, " +
+            "SUM(v.total) as total, COUNT(v.id) as transacciones " +
+            "FROM ventas v " +
+            "WHERE v.fecha_venta BETWEEN :inicio AND :fin " +
+            "AND (:sucursalId IS NULL OR v.sucursal_id = :sucursalId) " +
+            "AND v.estado NOT IN ('ANULADA', 'DEVUELTA') " +
+            "GROUP BY CAST(v.fecha_venta AS DATE) " +
+            "ORDER BY fecha ASC", nativeQuery = true)
+    List<java.util.Map<String, Object>> getConsolidadoVentas(@Param("inicio") LocalDateTime inicio,
+                                                            @Param("fin") LocalDateTime fin,
+                                                            @Param("sucursalId") Integer sucursalId);
+
+    @Query(value = "SELECT TO_CHAR(v.fecha_venta, 'YYYY-MM') as mes, " +
+            "SUM(v.total) as total, COUNT(v.id) as transacciones " +
+            "FROM ventas v " +
+            "WHERE v.fecha_venta BETWEEN :inicio AND :fin " +
+            "AND (:sucursalId IS NULL OR v.sucursal_id = :sucursalId) " +
+            "AND v.estado NOT IN ('ANULADA', 'DEVUELTA') " +
+            "GROUP BY TO_CHAR(v.fecha_venta, 'YYYY-MM') " +
+            "ORDER BY mes ASC", nativeQuery = true)
+    List<java.util.Map<String, Object>> getComparativoMensual(@Param("inicio") LocalDateTime inicio,
+                                                             @Param("fin") LocalDateTime fin,
+                                                             @Param("sucursalId") Integer sucursalId);
 }
