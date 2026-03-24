@@ -49,6 +49,14 @@ public class Lote {
     @Column(name = "cantidad_cuarentena")
     private Integer cantidadCuarentena = 0;
 
+    /**
+     * Estado del lote para trazabilidad farmacéutica:
+     *   ACTIVO       → disponible para venta/consulta (default).
+     *   DADO_DE_BAJA → retirado del stock activo, visible solo en auditoría.
+     */
+    @Column(name = "estado", nullable = false, length = 20)
+    private String estado = "ACTIVO";
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

@@ -15,6 +15,9 @@ public class LoteController {
     @Autowired
     private ProductoService productoService;
 
+    @Autowired
+    private com.legacy.pharmacy.inventario.service.InventarioService inventarioService;
+
     // -------------------------------------------------------------
     // GET /lotes/disponibles/{productoId}
     // Retorna producto con detalles financieros y sus lotes disponibles
@@ -32,6 +35,19 @@ public class LoteController {
         // Reutilizamos tu lógica existente de 'proximos-vencer' (ej. 30 días)
         // O retornamos lista vacía si prefieres implementarlo luego
         return ResponseEntity.ok(productoService.buscarLotesProximosVencer(30));
+    }
+
+    // -------------------------------------------------------------
+    // PATCH /lotes/{id}/baja
+    // Da de baja formalmente un lote por algún motivo (ej. Vencimiento)
+    // -------------------------------------------------------------
+    @PatchMapping("/{id}/baja")
+    public ResponseEntity<?> darDeBajaLote(
+            @PathVariable Integer id,
+            @RequestBody com.legacy.pharmacy.inventario.dto.BajaLoteRequest request) {
+
+        java.util.Map<String, Object> resultado = inventarioService.darDeBajaLote(id, request.getMotivo());
+        return ResponseEntity.ok(resultado);
     }
 
     // Aquí puedes mover los otros métodos de lotes que tenías sueltos
