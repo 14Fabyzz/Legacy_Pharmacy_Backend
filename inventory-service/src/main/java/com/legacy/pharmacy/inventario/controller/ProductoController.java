@@ -251,4 +251,15 @@ public class ProductoController {
     public record DevolverRequest(Integer cantidad, String motivo,
             com.legacy.pharmacy.inventario.enums.TipoVenta tipoVenta, String destinoProducto, String documentoRef) {
     }
+
+    /**
+     * Endpoint interno para MS-Reportes (Cross-Service Filtering)
+     * Retorna una lista de IDs de productos que coinciden con los filtros.
+     */
+    @GetMapping("/productos/filtro-ids")
+    public ResponseEntity<List<Integer>> obtenerIdsPorFiltros(
+            @RequestParam(required = false) Integer categoriaId,
+            @RequestParam(required = false) Integer laboratorioId) {
+        return ResponseEntity.ok(productoService.obtenerIdsPorFiltros(categoriaId, laboratorioId));
+    }
 }

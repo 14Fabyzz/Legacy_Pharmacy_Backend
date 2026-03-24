@@ -55,6 +55,10 @@ public class ProductoService {
         return productoRepository.findByNombreComercialContainingIgnoreCase(texto);
     }
 
+    public List<Integer> obtenerIdsPorFiltros(Integer categoriaId, Integer laboratorioId) {
+        return productoRepository.findIdsByFiltros(categoriaId, laboratorioId);
+    }
+
     public Producto guardarProducto(ProductoDTO dto) {
         Producto p = new Producto();
 
