@@ -66,4 +66,13 @@ public interface ProductoRepository extends JpaRepository<Producto, Integer> {
                         "OR TRIM(p.codigoInterno) = :query) " +
                         "AND (p.estado = 'ACTIVO' OR p.estado IS NULL OR p.estado = '')")
         List<Producto> buscarUniversal(@org.springframework.data.repository.query.Param("query") String query);
+
+        // ✅ QUERY CROSS-SERVICE para ms-reportes (Rendimiento Inventario)
+        // Devuelve solo los IDs de los productos para hacer IN() en postgres
+        @Query("SELECT p.id FROM Producto p WHERE " +
+               "(:categoriaId IS NULL OR p.categoria.id = :categoriaId) AND " +
+               "(:laboratorioId IS NULL OR p.laboratorio.id = :laboratorioId) AND " +
+               "p.estado = 'ACTIVO'")
+        List<Integer> findIdsByFiltros(@org.springframework.data.repository.query.Param("categoriaId") Integer categoriaId, 
+                                       @org.springframework.data.repository.query.Param("laboratorioId") Integer laboratorioId);
 }
