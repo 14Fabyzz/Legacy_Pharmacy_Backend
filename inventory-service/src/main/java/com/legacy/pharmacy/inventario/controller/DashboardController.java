@@ -23,9 +23,13 @@ public class DashboardController {
     // GET http://localhost:8080/api/v1/dashboard/cards
     // Sirve para pintar la grilla principal de productos
     @GetMapping("/cards")
-    public ResponseEntity<List<ProductoCard>> obtenerTarjetas(@RequestParam(required = false) String busqueda) {
+    public ResponseEntity<List<ProductoCard>> obtenerTarjetas(
+            @RequestParam(required = false) String busqueda,
+            @RequestParam(required = false) String estado) {
+        if (estado != null && !estado.isBlank()) {
+            return ResponseEntity.ok(cardRepository.findByEstado(estado.trim().toUpperCase()));
+        }
         if (busqueda != null && !busqueda.isEmpty()) {
-            // ✅ Actualizamos la llamada al nuevo método
             return ResponseEntity.ok(cardRepository
                     .findByNombreComercialContainingIgnoreCaseOrCodigoInternoContainingIgnoreCaseOrCodigoBarrasContainingIgnoreCase(
                             busqueda, busqueda, busqueda));

@@ -6,6 +6,8 @@ import java.util.List;
 
 public interface ProductoCardRepository extends JpaRepository<ProductoCard, Long> {
 
+    List<ProductoCard> findByEstado(String estado);
+
     // ❌ ANTES (Daba error porque no existe el campo "nombre"):
     // List<ProductoCard>
     // findByNombreContainingIgnoreCaseOrCodigoInternoContainingIgnoreCaseOrCodigoBarrasContainingIgnoreCase(String
