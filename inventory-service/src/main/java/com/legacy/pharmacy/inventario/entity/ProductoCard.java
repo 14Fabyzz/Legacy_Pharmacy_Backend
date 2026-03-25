@@ -54,6 +54,9 @@ public class ProductoCard {
     @Column(name = "stock_minimo")
     private Integer stockMinimo;
 
+    @Column(name = "estado")
+    private String estado;
+
     // ✅ CAMPOS FRACCIONAMIENTO
     @Column(name = "es_fraccionable")
     private Boolean esFraccionable;

@@ -1,7 +1,9 @@
 package com.legacy.pharmacy.inventario.controller;
 
 import com.legacy.pharmacy.inventario.entity.PrincipioActivo;
+import com.legacy.pharmacy.inventario.entity.Sucursal;
 import com.legacy.pharmacy.inventario.repository.PrincipioActivoRepository;
+import com.legacy.pharmacy.inventario.repository.SucursalRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,9 +25,18 @@ public class MasterDataController {
     @Autowired
     private PrincipioActivoRepository principioActivoRepository;
 
-    // GET http://localhost:8080/api/inventario/principios-activos
+    @Autowired
+    private SucursalRepository sucursalRepository;
+
+    // GET http://localhost:8081/api/v1/inventario/principios-activos
     @GetMapping("/principios-activos")
     public ResponseEntity<List<PrincipioActivo>> listarPrincipios() {
         return ResponseEntity.ok(principioActivoRepository.findAll());
     }
-}
+
+    // GET http://localhost:8081/api/v1/inventario/sucursales
+    @GetMapping("/sucursales")
+    public ResponseEntity<List<Sucursal>> listarSucursales() {
+        return ResponseEntity.ok(sucursalRepository.findAll());
+    }
+}
