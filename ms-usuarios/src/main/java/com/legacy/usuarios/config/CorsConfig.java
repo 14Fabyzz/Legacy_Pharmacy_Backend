@@ -18,7 +18,9 @@ public class CorsConfig {
         // Permitir orígenes (ajusta según tu frontend)
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:4200",  // Angular
-                "http://localhost:3000"   // React (si aplica)
+                "http://localhost:8080",  // Gateway
+                "https://regensaludpos.com", // Producción HTTPS
+                "http://regensaludpos.com"   // Producción HTTP
         ));
 
         // Permitir métodos HTTP

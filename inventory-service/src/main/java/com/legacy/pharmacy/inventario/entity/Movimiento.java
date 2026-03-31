@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+
 @Entity
 @Table(name = "movimientos")
 @Data
@@ -25,7 +26,7 @@ public class Movimiento {
     @JoinColumn(name = "lote_id", nullable = false)
     private Lote lote;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = TipoMovimientoConverter.class)
     @Column(name = "tipo_movimiento", nullable = false)
     private TipoMovimiento tipoMovimiento;
 
