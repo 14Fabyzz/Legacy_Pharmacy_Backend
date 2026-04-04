@@ -960,78 +960,75 @@ public class InventarioService {
                                 .build();
         }
 
+        // ──────────────────────────────────────────────────────────────────────────
+        // BAJA DE LOTE — Trazabilidad farmacéutica
+        // ──────────────────────────────────────────────────────────────────────────
 
-    // ──────────────────────────────────────────────────────────────────────────
-    // BAJA DE LOTE — Trazabilidad farmacéutica
-    // ──────────────────────────────────────────────────────────────────────────
+        /**
+         * Da de baja un lote:
+         * 1. Registra un movimiento BAJA en el Kardex con el motivo indicado.
+         * 2. Pone cantidad_actual = 0 (el lote sale del stock activo).
+         * 3. Marca el lote como DADO_DE_BAJA (auditoría permanente).
+         *
+         * @param loteId ID del lote a dar de baja.
+         * @param motivo Razón de la baja (VENCIMIENTO, DAÑO_FISICO, ROBO, etc.).
+         * @return Mapa con estado, mensaje y datos del lote procesado.
+         */
+        @Transactional
+        public java.util.Map<String, Object> darDeBajaLote(Integer loteId, String motivo) {
 
-    /**
-     * Da de baja un lote:
-     * 1. Registra un movimiento BAJA en el Kardex con el motivo indicado.
-     * 2. Pone cantidad_actual = 0 (el lote sale del stock activo).
-     * 3. Marca el lote como DADO_DE_BAJA (auditoría permanente).
-     *
-     * @param loteId ID del lote a dar de baja.
-     * @param motivo Razón de la baja (VENCIMIENTO, DAÑO_FISICO, ROBO, etc.).
-     * @return Mapa con estado, mensaje y datos del lote procesado.
-     */
-    @Transactional
-    public java.util.Map<String, Object> darDeBajaLote(Integer loteId, String motivo) {
+                // 1. Verificar que el lote existe y no está ya dado de baja
+                Lote lote = loteRepository.findById(loteId)
+                                .orElseThrow(() -> new RuntimeException("Lote no encontrado: " + loteId));
 
-        // 1. Verificar que el lote existe y no está ya dado de baja
-        Lote lote = loteRepository.findById(loteId)
-                .orElseThrow(() -> new RuntimeException("Lote no encontrado: " + loteId));
+                if ("DADO_DE_BAJA".equalsIgnoreCase(lote.getEstado())) {
+                        throw new IllegalStateException("El lote ID " + loteId + " ya fue dado de baja anteriormente.");
+                }
 
-        if ("DADO_DE_BAJA".equalsIgnoreCase(lote.getEstado())) {
-            throw new IllegalStateException("El lote ID " + loteId + " ya fue dado de baja anteriormente.");
+                String motivoFinal = (motivo != null && !motivo.isBlank()) ? motivo.trim().toUpperCase() : "SIN_MOTIVO";
+                String usuarioResponsable = UserContext.getUsername();
+                if (usuarioResponsable == null) {
+                        usuarioResponsable = "SISTEMA";
+                }
+
+                int cantidadBaja = lote.getCantidadActual() != null ? lote.getCantidadActual() : 0;
+
+                log.info("BAJA_LOTE: Iniciando baja del lote ID={} | Producto={} | Cantidad={} | Motivo={} | Usuario={}",
+                                loteId,
+                                lote.getProducto() != null ? lote.getProducto().getId() : "N/A",
+                                cantidadBaja,
+                                motivoFinal,
+                                usuarioResponsable);
+
+                // 2. Registrar movimiento en el Kardex (cantidad negativa = salida del stock)
+                // saldo_historico = 0 porque el lote queda vacío tras la baja
+                jdbcTemplate.update(
+                                "INSERT INTO movimientos " +
+                                                "(lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, "
+                                                +
+                                                " sucursal_id, observaciones, documento_ref) " +
+                                                "VALUES (?, 'BAJA', ?, 0, ?, NULL, ?, ?)",
+                                loteId,
+                                -cantidadBaja, // cantidad negativa → salida total
+                                usuarioResponsable,
+                                "Baja de lote: " + motivoFinal,
+                                "BAJA-" + loteId + "-" + java.time.LocalDate.now());
+
+                // 3. Marcar lote como DADO_DE_BAJA y dejar cantidad en 0
+                jdbcTemplate.update(
+                                "UPDATE lotes SET estado = 'DADO_DE_BAJA', cantidad_actual = 0 WHERE id = ?",
+                                loteId);
+
+                // 4. Limpiar caché de Hibernate para reflejar el UPDATE directo
+                entityManager.clear();
+
+                log.info("BAJA_LOTE: Lote ID={} marcado como DADO_DE_BAJA exitosamente.", loteId);
+
+                return java.util.Map.of(
+                                "estado", "OK",
+                                "mensaje", "Lote dado de baja correctamente.",
+                                "loteId", loteId,
+                                "cantidadAjustada", cantidadBaja,
+                                "motivo", motivoFinal);
         }
-
-        String motivoFinal = (motivo != null && !motivo.isBlank()) ? motivo.trim().toUpperCase() : "SIN_MOTIVO";
-        String usuarioResponsable = UserContext.getUsername();
-        if (usuarioResponsable == null) {
-            usuarioResponsable = "SISTEMA";
-        }
-
-        int cantidadBaja = lote.getCantidadActual() != null ? lote.getCantidadActual() : 0;
-
-        log.info("BAJA_LOTE: Iniciando baja del lote ID={} | Producto={} | Cantidad={} | Motivo={} | Usuario={}",
-                loteId,
-                lote.getProducto() != null ? lote.getProducto().getId() : "N/A",
-                cantidadBaja,
-                motivoFinal,
-                usuarioResponsable);
-
-        // 2. Registrar movimiento en el Kardex (cantidad negativa = salida del stock)
-        //    saldo_historico = 0 porque el lote queda vacío tras la baja
-        jdbcTemplate.update(
-                "INSERT INTO movimientos " +
-                "(lote_id, tipo_movimiento, cantidad, saldo_historico, usuario_responsable, " +
-                " sucursal_id, observaciones, documento_ref) " +
-                "VALUES (?, 'BAJA', ?, 0, ?, NULL, ?, ?)",
-                loteId,
-                -cantidadBaja,             // cantidad negativa → salida total
-                usuarioResponsable,
-                "Baja de lote: " + motivoFinal,
-                "BAJA-" + loteId + "-" + java.time.LocalDate.now()
-        );
-
-        // 3. Marcar lote como DADO_DE_BAJA y dejar cantidad en 0
-        jdbcTemplate.update(
-                "UPDATE lotes SET estado = 'DADO_DE_BAJA', cantidad_actual = 0 WHERE id = ?",
-                loteId
-        );
-
-        // 4. Limpiar caché de Hibernate para reflejar el UPDATE directo
-        entityManager.clear();
-
-        log.info("BAJA_LOTE: Lote ID={} marcado como DADO_DE_BAJA exitosamente.", loteId);
-
-        return java.util.Map.of(
-                "estado", "OK",
-                "mensaje", "Lote dado de baja correctamente.",
-                "loteId", loteId,
-                "cantidadAjustada", cantidadBaja,
-                "motivo", motivoFinal
-        );
-    }
 }
