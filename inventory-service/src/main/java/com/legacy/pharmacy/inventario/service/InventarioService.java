@@ -1031,4 +1031,43 @@ public class InventarioService {
                                 "cantidadAjustada", cantidadBaja,
                                 "motivo", motivoFinal);
         }
+
+        public com.legacy.pharmacy.inventario.dto.InventarioConsolidadoDTO obtenerMetricasConsolidado(java.time.LocalDate inicio, java.time.LocalDate fin, Integer sucursalId) {
+                java.time.LocalDateTime inicioTime = inicio.atStartOfDay();
+                java.time.LocalDateTime finTime = fin.atTime(java.time.LocalTime.MAX);
+
+                // 1. COGS (Sum of SALIDA * costo_compra)
+                String sqlCogs = "SELECT COALESCE(SUM(ABS(m.cantidad) * l.costo_compra), 0) " +
+                                "FROM movimientos m " +
+                                "INNER JOIN lotes l ON m.lote_id = l.id " +
+                                "WHERE m.tipo_movimiento = 'SALIDA' " +
+                                "AND m.created_at BETWEEN ? AND ? " +
+                                "AND (? IS NULL OR m.sucursal_id = ?)";
+
+                java.math.BigDecimal cogs = jdbcTemplate.queryForObject(sqlCogs, java.math.BigDecimal.class, inicioTime, finTime, sucursalId, sucursalId);
+
+                // 2. Unidades Recibidas (Sum of ENTRADA)
+                String sqlEntradas = "SELECT COALESCE(SUM(ABS(m.cantidad)), 0) " +
+                                "FROM movimientos m " +
+                                "WHERE m.tipo_movimiento = 'ENTRADA' " +
+                                "AND m.created_at BETWEEN ? AND ? " +
+                                "AND (? IS NULL OR m.sucursal_id = ?)";
+
+                Long unidadesRecibidas = jdbcTemplate.queryForObject(sqlEntradas, Long.class, inicioTime, finTime, sucursalId, sucursalId);
+
+                // 3. Valor Inventario Actual
+                String sqlValorActual = "SELECT COALESCE(SUM(l.cantidad_actual * l.costo_compra), 0) " +
+                                "FROM lotes l " +
+                                "WHERE l.cantidad_actual > 0 " +
+                                "AND (? IS NULL OR l.sucursal_id = ?)";
+
+                java.math.BigDecimal valorActual = jdbcTemplate.queryForObject(sqlValorActual, java.math.BigDecimal.class, sucursalId, sucursalId);
+
+                return com.legacy.pharmacy.inventario.dto.InventarioConsolidadoDTO.builder()
+                                .cogs(cogs != null ? cogs : java.math.BigDecimal.ZERO)
+                                .unidadesRecibidas(unidadesRecibidas != null ? unidadesRecibidas : 0L)
+                                .valorInventarioActual(valorActual != null ? valorActual : java.math.BigDecimal.ZERO)
+                                .inventarioPromedio(valorActual != null ? valorActual : java.math.BigDecimal.ZERO) // Using exact current value as average approximation
+                                .build();
+        }
 }

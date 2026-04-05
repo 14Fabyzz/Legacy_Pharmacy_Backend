@@ -49,9 +49,10 @@ public class ResumenInteligenteService {
 
         // Construir el prompt para Gemini
         StringBuilder prompt = new StringBuilder();
-        prompt.append("Eres un Consultor de Negocios y Director de Operaciones (COO) altamente analítico pero con un lenguaje comercial directo y fácil de entender. ")
-              .append("Tu objetivo es analizar los siguientes datos reales de una farmacia entre el ").append(inicio).append(" y el ").append(fin)
-              .append(" y entregar un informe gerencial que cualquier dueño de negocio sin formación contable pueda entender a la perfección.\n\n");
+        prompt.append("Actúa como un experto financiero para la farmacia Regen Salud POS. La fecha actual es ")
+              .append(LocalDate.now().toString())
+              .append(". Analiza los siguientes datos del periodo ").append(inicio).append(" al ").append(fin)
+              .append(" y entrega un informe gerencial que cualquier dueño de negocio sin formación contable pueda entender a la perfección.\n\n");
 
         prompt.append("DATOS DEL MOTOR DE VENTAS:\n")
               .append("- Ticket Promedio: $").append(mf.format(ventas.getTicketPromedio())).append(" (Explica qué significa que cada cliente gaste en promedio esta cantidad).\n")
@@ -98,7 +99,7 @@ public class ResumenInteligenteService {
             .append("2. Usa etiquetas semánticas: <h2> para el título principal, <h3> para secciones, <ul>/<li> para métricas y <table class='table table-sm table-modern'> para el ranking.\n\n")
             
             .append("ESTRUCTURA OBLIGATORIA DEL INFORME:\n")
-            .append("1. ENCABEZADO: Genera un <h2 class='text-center'>Reporte Analítico de Negocio</h2> seguido de un <p class='text-center text-muted'>Generado por Regen Salud POS AI - [Fecha]</p>.\n")
+            .append("1. ENCABEZADO: Genera un <h2 class='text-center'>Reporte Analítico de Negocio</h2> seguido de un <p class='text-center text-muted'>Generado por Regen Salud POS AI - ").append(LocalDate.now().getYear()).append("</p>.\n")
             
             .append("2. DIAGNÓSTICO INICIAL: Un párrafo <p> que comience con un saludo (ej. '¡Hola! Como tu Consultor...') y dé un diagnóstico general usando analogías (ej. 'almacén lleno, pasillos con poco movimiento') traduciendo los números a la realidad del capital de trabajo.\n")
             

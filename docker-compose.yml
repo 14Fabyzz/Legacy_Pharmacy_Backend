@@ -116,7 +116,7 @@ services:
     depends_on:
       - gateway-service
     volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - ../Legacy-Pharmacy/nginx.conf:/etc/nginx/conf.d/default.conf
       # ESTO ES LO NUEVO: Conectamos los certificados
       - /etc/letsencrypt:/etc/letsencrypt:ro 
 
