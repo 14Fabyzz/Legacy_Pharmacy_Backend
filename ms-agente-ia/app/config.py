@@ -14,8 +14,10 @@ DATA_DIR = BASE_DIR / "data"
 DATA_DIR.mkdir(exist_ok=True)
 
 # API Keys
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_MODEL = "gemini-2.5-flash"
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+# gpt-4o-mini: barato y rápido, ideal para SQL   ← recomendado
+# gpt-4o: más capaz pero más caro
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
 # ========== CONFIGURACIÓN MySQL (INVENTARIO) ==========
 MYSQL_CONFIG = {

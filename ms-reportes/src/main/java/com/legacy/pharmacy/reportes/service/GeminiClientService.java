@@ -44,6 +44,7 @@ public class GeminiClientService {
         try {
             GeminiResponse response = restClient.post()
                     .uri(urlWithKey)
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                     .body(requestBody)
                     .retrieve()
                     .body(GeminiResponse.class);
