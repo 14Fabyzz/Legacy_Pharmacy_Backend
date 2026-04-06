@@ -951,7 +951,8 @@ public class VentaServiceImpl implements VentaService {
     public java.util.List<java.math.BigDecimal> obtenerVentasSemanales() {
         System.out.println("VENTA-REPORTE: Consultando ventas semanales");
         
-        java.time.LocalDate hoy = java.time.LocalDate.now();
+        java.time.ZoneId zonaColombia = java.time.ZoneId.of("America/Bogota");
+        java.time.LocalDate hoy = java.time.LocalDate.now(zonaColombia);
         java.time.LocalDate lunes = hoy.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
         java.time.LocalDate domingo = hoy.with(java.time.temporal.TemporalAdjusters.nextOrSame(java.time.DayOfWeek.SUNDAY));
         
