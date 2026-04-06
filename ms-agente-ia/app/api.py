@@ -10,8 +10,8 @@ import json
 
 from app.agent import MCPAgent
 from app.config import (
-    GEMINI_API_KEY,
-    GEMINI_MODEL,
+    OPENAI_API_KEY,
+    OPENAI_MODEL,
     MYSQL_CONFIG,
     POSTGRES_CONFIG,
     DATABASE_TYPE
@@ -39,8 +39,8 @@ async def lifespan(app: FastAPI):
     print("🤖 Iniciando Agente MCP para la API...")
     try:
         agente_global = MCPAgent(
-            api_key=GEMINI_API_KEY,
-            model_name=GEMINI_MODEL,
+            api_key=OPENAI_API_KEY,
+            model_name=OPENAI_MODEL,
             db_type=DATABASE_TYPE,
             mysql_config=MYSQL_CONFIG,
             postgres_config=POSTGRES_CONFIG if DATABASE_TYPE == 'multi' else None
@@ -109,7 +109,12 @@ async def confirm_action(request: ConfirmRequest):
         sql_to_run = request.sql_query
         print(f"\n⚠️ EJECUTANDO SQL CONFIRMADO: {sql_to_run}")
 
-        db_tool = agente_global.tools.get("database")
+        # En modo multi-datasource las tools se llaman "inventario_db" y "ventas_db";
+        # en modo mysql/sqlite se llama "database". Las escrituras solo van a MySQL.
+        db_tool = (
+            agente_global.tools.get("database")
+            or agente_global.tools.get("inventario_db")
+        )
 
         if not db_tool:
             raise HTTPException(status_code=500, detail="Herramienta de base de datos no encontrada.")
