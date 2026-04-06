@@ -72,4 +72,38 @@ public class InventarioClient {
             throw new ExternalServiceException("El servicio de inventario no está disponible para filtrar productos", e);
         }
     }
+
+    @org.springframework.cache.annotation.Cacheable(value = "inventarioMetricas", key = "#inicio.toString() + '-' + #fin.toString() + '-' + #sucursalId")
+    @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "inventoryService", fallbackMethod = "fallbackObtenerMetricasConsolidado")
+    public com.legacy.pharmacy.reportes.dto.InventarioConsolidadoDTO obtenerMetricasConsolidado(LocalDate inicio, LocalDate fin, Integer sucursalId) {
+        log.info("Solicitando metricas consolidadas de inventario del {} al {}, sucursal {}", inicio, fin, sucursalId);
+        
+        try {
+            return restClient.get()
+                    .uri(uriBuilder -> {
+                        uriBuilder.path("/api/v1/inventario/metricas-consolidado")
+                                  .queryParam("fechaInicio", inicio)
+                                  .queryParam("fechaFin", fin);
+                        if (sucursalId != null) uriBuilder.queryParam("sucursalId", sucursalId);
+                        return uriBuilder.build();
+                    })
+                    .header("X-User-Id", com.legacy.pharmacy.reportes.config.UserContext.getUserId() != null ? String.valueOf(com.legacy.pharmacy.reportes.config.UserContext.getUserId()) : "1")
+                    .header("X-Username", com.legacy.pharmacy.reportes.config.UserContext.getUsername() != null ? com.legacy.pharmacy.reportes.config.UserContext.getUsername() : "System")
+                    .header("X-User-Role", com.legacy.pharmacy.reportes.config.UserContext.getUserRole() != null ? com.legacy.pharmacy.reportes.config.UserContext.getUserRole() : "ADMIN")
+                    .retrieve()
+                    .onStatus(HttpStatusCode::isError, (request, response) -> {
+                        log.error("Error al consultar metricas-consolidado: status {}", response.getStatusCode());
+                        throw new ExternalServiceException("Error al obtener consolidado desde ms-inventario");
+                    })
+                    .body(com.legacy.pharmacy.reportes.dto.InventarioConsolidadoDTO.class);
+        } catch (Exception e) {
+            log.error("Fallo de conexión crítico obteniendo metricas consolidadas: " + e.getMessage());
+            throw new ExternalServiceException("El servicio de inventario no está disponible para metricas consolidadas", e);
+        }
+    }
+
+    public com.legacy.pharmacy.reportes.dto.InventarioConsolidadoDTO fallbackObtenerMetricasConsolidado(LocalDate inicio, LocalDate fin, Integer sucursalId, Throwable t) {
+        log.warn("⚠️ EJECUTANDO FALLBACK CIRCUIT BREAKER para inventario: {}", t.getMessage());
+        return null; // El servicio recolector detectará null y aplicará los multiplicadores quemados.
+    }
 }

@@ -124,4 +124,17 @@ public class InventarioController {
             return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
         }
     }
+
+    @GetMapping("/metricas-consolidado")
+    public ResponseEntity<com.legacy.pharmacy.inventario.dto.InventarioConsolidadoDTO> obtenerMetricasConsolidado(
+            @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate fechaInicio,
+            @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate fechaFin,
+            @RequestParam(required = false) Integer sucursalId) {
+        try {
+            return ResponseEntity.ok(inventarioService.obtenerMetricasConsolidado(fechaInicio, fechaFin, sucursalId));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().build();
+        }
+    }
 }
