@@ -101,7 +101,7 @@ public class ResumenInteligenteService {
             .append("ESTRUCTURA OBLIGATORIA DEL INFORME:\n")
             .append("1. ENCABEZADO: Genera un <h2 class='text-center'>Reporte Analítico de Negocio</h2> seguido de un <p class='text-center text-muted'>Generado por Regen Salud POS AI - ").append(LocalDate.now().getYear()).append("</p>.\n")
             
-            .append("2. DIAGNÓSTICO INICIAL: Un párrafo <p> que comience con un saludo (ej. '¡Hola! Como tu Consultor...') y dé un diagnóstico general usando analogías (ej. 'almacén lleno, pasillos con poco movimiento') traduciendo los números a la realidad del capital de trabajo.\n")
+            .append("2. DIAGNÓSTICO INICIAL: Entra directamente al análisis, sin saludos iniciales, sin presentarte y sin usar frases como '¡Hola! Como tu Consultor...'. Inicia el párrafo <p> dando un diagnóstico general usando analogías (ej. 'almacén lleno, pasillos con poco movimiento') traduciendo los números a la realidad del capital de trabajo.\n")
             
             .append("3. SECCIÓN: <h3>El Motor de tus Ventas: ¿Cómo está funcionando la caja?</h3>\n")
             .append("   - Lista <ul> con viñetas para: Ticket Promedio (valor de cada visita), Artículos por Ticket (comportamiento del carrito) y Margen de Utilidad Bruta (dinero base para cubrir gastos).\n")
