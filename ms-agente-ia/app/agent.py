@@ -259,6 +259,11 @@ class MCPAgent:
                 first_val = list(last_result[0].values())[0]
                 step_sql = step_sql.replace("{STEP_RESULT}", str(first_val))
 
+            # Sustituir {STEP_RESULT_LIST} con lista de IDs del paso anterior (ej: 1,2,3)
+            if "{STEP_RESULT_LIST}" in step_sql and last_result:
+                id_list = ",".join(str(list(row.values())[0]) for row in last_result)
+                step_sql = step_sql.replace("{STEP_RESULT_LIST}", id_list)
+
             tool, clean_sql = self._resolve_tool_and_sql(step_sql)
             print(f"📊 MULTI-STEP Paso {i + 1}: {clean_sql}")
 
@@ -351,6 +356,26 @@ SELECT nombre_comercial, stock_actual FROM v_stock_productos WHERE id = {{STEP_R
 
 Regla: {{STEP_RESULT}} se sustituye con el PRIMER VALOR de la PRIMERA FILA del paso anterior.
 Úsalo cuando necesites el ID de un resultado de DB2 para buscarlo en DB1 (o viceversa).
+
+════════════════════════════════════════════════════════════
+REGLA CRÍTICA: NUNCA MOSTRAR IDs AL USUARIO
+════════════════════════════════════════════════════════════
+NUNCA devuelvas columnas como producto_id, id, cliente_id, venta_id u otros IDs numéricos
+como resultado final visible. Usa siempre el nombre legible disponible.
+
+La tabla detalle_ventas (DB2) ya tiene la columna producto_nombre.
+Para consultas de productos más vendidos, top productos, ventas por producto, etc.,
+USA SIEMPRE producto_nombre en lugar de producto_id.
+
+Ejemplo correcto para "productos más vendidos":
+=== DB2 ===
+SELECT dv.producto_nombre, SUM(dv.cantidad) AS total_vendido
+FROM detalle_ventas dv
+JOIN ventas v ON dv.venta_id = v.id
+WHERE v.estado = 'COMPLETADA'
+GROUP BY dv.producto_nombre
+ORDER BY total_vendido DESC
+LIMIT 10;
 
 ════════════════════════════════════════════════════════════
 PREGUNTAS DE SEGUIMIENTO (contexto conversacional)
