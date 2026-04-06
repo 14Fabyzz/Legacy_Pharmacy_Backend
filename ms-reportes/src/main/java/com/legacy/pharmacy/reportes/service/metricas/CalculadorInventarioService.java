@@ -1,6 +1,8 @@
 package com.legacy.pharmacy.reportes.service.metricas;
 
 import com.legacy.pharmacy.reportes.dto.GestionInventarioMetricasDTO;
+import com.legacy.pharmacy.reportes.client.InventarioClient;
+import com.legacy.pharmacy.reportes.dto.InventarioConsolidadoDTO;
 import com.legacy.pharmacy.reportes.dto.internal.InventarioRawDTO;
 import com.legacy.pharmacy.reportes.dto.internal.VentasRawDTO;
 import com.legacy.pharmacy.reportes.service.RecolectorDatosService;
@@ -15,18 +17,39 @@ import java.time.temporal.ChronoUnit;
 public class CalculadorInventarioService {
 
     private final RecolectorDatosService recolectorDatosService;
+    private final InventarioClient inventarioClient;
 
-    public CalculadorInventarioService(RecolectorDatosService recolectorDatosService) {
+    public CalculadorInventarioService(RecolectorDatosService recolectorDatosService, InventarioClient inventarioClient) {
         this.recolectorDatosService = recolectorDatosService;
+        this.inventarioClient = inventarioClient;
     }
 
     public GestionInventarioMetricasDTO calcularPulso(LocalDate inicio, LocalDate fin, Integer sucursalId) {
         try {
             VentasRawDTO ventas = recolectorDatosService.obtenerVentasSincrono(inicio, fin, sucursalId);
-            InventarioRawDTO inventario = recolectorDatosService.obtenerInventarioSincrono(inicio, fin, sucursalId);
+            InventarioConsolidadoDTO inventarioReal = inventarioClient.obtenerMetricasConsolidado(inicio, fin, sucursalId);
 
-            BigDecimal cogs = ventas.getCostoMercanciaVendidaCogs();
-            BigDecimal invPromedio = inventario.getInventarioPromedio();
+            boolean isRealData = true;
+            BigDecimal cogs;
+            BigDecimal invPromedio;
+            BigDecimal valorInventarioActual;
+            long unidadesRecibidas;
+            
+            if (inventarioReal != null) {
+                cogs = inventarioReal.getCogs() != null ? inventarioReal.getCogs() : BigDecimal.ZERO;
+                invPromedio = inventarioReal.getInventarioPromedio() != null ? inventarioReal.getInventarioPromedio() : BigDecimal.ZERO;
+                valorInventarioActual = inventarioReal.getValorInventarioActual() != null ? inventarioReal.getValorInventarioActual() : BigDecimal.ZERO;
+                unidadesRecibidas = inventarioReal.getUnidadesRecibidas() != null ? inventarioReal.getUnidadesRecibidas() : 0L;
+            } else {
+                // Fallback: usar estimaciones si el endpoint real falló (Circuit Breaker)
+                isRealData = false;
+                InventarioRawDTO inventarioEstimado = recolectorDatosService.obtenerInventarioSincrono(inicio, fin, sucursalId);
+                cogs = ventas.getCostoMercanciaVendidaCogs(); // Estimado en ventas
+                invPromedio = inventarioEstimado.getInventarioPromedio();
+                valorInventarioActual = inventarioEstimado.getValorInventarioActual();
+                unidadesRecibidas = inventarioEstimado.getUnidadesRecibidas();
+            }
+
             BigDecimal totalIngresos = ventas.getTotalIngresos();
             
             // IRI = cogs / inventarioPromedio
@@ -40,8 +63,8 @@ public class CalculadorInventarioService {
             
             // Sell-Through = (unidadesVendidas / unidadesRecibidas) * 100
             BigDecimal unidadesVendidas = BigDecimal.valueOf(ventas.getUnidadesVendidas());
-            BigDecimal unidadesRecibidas = BigDecimal.valueOf(inventario.getUnidadesRecibidas());
-            BigDecimal sellThrough = dividirSeguro(unidadesVendidas, unidadesRecibidas).multiply(BigDecimal.valueOf(100));
+            BigDecimal unidadesRecibidasBd = BigDecimal.valueOf(unidadesRecibidas);
+            BigDecimal sellThrough = dividirSeguro(unidadesVendidas, unidadesRecibidasBd).multiply(BigDecimal.valueOf(100));
             
             // Semanas del periodo = Días entre inicio y fin divididos por 7 (mínimo 1)
             long dias = Math.max(1, ChronoUnit.DAYS.between(inicio, fin));
@@ -51,7 +74,6 @@ public class CalculadorInventarioService {
             BigDecimal promVentasSemanales = dividirSeguro(unidadesVendidas, semanas);
             
             // WOS = valorInventarioActual / Promedio Ventas Semanales
-            BigDecimal valorInventarioActual = inventario.getValorInventarioActual();
             BigDecimal wos = dividirSeguro(valorInventarioActual, promVentasSemanales);
 
             return GestionInventarioMetricasDTO.builder()
@@ -59,6 +81,7 @@ public class CalculadorInventarioService {
                     .gmroi(gmroi.setScale(2, RoundingMode.HALF_UP))
                     .sellThroughRate(sellThrough.setScale(2, RoundingMode.HALF_UP))
                     .weeksOfSupplyWos(wos.setScale(2, RoundingMode.HALF_UP))
+                    .isRealData(isRealData)
                     .build();
         } catch (Exception e) {
             return GestionInventarioMetricasDTO.builder()
@@ -66,6 +89,7 @@ public class CalculadorInventarioService {
                     .gmroi(BigDecimal.ZERO)
                     .sellThroughRate(BigDecimal.ZERO)
                     .weeksOfSupplyWos(BigDecimal.ZERO)
+                    .isRealData(false)
                     .build();
         }
     }

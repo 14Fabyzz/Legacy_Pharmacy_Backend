@@ -10,10 +10,9 @@ import java.math.BigDecimal;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class GestionInventarioMetricasDTO {
-    private BigDecimal rotacionInventarioIri;
-    private BigDecimal gmroi;
-    private BigDecimal sellThroughRate;
-    private BigDecimal weeksOfSupplyWos;
-    private Boolean isRealData;
+public class InventarioConsolidadoDTO {
+    private BigDecimal cogs;
+    private Long unidadesRecibidas;
+    private BigDecimal valorInventarioActual;
+    private BigDecimal inventarioPromedio;
 }
