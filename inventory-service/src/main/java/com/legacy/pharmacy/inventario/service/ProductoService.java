@@ -320,6 +320,8 @@ public class ProductoService {
             dto.setNombreProducto(p.getNombreComercial());
             dto.setTipo(p.getTipo().name());
             dto.setPrecioVentaBase(p.getPrecioVentaBase());
+            dto.setPrecioVentaTotal(p.getPrecioVentaTotal());
+            dto.setIvaPorcentaje(p.getIvaPorcentaje());
             dto.setPrecioVentaUnidad(p.getPrecioVentaUnidad());
             dto.setPrecioVentaBlister(p.getPrecioVentaBlister());
             dto.setEsFraccionable(p.getEsFraccionable());
