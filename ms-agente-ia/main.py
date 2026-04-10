@@ -4,8 +4,8 @@ Se conecta directamente a la base de datos real especificada en config.py
 """
 from app.agent import MCPAgent
 from app.config import (
-    GEMINI_API_KEY,
-    GEMINI_MODEL,
+    OPENAI_API_KEY,
+    OPENAI_MODEL,
     MYSQL_CONFIG,
     POSTGRES_CONFIG,
     DATABASE_TYPE
@@ -28,8 +28,8 @@ def main():
     try:
         # Crear agente
         agente = MCPAgent(
-            api_key=GEMINI_API_KEY,
-            model_name=GEMINI_MODEL,
+            api_key=OPENAI_API_KEY,
+            model_name=OPENAI_MODEL,
             db_type=DATABASE_TYPE,
             mysql_config=MYSQL_CONFIG,
             postgres_config=POSTGRES_CONFIG

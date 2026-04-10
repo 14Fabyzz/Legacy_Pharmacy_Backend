@@ -170,7 +170,12 @@ class MCPAgent:
                     if corrected_raw == "NO_QUERY":
                         response_text = f"Intenté corregir el error pero no encontré una consulta válida. ({original_error})"
                     else:
-                        selected_tool, corrected_sql = self._resolve_tool_and_sql(corrected_raw)
+                        # Si el LLM no incluyó prefijo de BD, reusar la herramienta del intento 1
+                        has_db_prefix = "=== DB1 ===" in corrected_raw or "=== DB2 ===" in corrected_raw
+                        if has_db_prefix:
+                            selected_tool, corrected_sql = self._resolve_tool_and_sql(corrected_raw)
+                        else:
+                            corrected_sql = self._clean_sql_markdown(corrected_raw)
                         print(f"📊 SQL (Intento 2): {corrected_sql}")
                         results = selected_tool.execute(corrected_sql)
                         clean_sql = corrected_sql
@@ -439,10 +444,10 @@ SIEMPRE aplica estos filtros en consultas sobre la tabla "ventas":
      ) AS total_neto
    FROM ventas v
    WHERE v.estado = 'COMPLETADA'
-     AND EXTRACT(MONTH FROM v."fechaVenta") = 3
-     AND EXTRACT(YEAR FROM v."fechaVenta") = 2026;
+     AND EXTRACT(MONTH FROM v."fecha_venta") = 3
+     AND EXTRACT(YEAR FROM v."fecha_venta") = 2026;
 
-   NOTA: La columna se llama "fechaVenta" (camelCase) → siempre con comillas dobles en PostgreSQL.
+   NOTA: La columna se llama "fecha_venta" (snake_case) → siempre con comillas dobles en PostgreSQL.
 
 ════════════════════════════════════════════════════════════
 SEGURIDAD Y BUENAS PRÁCTICAS
@@ -517,7 +522,7 @@ Recuerda usar el prefijo === DB1 === para MySQL (inventario) o === DB2 === para 
 
 REGLAS IMPORTANTES PARA VENTAS (DB2):
 - Siempre filtra WHERE estado = 'COMPLETADA' en la tabla ventas.
-- La columna de fecha se llama "fechaVenta" (camelCase) → usa comillas dobles en PostgreSQL.
+- La columna de fecha se llama "fecha_venta" (snake_case) → usa comillas dobles en PostgreSQL.
 - Para totales de dinero, descuenta devoluciones con estado = 'COMPLETADA' de la tabla devoluciones.
 
 Si no es posible corregir, devuelve: NO_QUERY
