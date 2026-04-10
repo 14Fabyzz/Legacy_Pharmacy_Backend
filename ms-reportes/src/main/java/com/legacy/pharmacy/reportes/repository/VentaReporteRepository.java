@@ -165,4 +165,30 @@ public interface VentaReporteRepository extends JpaRepository<Venta, Long> {
     List<java.util.Map<String, Object>> getComparativoProducto(@Param("inicio") LocalDateTime inicio,
                                                               @Param("fin") LocalDateTime fin,
                                                               @Param("sucursalId") Integer sucursalId);
+    // ==========================================
+    // QUERIES CIERRE DE TURNO (INTEGRACION MS-VENTAS)
+    // ==========================================
+
+    @Query(value = "SELECT id, usuario_id, sucursal_id, estado, " +
+            "fecha_apertura, fecha_cierre, " +
+            "saldo_inicial, total_ventas_teorico, " +
+            "total_efectivo_real, total_egresos, " +
+            "diferencia, observaciones_cierre " +
+            "FROM turnos_caja WHERE id = :turnoId", nativeQuery = true)
+    List<java.util.Map<String, Object>> getEncabezadoCierreTurno(@Param("turnoId") Long turnoId);
+
+    @Query(value = "SELECT id, fecha, tipo, monto, referencia, descripcion " +
+            "FROM movimientos_caja WHERE turno_id = :turnoId " +
+            "ORDER BY fecha ASC", nativeQuery = true)
+    List<java.util.Map<String, Object>> getMovimientosPorTurno(@Param("turnoId") Long turnoId);
+
+    @Query(value = "SELECT id, usuario_id, sucursal_id, estado, " +
+            "fecha_apertura, fecha_cierre, " +
+            "saldo_inicial, total_ventas_teorico, " +
+            "total_efectivo_real, total_egresos, " +
+            "diferencia, observaciones_cierre " +
+            "FROM turnos_caja " +
+            "WHERE fecha_apertura BETWEEN :inicio AND :fin " +
+            "ORDER BY fecha_apertura DESC", nativeQuery = true)
+    List<java.util.Map<String, Object>> getCierresTurnoRangoFechas(@Param("inicio") LocalDateTime inicio, @Param("fin") LocalDateTime fin);
 }
