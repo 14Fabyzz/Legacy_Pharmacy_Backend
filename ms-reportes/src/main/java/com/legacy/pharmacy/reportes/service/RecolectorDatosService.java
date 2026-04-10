@@ -11,6 +11,14 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.LocalDateTime;
+import java.sql.Timestamp;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import com.legacy.pharmacy.reportes.dto.cierre.CierreTurnoConciliacionDTO;
+import com.legacy.pharmacy.reportes.dto.cierre.MovimientoTurnoDTO;
 
 /**
  * Servicio que recolecta datos crudos de ventas e inventario.
@@ -112,6 +120,139 @@ public class RecolectorDatosService {
                     .valorInventarioTeorico(BigDecimal.ZERO)
                     .valorInventarioFisico(BigDecimal.ZERO)
                     .build();
+        }
+    }
+
+    /**
+     * Obtiene la cabecera (datos teóricos y reales) del Cierre de un Turno específico.
+     */
+    @Transactional(readOnly = true)
+    public CierreTurnoConciliacionDTO obtenerCabeceraTurno(Long turnoId) {
+        log.info("Recolectando cabecera de conciliacion para el turno: {}", turnoId);
+        List<Map<String, Object>> rawList = ventaReporteRepository.getEncabezadoCierreTurno(turnoId);
+        if (rawList == null || rawList.isEmpty()) {
+            return null; // El turno no existe o es nulo
+        }
+
+        Map<String, Object> raw = rawList.get(0);
+
+        CierreTurnoConciliacionDTO dto = new CierreTurnoConciliacionDTO();
+        dto.setId(mapToLong(raw.get("id")));
+        dto.setUsuarioId(mapToString(raw.get("usuario_id")));
+        dto.setSucursalId(mapToInteger(raw.get("sucursal_id")));
+        dto.setEstado(mapToString(raw.get("estado")));
+        dto.setFechaApertura(mapToLocalDateTime(raw.get("fecha_apertura")));
+        dto.setFechaCierre(mapToLocalDateTime(raw.get("fecha_cierre")));
+        dto.setSaldoInicial(mapToBigDecimal(raw.get("saldo_inicial")));
+        dto.setTotalVentasTeorico(mapToBigDecimal(raw.get("total_ventas_teorico")));
+        dto.setTotalEfectivoReal(mapToBigDecimal(raw.get("total_efectivo_real")));
+        dto.setTotalEgresos(mapToBigDecimal(raw.get("total_egresos")));
+        dto.setDiferencia(mapToBigDecimal(raw.get("diferencia")));
+        dto.setObservacionesCierre(mapToString(raw.get("observaciones_cierre")));
+        
+        return dto;
+    }
+
+    /**
+     * Obtiene una lista de cabeceras de Cierres de Turno en un rango de fechas.
+     */
+    @Transactional(readOnly = true)
+    public List<CierreTurnoConciliacionDTO> obtenerCierresTurnoRango(LocalDate inicio, LocalDate fin) {
+        log.info("Recolectando cierres de turno en el rango {} a {}", inicio, fin);
+        
+        var inicioDateTime = inicio.atStartOfDay();
+        var finDateTime = fin.atTime(LocalTime.MAX);
+        
+        List<Map<String, Object>> rawList = ventaReporteRepository.getCierresTurnoRangoFechas(inicioDateTime, finDateTime);
+        
+        return rawList.stream().map(raw -> {
+            CierreTurnoConciliacionDTO dto = new CierreTurnoConciliacionDTO();
+            dto.setId(mapToLong(raw.get("id")));
+            dto.setUsuarioId(mapToString(raw.get("usuario_id")));
+            dto.setSucursalId(mapToInteger(raw.get("sucursal_id")));
+            dto.setEstado(mapToString(raw.get("estado")));
+            dto.setFechaApertura(mapToLocalDateTime(raw.get("fecha_apertura")));
+            dto.setFechaCierre(mapToLocalDateTime(raw.get("fecha_cierre")));
+            dto.setSaldoInicial(mapToBigDecimal(raw.get("saldo_inicial")));
+            dto.setTotalVentasTeorico(mapToBigDecimal(raw.get("total_ventas_teorico")));
+            dto.setTotalEfectivoReal(mapToBigDecimal(raw.get("total_efectivo_real")));
+            dto.setTotalEgresos(mapToBigDecimal(raw.get("total_egresos")));
+            dto.setDiferencia(mapToBigDecimal(raw.get("diferencia")));
+            dto.setObservacionesCierre(mapToString(raw.get("observaciones_cierre")));
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
+    /**
+     * Obtiene todos los movimientos asociados a un Turno.
+     */
+    @Transactional(readOnly = true)
+    public List<MovimientoTurnoDTO> obtenerMovimientosDelTurno(Long turnoId) {
+        log.info("Recolectando movimientos del turno: {}", turnoId);
+        List<Map<String, Object>> rawList = ventaReporteRepository.getMovimientosPorTurno(turnoId);
+        
+        return rawList.stream().map(raw -> {
+            MovimientoTurnoDTO dto = new MovimientoTurnoDTO();
+            dto.setId(mapToLong(raw.get("id")));
+            dto.setFecha(mapToLocalDateTime(raw.get("fecha")));
+            dto.setTipo(mapToString(raw.get("tipo")));
+            dto.setMonto(mapToBigDecimal(raw.get("monto")));
+            dto.setReferencia(mapToString(raw.get("referencia")));
+            dto.setDescripcion(mapToString(raw.get("descripcion")));
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
+    // Utilidades de casteo seguro para los Maps nativos
+    
+    private Long mapToLong(Object obj) {
+        if (obj == null) return null;
+        if (obj instanceof Number) return ((Number) obj).longValue();
+        try {
+            return Long.parseLong(obj.toString());
+        } catch (Exception e) { return null; }
+    }
+
+    private String mapToString(Object obj) {
+        if (obj == null) return null;
+        return obj.toString();
+    }
+    
+    private Integer mapToInteger(Object obj) {
+        if (obj == null) return null;
+        if (obj instanceof Number) return ((Number) obj).intValue();
+        try {
+            return Integer.parseInt(obj.toString());
+        } catch (Exception e) { return null; }
+    }
+    
+    private BigDecimal mapToBigDecimal(Object obj) {
+        if (obj == null) return BigDecimal.ZERO;
+        if (obj instanceof BigDecimal) return (BigDecimal) obj;
+        if (obj instanceof Number) return BigDecimal.valueOf(((Number) obj).doubleValue());
+        try {
+            return new BigDecimal(obj.toString());
+        } catch (Exception e) { return BigDecimal.ZERO; }
+    }
+    
+    private LocalDateTime mapToLocalDateTime(Object obj) {
+        if (obj == null) return null;
+        if (obj instanceof Timestamp) return ((Timestamp) obj).toLocalDateTime();
+        if (obj instanceof java.sql.Date) return ((java.sql.Date) obj).toLocalDate().atStartOfDay();
+        if (obj instanceof LocalDateTime) return (LocalDateTime) obj;
+        
+        String str = obj.toString();
+        if (str.contains(" ")) {
+            str = str.replace(" ", "T");
+        }
+        try {
+            return LocalDateTime.parse(str);
+        } catch (Exception e) {
+            try {
+                return LocalDate.parse(str).atStartOfDay();
+            } catch (Exception ex) {
+                return null;
+            }
         }
     }
 }

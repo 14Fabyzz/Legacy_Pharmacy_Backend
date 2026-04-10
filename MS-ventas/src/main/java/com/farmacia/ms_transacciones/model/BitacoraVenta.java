@@ -3,6 +3,8 @@ package com.farmacia.ms_transacciones.model;
 import com.farmacia.ms_transacciones.enums.TipoEventoAuditoria;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "bitacora_ventas", indexes = {
@@ -34,7 +36,8 @@ public class BitacoraVenta {
     @Column(name = "motivo", length = 500)
     private String motivo;
 
-    @Column(name = "detalles_cambios_json", columnDefinition = "TEXT")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "detalles_cambios_json", columnDefinition = "jsonb")
     private String detallesCambiosJson;
 
     public Long getId() {
